@@ -1,7 +1,8 @@
-import type { HealthResponse } from '@kvg/contracts';
+import type { AuthState, HealthResponse } from '@kvg/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { IdentitySection } from '../features/identity/IdentitySection';
 import { getHealth } from '../shared/api/http-client';
+import { RecordsWorkspace } from '../features/records/RecordsWorkspace';
 
 type HealthState =
   | { status: 'idle' }
@@ -10,6 +11,7 @@ type HealthState =
   | { status: 'error'; message: string };
 
 export function App() {
+  const [auth, setAuth] = useState<AuthState>({ status: 'anonymous' });
   const [state, setState] = useState<HealthState>({ status: 'idle' });
   const currentRequest = useRef<AbortController | null>(null);
 
@@ -50,7 +52,13 @@ export function App() {
         <h1>Sistema Jurídico KVG</h1>
       </header>
 
-      <IdentitySection />
+      <IdentitySection auth={auth} onAuthChange={setAuth} />
+      {auth.status === 'authenticated' && (
+        <RecordsWorkspace
+          key={auth.user.id}
+          onSessionExpired={() => setAuth({ status: 'anonymous' })}
+        />
+      )}
 
       <section className="panel" aria-labelledby="api-heading">
         <h2 id="api-heading">Comunicación con la API</h2>

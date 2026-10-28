@@ -24,8 +24,13 @@ const pendingMessages: Record<PendingOperation, string> = {
   logout: 'Cerrando sesión…',
 };
 
-export function IdentitySection() {
-  const [auth, setAuth] = useState<AuthState>({ status: 'anonymous' });
+export function IdentitySection({
+  auth,
+  onAuthChange,
+}: {
+  auth: AuthState;
+  onAuthChange: (state: AuthState) => void;
+}) {
   const [pending, setPending] = useState<PendingOperation | null>('session');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -46,7 +51,7 @@ export function IdentitySection() {
   }
 
   function applyAuth(next: AuthState) {
-    setAuth(next);
+    onAuthChange(next);
     clearSensitiveFields();
   }
 

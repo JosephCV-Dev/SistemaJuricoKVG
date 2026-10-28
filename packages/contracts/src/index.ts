@@ -21,3 +21,16 @@ export type {
   MfaEnrollmentResponse,
   CsrfResponse,
 } from './identity';
+
+export type {
+  IdentificationType,
+  ClientInput,
+  ClientSummary,
+  ClientDetail,
+  CaseStatus,
+  CaseInput,
+  CaseSummary,
+  CaseDetail,
+  RecordPage,
+  SessionCapabilities,
+} from './records';

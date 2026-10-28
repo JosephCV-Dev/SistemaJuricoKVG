@@ -11,7 +11,10 @@
     "check:supabase": "node scripts/check-supabase.mjs",
     "setup:identity:dev": "node scripts/setup-identity-dev.mjs",
     "test:identity:live": "node scripts/test-identity-live.mjs",
-    "test:identity:schema": "node scripts/test-identity-schema.mjs"
+    "test:identity:schema": "node scripts/test-identity-schema.mjs",
+    "setup:records:dev": "node scripts/setup-records-dev.mjs",
+    "test:records:live": "node scripts/test-records-live.mjs",
+    "test:records:schema": "node scripts/test-records-schema.mjs"
   },
   "dependencies": {
     "@kvg/contracts": "*",

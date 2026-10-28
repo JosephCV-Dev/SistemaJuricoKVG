@@ -17,6 +17,7 @@ import type {
   CsrfResponse,
   MfaEnrollmentResponse,
   AuthUser,
+  SessionCapabilities,
 } from '@kvg/contracts';
 import { randomUUID } from 'node:crypto';
 import { IdentityService } from '../application/identity.service';
@@ -114,6 +115,18 @@ export class AuthController {
     if (!request.identity)
       throw new UnauthorizedException('Se requiere una sesión autenticada.');
     return request.identity.user;
+  }
+
+  @Get('capabilities')
+  @Authenticated()
+  capabilities(@Req() request: Request): SessionCapabilities {
+    if (!request.identity)
+      throw new UnauthorizedException('Se requiere una sesión autenticada.');
+    return {
+      capabilities: request.identity.capabilities.map(
+        ({ permission, context }) => ({ permission, context }),
+      ),
+    };
   }
 
   @Post('mfa/enroll')

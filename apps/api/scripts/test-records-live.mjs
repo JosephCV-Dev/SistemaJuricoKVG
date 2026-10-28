@@ -1,0 +1,355 @@
+import { randomUUID } from 'node:crypto';
+import { writeFile } from 'node:fs/promises';
+import { NestFactory } from '@nestjs/core';
+import {
+  developmentConfig,
+  ownerConnection,
+  localDirectory,
+  reportSetupFailure,
+  DevelopmentSetupError,
+} from './lib/development-database.mjs';
+import { readDevelopmentFixture } from './lib/development-identities.mjs';
+import { DevelopmentBrowser } from './lib/development-http.mjs';
+
+let app,
+  owner,
+  stage = 'CONFIGURACION';
+const browsers = [];
+const checks = [];
+function check(condition, description) {
+  if (!condition)
+    throw new DevelopmentSetupError(`Comprobación no superada: ${description}`);
+  checks.push(description);
+}
+try {
+  const config = await developmentConfig();
+  const fixture = await readDevelopmentFixture(config);
+  owner = await ownerConnection(config);
+  const { AppModule } = await import('../dist/app.module.js');
+  const { configureApp } = await import('../dist/configure-app.js');
+  const { ServerSessions } =
+    await import('../dist/modules/identity/presentation/server-sessions.service.js');
+  const { KvgRpcService } =
+    await import('../dist/infrastructure/supabase/kvg-rpc.service.js');
+  app = await NestFactory.create(AppModule, { logger: false });
+  configureApp(app);
+  await app.listen(0, '127.0.0.1');
+  const origin = await app.getUrl();
+  const rpc = app.get(KvgRpcService);
+  const sessions = app.get(ServerSessions);
+  async function login(role) {
+    const browser = new DevelopmentBrowser(origin);
+    browsers.push(browser);
+    const state = await browser.login(
+      fixture.accounts.find((account) => account.role === role),
+    );
+    check(state.user.roles.includes(role), `rol_${role}_con_mfa_real`);
+    const sid = decodeURIComponent(browser.cookie.split('=')[1])
+      .slice(2)
+      .split('.')[0];
+    const stored = await new Promise((resolve, reject) =>
+      sessions.runtime.store.get(sid, (error, value) =>
+        error ? reject(error) : resolve(value),
+      ),
+    );
+    return {
+      browser,
+      token: stored.authentication.accessToken,
+      user: state.user,
+    };
+  }
+  stage = 'IDENTIDADES';
+  const secretary = await login('SECRETARIA');
+  const legal = await login('ABOGADO');
+  const admin = await login('ADMINISTRADOR');
+  const anonymous = new DevelopmentBrowser(origin);
+  check(
+    (await anonymous.request('clients')).status === 401,
+    'consulta_anonima_denegada',
+  );
+  check(
+    (await secretary.browser.request('clients', 'POST', {})).status === 403,
+    'alta_sin_csrf_denegada',
+  );
+  const tag = randomUUID().replaceAll('-', '').slice(0, 12);
+  const input = {
+    requestId: randomUUID(),
+    name: `Cliente ficticio recorrido ${tag}`,
+    identifications: [{ type: 'PRUEBA_KVG', value: `dev-${tag}` }],
+    contacts: [
+      { type: 'CORREO', value: `ficticio.${tag}@example.com`, preferred: true },
+    ],
+  };
+  check(
+    (await admin.browser.mutate('clients', input)).status === 403,
+    'administrador_no_registra_clientes',
+  );
+  check(
+    (await legal.browser.mutate('clients', input)).status === 403,
+    'abogado_sin_permiso_de_alta_denegado',
+  );
+  check(
+    (await secretary.browser.mutate('clients', { ...input, name: '  ' }))
+      .status === 400,
+    'nombre_vacio_rechazado',
+  );
+  check(
+    (
+      await secretary.browser.mutate('clients', {
+        ...input,
+        creado_por: admin.user.id,
+      })
+    ).status === 400,
+    'autoria_falsificada_rechazada',
+  );
+
+  stage = 'CLIENTE';
+  const concurrent = await Promise.all([
+    secretary.browser.mutate('clients', input),
+    secretary.browser.mutate('clients', input),
+  ]);
+  check(
+    concurrent.every((item) => item.status === 201),
+    'alta_cliente_concurrente_correcta',
+  );
+  check(
+    concurrent[0].data.id === concurrent[1].data.id,
+    'reintento_cliente_conserva_identificador',
+  );
+  const client = concurrent[0].data;
+  const readClient = await secretary.browser.request(`clients/${client.id}`);
+  check(
+    readClient.status === 200 && readClient.data.contacts.length === 1,
+    'cliente_y_contacto_persistidos',
+  );
+  check(
+    !JSON.stringify(readClient.data).includes('auth_usuario_id') &&
+      !JSON.stringify(readClient.data).includes('accessToken'),
+    'salida_cliente_sin_datos_tecnicos',
+  );
+  check(
+    (await legal.browser.request(`clients/${client.id}`)).status === 403,
+    'abogado_no_ve_cliente_sin_alcance',
+  );
+  check(
+    (
+      await secretary.browser.mutate('clients', {
+        ...input,
+        name: 'Contenido distinto',
+      })
+    ).status === 409,
+    'uuid_reutilizado_con_otro_contenido_rechazado',
+  );
+  const duplicate = await secretary.browser.mutate('clients', {
+    ...input,
+    requestId: randomUUID(),
+    identifications: [
+      { type: 'PRUEBA_KVG', value: `DEV ${tag.toUpperCase()}` },
+    ],
+  });
+  check(duplicate.status === 409, 'identificacion_unica_normalizada_rechazada');
+  const equalName = await secretary.browser.mutate('clients', {
+    ...input,
+    requestId: randomUUID(),
+    identifications: [],
+  });
+  check(
+    equalName.status === 201 && equalName.data.id !== client.id,
+    'nombre_igual_no_impide_cliente_distinto',
+  );
+  const clientsCount = await owner.query(
+    'SELECT count(*)::integer AS count FROM kvg.cliente WHERE nombre_presentacion=$1',
+    [input.name],
+  );
+  check(
+    clientsCount.rows[0].count === 2,
+    'rechazos_y_reintentos_sin_cliente_parcial',
+  );
+  const firstPage = await secretary.browser.request(
+    `clients?text=${encodeURIComponent(tag)}&limit=1&offset=0`,
+  );
+  const nextPage = await secretary.browser.request(
+    `clients?text=${encodeURIComponent(tag)}&limit=1&offset=1`,
+  );
+  check(
+    firstPage.status === 200 &&
+      firstPage.data.hasMore &&
+      firstPage.data.items[0].id !== nextPage.data.items[0].id,
+    'paginacion_clientes_sin_repetir_filas',
+  );
+
+  stage = 'EXPEDIENTE';
+  const caseInput = {
+    requestId: randomUUID(),
+    clientId: client.id,
+    description: `Asunto ficticio ${tag}`,
+    externalNumber: `EXT-${tag}`,
+    externalAuthority: 'Autoridad ficticia de desarrollo',
+  };
+  const noClient = await secretary.browser.mutate('cases', {
+    ...caseInput,
+    requestId: randomUUID(),
+    clientId: randomUUID(),
+  });
+  check(noClient.status === 403, 'cliente_no_accesible_no_crea_expediente');
+  check(
+    (
+      await secretary.browser.mutate('cases', {
+        ...caseInput,
+        folio: 'FORZADO',
+        status: 'CONCLUIDO',
+      })
+    ).status === 400,
+    'folio_y_estado_no_se_aceptan_del_navegador',
+  );
+  const casesCreated = await Promise.all([
+    secretary.browser.mutate('cases', caseInput),
+    secretary.browser.mutate('cases', caseInput),
+  ]);
+  check(
+    casesCreated.every((item) => item.status === 201),
+    'alta_expediente_concurrente_correcta',
+  );
+  check(
+    casesCreated[0].data.id === casesCreated[1].data.id,
+    'reintento_expediente_sin_duplicacion',
+  );
+  const caseRecord = casesCreated[0].data;
+  check(
+    caseRecord.status === 'NUEVO' &&
+      /^KVG-\d{4}-\d{10}$/.test(caseRecord.folio) &&
+      caseRecord.folio !== caseRecord.externalNumber,
+    'folio_servidor_y_estado_nuevo',
+  );
+  const detail = await secretary.browser.request(`cases/${caseRecord.id}`);
+  check(
+    detail.status === 200 &&
+      detail.data.history.length === 1 &&
+      detail.data.history[0].to === 'NUEVO',
+    'detalle_y_historial_inicial',
+  );
+  const grants = await owner.query(
+    'SELECT concesion_id FROM kvg.concesion_acceso WHERE expediente_id=$1 AND usuario_id=$2 AND revocado_en IS NULL',
+    [caseRecord.id, secretary.user.id],
+  );
+  check(grants.rowCount === 1, 'concesion_inicial_explicita');
+  check(
+    (await legal.browser.request(`cases/${caseRecord.id}`)).status === 403,
+    'otro_actor_con_capacidad_no_ve_expediente',
+  );
+  const hiddenCases = await legal.browser.request(
+    `cases?text=${encodeURIComponent(tag)}`,
+  );
+  const hiddenClients = await legal.browser.request(
+    `clients?text=${encodeURIComponent(tag)}`,
+  );
+  check(
+    hiddenCases.data.items.length === 0 &&
+      hiddenClients.data.items.length === 0,
+    'listados_sin_relaciones_ni_cantidades_ajenas',
+  );
+  check(
+    (await admin.browser.request(`cases/${caseRecord.id}`)).status === 403,
+    'administrador_no_obtiene_lectura_juridica',
+  );
+
+  stage = 'ASIGNACION_Y_REVOCACION';
+  await rpc.execute(secretary.token, 'expediente.asignar', {
+    expediente_id: caseRecord.id,
+    revision: caseRecord.revision,
+    abogado_id: legal.user.id,
+    funcion: 'PRINCIPAL',
+    motivo:
+      'Asignación ficticia para verificar consulta por alcance en el paso 3.',
+  });
+  const assigned = await legal.browser.request(`cases/${caseRecord.id}`);
+  check(
+    assigned.status === 200 &&
+      assigned.data.assignments.some(
+        (item) =>
+          item.userId === legal.user.id &&
+          item.active &&
+          item.name === legal.user.name,
+      ),
+    'principal_consulta_expediente_y_nombre',
+  );
+  check(
+    (await legal.browser.request(`clients/${client.id}`)).status === 200,
+    'principal_consulta_cliente_del_expediente',
+  );
+  await rpc.execute(admin.token, 'seguridad.revocar_concesion', {
+    concesion_id: grants.rows[0].concesion_id,
+    motivo: 'Ensayo ficticio de revocación inmediata por recurso.',
+  });
+  check(
+    (await secretary.browser.request(`cases/${caseRecord.id}`)).status === 403,
+    'concesion_revocada_denegada_con_cookie_vigente',
+  );
+  check(
+    (await secretary.browser.request(`clients/${client.id}`)).status === 403,
+    'cliente_de_expediente_revocado_denegado',
+  );
+  check(
+    (await secretary.browser.mutate('cases', caseInput)).status === 403,
+    'reintento_idempotente_revalida_alcance',
+  );
+  const audit = await owner.query(
+    'SELECT accion,usuario_id FROM kvg.evento_auditoria WHERE recurso_id IN ($1::uuid,$2::uuid)',
+    [client.id, caseRecord.id],
+  );
+  check(
+    audit.rows.some(
+      (item) =>
+        item.accion === 'cliente.insert' &&
+        item.usuario_id === secretary.user.id,
+    ) &&
+      audit.rows.some(
+        (item) =>
+          item.accion === 'expediente.insert' &&
+          item.usuario_id === secretary.user.id,
+      ),
+    'auditoria_de_altas_con_actor_real',
+  );
+  check(
+    audit.rows.some((item) => item.accion === 'CLIENTE_CONSULTAR') &&
+      audit.rows.some((item) => item.accion === 'EXPEDIENTE_CONSULTAR'),
+    'auditoria_de_consultas_reales',
+  );
+  const requests = await owner.query(
+    'SELECT count(*)::integer AS count FROM kvg_privado.solicitud_creacion WHERE usuario_id=$1 AND solicitud_id IN ($2::uuid,$3::uuid)',
+    [secretary.user.id, input.requestId, caseInput.requestId],
+  );
+  check(
+    requests.rows[0].count === 2,
+    'solicitudes_confirmadas_una_vez_por_alta',
+  );
+  const report = {
+    date: '2026-10-28',
+    result: 'passed',
+    checks,
+    realDataUsed: false,
+    deploymentVerified: false,
+  };
+  await writeFile(
+    `${localDirectory}/records-live-verification.json`,
+    JSON.stringify(report, null, 2) + '\n',
+    { mode: 0o600 },
+  );
+  console.log(
+    JSON.stringify({
+      resultado: 'correcto',
+      comprobaciones: checks.length,
+      detalle: checks,
+      datos_reales: false,
+      credenciales_publicadas: false,
+    }),
+  );
+} catch (error) {
+  reportSetupFailure(stage, error);
+  process.exitCode = 1;
+} finally {
+  for (const browser of browsers)
+    await browser.mutate('auth/logout', {}).catch(() => undefined);
+  await owner?.end().catch(() => undefined);
+  await app?.close().catch(() => undefined);
+}

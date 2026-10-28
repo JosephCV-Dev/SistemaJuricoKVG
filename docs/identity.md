@@ -8,9 +8,9 @@ Están implementados el frontend, el cliente HTTP y el backend de acceso: correo
 
 El **28 de octubre de 2026** se aplicaron las dos migraciones de identidad en desarrollo, se prepararon dos cuentas ficticias confirmadas sin enviar correos y se ejecutó el recorrido HTTP con Supabase Auth, MFA, sesión operativa KVG y RPC reales. Se comprobó el registro público deshabilitado, el acceso propio permitido, rechazos sin autorización, renovación, cierre/revocación y vencimiento. También se comprobaron el cifrado de la carga y el acceso restringido del rol de sesiones. La baseline permanece intacta.
 
-Las pruebas locales de API y cliente HTTP usan puertos o respuestas simuladas y complementan esa evidencia real. La última ejecución real pasó 39 comprobaciones, incluidas renovación concurrente, respuesta antigua sin sobrescritura del token nuevo y registro público deshabilitado. **No se ha probado el recorrido en navegador ni el entorno de producción.** La revisión previa del catálogo está documentada por separado en [supabase-verification.md](supabase-verification.md).
+Las pruebas locales de API y cliente HTTP usan puertos o respuestas simuladas y complementan esa evidencia real. La última ejecución real pasó 39 comprobaciones, incluidas renovación concurrente, respuesta antigua sin sobrescritura del token nuevo y registro público deshabilitado. **El acceso se comprobó después en Chromium local durante el paso 3A; producción sigue pendiente.** La revisión previa del catálogo está documentada por separado en [supabase-verification.md](supabase-verification.md).
 
-CU018/CU019 completos —administrar usuarios y roles/permisos— no forman parte de esta entrega. El aprovisionamiento de prueba y la consulta de capacidades actuales son las bases necesarias para CU023/CU024, no una interfaz administrativa terminada. El siguiente avance es el paso 3: cliente y expediente mínimos, con permiso, alcance y auditoría.
+CU018/CU019 completos —administrar usuarios y roles/permisos— no forman parte de esta entrega. El aprovisionamiento de prueba y la consulta de capacidades actuales son las bases necesarias para CU023/CU024, no una interfaz administrativa terminada. El recorrido mínimo de clientes/expedientes está implementado; su preparación y evidencia están en [clients-and-cases.md](clients-and-cases.md).
 
 ## Identidades que deben distinguirse
 
@@ -22,11 +22,11 @@ CU018/CU019 completos —administrar usuarios y roles/permisos— no forman part
 
 Tener una cuenta Auth o superar contraseña/MFA no concede por sí solo una sesión operativa KVG. La API debe comprobar también cuenta, sesión, capacidades actuales y, en cada caso de uso, alcance sobre el recurso. Los roles devueltos a la interfaz son informativos; el navegador no decide permisos.
 
-Las cuentas ordinarias se incorporan por invitación y se comprobó que el registro público de Auth está deshabilitado. En desarrollo ya se prepararon dos identidades ficticias distintas, con correo confirmado mediante el SDK administrativo y sin enviar correos: un responsable técnico y un responsable jurídico. Esto es preparación de pruebas, no el procedimiento de altas de producción.
+Las cuentas ordinarias se incorporan por invitación y se comprobó que el registro público de Auth está deshabilitado. Durante CU023/CU024 se prepararon dos identidades ficticias distintas, con correo confirmado mediante el SDK administrativo y sin enviar correos: un responsable técnico y un responsable jurídico. Esto es preparación de pruebas, no el procedimiento de altas de producción.
 
 Antes de ejecutar `public.kvg_inicializar`, comprobar si el bootstrap ya existe. La función requiere dos identidades Auth distintas confirmadas, una referencia de aprobación y el estado inicial previsto por el SQL. Sólo se ejecuta como propietario cuando corresponde; no se repite sobre cuentas operativas existentes. El procedimiento está en [database/README.md](../database/README.md). La aplicación no inicializa ni migra la base al arrancar.
 
-Las credenciales y claves TOTP de las dos cuentas se conservan en `apps/api/.local/identity-development-accounts.json`, ignorado por Git y con permisos `0600`; el directorio local se restringe a `0700`. No incluir sus valores en esta guía, commits, capturas, respuestas HTTP o logs. Las claves administrativas utilizadas para preparar las cuentas no pertenecen a las variables del frontend ni a la sesión ordinaria del usuario.
+Las credenciales y claves TOTP de las cuentas ficticias se conservan en `apps/api/.local/identity-development-accounts.json`, ignorado por Git y con permisos `0600`; el directorio local se restringe a `0700`. No incluir sus valores en esta guía, commits, capturas, respuestas HTTP o logs. Las claves administrativas utilizadas para preparar las cuentas no pertenecen a las variables del frontend ni a la sesión ordinaria del usuario.
 
 ## Configuración del servidor
 
@@ -60,7 +60,7 @@ npm run setup:identity:dev
 
 Este comando requiere `NODE_ENV=development` y comprueba que SQL y API correspondan al mismo proyecto. Tiene efectos de aprovisionamiento: aplica las migraciones pendientes y registra sus checksums, prepara el rol limitado y sus credenciales, genera las claves de sesión que falten y actualiza el archivo local de configuración. Crea las dos cuentas ficticias mediante Auth Admin sin enviar correos y ejecuta `kvg_inicializar` únicamente si no hay perfiles operativos.
 
-La preparación ya se realizó en el entorno actual; no hace falta repetirla para arrancar la web. Si hay bootstrap y no se conserva el archivo de cuentas correspondiente, el script se detiene en lugar de sustituir perfiles. Si una migración aplicada cambia de checksum, también se detiene. No es un despliegue de producción ni un paso automático del arranque.
+La preparación ya se realizó en el entorno actual; no hace falta repetirla para arrancar la web. La cuenta adicional de Secretaría se prepara con el comando separado del paso 3A. Si hay bootstrap y no se conserva el archivo de cuentas correspondiente, el script se detiene en lugar de sustituir perfiles. Si una migración aplicada cambia de checksum, también se detiene. No es un despliegue de producción ni un paso automático del arranque.
 
 ## Flujo de sesión implementado
 
@@ -110,7 +110,7 @@ La clave de alta TOTP se conserva únicamente mientras se completa el alta en la
 
 ## Comprobar el recorrido en la interfaz
 
-El entorno de desarrollo ya tiene las migraciones y cuentas. Para realizar la comprobación manual pendiente:
+El entorno de desarrollo ya tiene las migraciones y cuentas. El acceso también se comprobó en Chromium local con el paso 3A; para repetirlo manualmente:
 
 1. Ejecutar `npm run dev` desde la raíz y abrir `http://127.0.0.1:5173`. Usar siempre el mismo nombre de host que `APP_ORIGIN`, sin alternar con `localhost`.
 2. Comprobar que al entrar se consulta la sesión y, sin sesión previa, aparece el formulario. **Comprobar API** sigue disponible como diagnóstico independiente de salud.
@@ -148,7 +148,7 @@ renovado ante un fallo temporal de Auth. No equivale a una prueba en navegador.
 
 `test:identity:live` levanta temporalmente la API local y utiliza Auth, MFA TOTP, RPC y PostgreSQL reales del entorno de desarrollo. Inicia, renueva, revoca y vence sesiones de prueba; verifica cifrado, rol restringido y acceso permitido/denegado. Puede registrar el alta inicial de factores TOTP en el archivo privado de cuentas. Conserva un informe local en `apps/api/.local/identity-live-verification.json`, sin publicar credenciales. Estas pruebas tienen efectos sobre las identidades y sesiones ficticias y no deben apuntar a producción.
 
-El aprovisionamiento y la ejecución real tuvieron resultado satisfactorio para el recorrido comprobado. También se repitió la preparación: conservó las dos cuentas y el bootstrap y reconoció ambas migraciones por su checksum, sin duplicarlas. Quedan pendientes la comprobación manual en navegador, el despliegue y las verificaciones de producción. La evidencia debe registrar entorno, fecha, escenarios y resultados, sin secretos ni datos reales.
+El aprovisionamiento y la ejecución real tuvieron resultado satisfactorio para el recorrido comprobado. También se repitió la preparación: conservó las dos cuentas y el bootstrap y reconoció ambas migraciones por su checksum, sin duplicarlas. El paso 3A añade una cuenta ficticia de Secretaría, conciliada mediante el contrato técnico, y una comprobación de Chromium local. Quedan pendientes otros navegadores/dispositivos, el despliegue y las verificaciones de producción. La evidencia debe registrar entorno, fecha, escenarios y resultados, sin secretos ni datos reales.
 
 Nombre sugerido para el commit cuando el incremento esté verificado:
 

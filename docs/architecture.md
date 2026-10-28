@@ -24,7 +24,7 @@ flowchart TD
   identity -->|Contraseña y TOTP MFA| auth[Supabase Auth]
   identity -->|RPC con JWT real del usuario| db[PostgreSQL / kvg_operar]
   identity -->|Rol técnico restringido / contenido cifrado| sessions[PostgreSQL / kvg_servidor.sesion_web]
-  business -. RPC con identidad del usuario .-> db
+  business -->|Clientes y expedientes / RPC con identidad del usuario| db
   business -. Autorización y transferencia controlada .-> storage[Storage privado]
   worker[Trabajador futuro / mismo backend] -. Trabajo técnico / kvg_trabajar .-> db
   worker -. Verificación y conciliación .-> storage
@@ -34,7 +34,8 @@ flowchart TD
 React y la API incluyen inicio/cierre de sesión con Supabase Auth, MFA TOTP y
 sesión operativa KVG. La persistencia de la cookie del servidor está separada de
 las tablas de negocio. Las conexiones discontinuas representan trabajo pendiente:
-clientes/expedientes, transferencia de archivos, trabajador y recuperación. La
+documentos, transferencia de archivos, trabajador y recuperación. Los módulos de
+clientes y expedientes ya implementan el recorrido mínimo del paso 3A. La
 verificación de identidad en desarrollo no acredita todavía el prototipo completo.
 
 ## Límites del código
@@ -107,7 +108,8 @@ El servidor comprueba identidad Auth y estado de la sesión operativa mediante
 comprobando el recurso concreto. `@Authenticated` se reserva a información de la
 propia sesión. Las mutaciones de acceso requieren origen exacto y token CSRF;
 login/MFA/renovación tienen límites de intentos por IP y cuenta/sesión por instancia.
-Las futuras mutaciones de negocio deben incorporar también la protección CSRF.
+Las altas de clientes y expedientes incorporan la misma protección CSRF; las
+futuras mutaciones deben conservarla.
 
 La sesión previa a MFA vence en diez minutos. La operativa usa la duración devuelta
 por SQL (actualmente ocho horas máximas y treinta minutos de inactividad, sujetos a
@@ -136,8 +138,9 @@ en loopback de forma predeterminada para desarrollo.
 
 `GET /api/v1/health` es público y solo informa de la salud del proceso. El contrato
 de `/api/v1/auth` y los pasos para probarlo están en [identity.md](identity.md).
-Los módulos de negocio todavía no tienen rutas; usarán la política de acceso por
-defecto y los puertos RPC existentes.
+Las rutas privadas de clientes y expedientes usan el guard y los puertos RPC por
+identidad; las altas incorporan CSRF y el SQL comprueba el alcance concreto. El
+contrato y sus límites están en [clients-and-cases.md](clients-and-cases.md).
 
 El proxy Vite permite consumir `/api` desde el mismo origen durante desarrollo.
 En producción habrá que configurar el servicio o proxy que entregue los archivos
@@ -183,9 +186,10 @@ concurrente. El almacén tiene pruebas de cifrado, integridad y escrituras tard�
 dentro de una transacción revertida. `npm run test:identity:live` ejercita Auth,
 TOTP, RPC, persistencia cifrada y revocación reales contra el proyecto de desarrollo
 con cuentas ficticias. Estas pruebas no se ejecutan en CI ni usan datos reales.
-La evidencia y los límites están en [identity.md](identity.md) y
-[supabase-verification.md](supabase-verification.md). No se ha probado la interfaz
-en un navegador ni se ha configurado producción.
+El incremento de clientes/expedientes añade comprobaciones de SQL y RPC reales y
+un recorrido de Chromium local, incluida la vista móvil. La evidencia y los límites
+están en [clients-and-cases.md](clients-and-cases.md), [identity.md](identity.md) y
+[supabase-verification.md](supabase-verification.md). Producción sigue pendiente.
 
 Antes de considerar validada la arquitectura completa se necesita demostrar con
 datos ficticios: identidad real, expediente accesible, carga privada segura, consulta
@@ -198,3 +202,23 @@ Referencias técnicas consultadas para esta preparación:
 - [Vite: guía de inicio](https://vite.dev/guide/).
 - [Node.js: versiones y soporte LTS](https://nodejs.org/en/about/previous-releases).
 - [Supabase: claves de API y privilegios](https://supabase.com/docs/guides/api/api-keys).
+
+## Recorrido mínimo de clientes y expedientes
+
+`clients` y `cases` separan tipos de dominio, puertos/casos de aplicación,
+adaptadores RPC y controladores/DTO. Los adaptadores seleccionan campos HTTP y
+validan las respuestas `unknown`; no devuelven filas internas. La web comparte el
+transporte de cookie/CSRF y coordina formularios separados de registro/apertura,
+listados y detalles dentro de `features/records`.
+
+La API requiere un UUID de solicitud en cada alta. PostgreSQL confirma el recurso
+y su clave de reintento en una sola transacción; serializa solicitudes repetidas y
+revalida alcance antes de consultar el resultado. La tabla privada guarda hash e
+identificador, sin respuestas personales. Las migraciones 003/004 amplían el RPC
+con esta garantía y los nombres de responsables ya autorizados; la baseline queda
+intacta y no se amplían permisos de tablas.
+
+La preparación ficticia de Secretaría usa la identidad MFA del administrador para
+los RPC de usuarios/roles y una credencial técnica únicamente para Auth Admin y la
+conciliación de identidad por `kvg_trabajar`. No sustituye la identidad ordinaria en
+operaciones de clientes/expedientes. No hay un trabajador general ejecutándose.

@@ -4,7 +4,9 @@ El usuario ya aplicó el modelo físico en un proyecto Supabase. La inspección
 PostgreSQL confirmó que los elementos comparados coincidían con el SQL. El backend
 incluye el adaptador RPC por identidad y CU023/CU024 con MFA y sesión KVG, verificados
 con cuentas ficticias. Esta guía conserva el diagnóstico de conexión; la preparación
-y prueba del acceso están en [identity.md](identity.md).
+y prueba del acceso están en [identity.md](identity.md). La preparación ficticia y
+pruebas del recorrido mínimo de clientes/expedientes se documentan por separado en
+[clients-and-cases.md](clients-and-cases.md).
 
 La revisión del catálogo se completó mediante una conexión SQL de solo lectura.
 La configuración HTTP está restaurada y coincide con el mismo proyecto; el paso 1

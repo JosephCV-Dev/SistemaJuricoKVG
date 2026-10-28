@@ -15,17 +15,18 @@ identidades Auth ficticias distintas y confirmadas. Las pruebas con el proveedor
 real comprobaron contraseña/MFA, sesión operativa, RPC permitida/denegada,
 revocación y expiración. Las pruebas HTTP locales cubren además CSRF, cookies,
 renovación concurrente, cierre, cuenta inactiva y capacidades/contextos mediante
-puertos simulados. Falta QA en navegador; esto no acredita operaciones sobre
-expedientes, procesamiento de Storage ni respaldos/restauración. Consulta
-[identidad y evidencia](../docs/identity.md).
+puertos simulados. El paso 3A añade el recorrido mínimo de clientes/expedientes,
+una identidad ficticia de Secretaría y pruebas reales de alcance, idempotencia y
+auditoría, además de Chromium local. Storage y recuperación siguen pendientes.
+Consulta [identidad](../docs/identity.md) y [cliente/expediente](../docs/clients-and-cases.md).
 
 ## Archivos y procedencia
 
-| Ruta                                        | Propósito                                                                                                            |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `baseline/Modelo_Fisico_KVG_PostgreSQL.sql` | Copia íntegra del modelo físico entregado por el usuario.                                                            |
-| `migrations/`                               | Cambios incrementales explícitos sobre la baseline, incluidas las dos migraciones de sesión aplicadas en desarrollo. |
-| `tests/README.md`                           | Casos de integración pendientes antes de utilizar datos reales.                                                      |
+| Ruta                                        | Propósito                                                                                                                    |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `baseline/Modelo_Fisico_KVG_PostgreSQL.sql` | Copia íntegra del modelo físico entregado por el usuario.                                                                    |
+| `migrations/`                               | Cambios incrementales explícitos sobre la baseline, incluidas sesiones, idempotencia y responsables aplicados en desarrollo. |
+| `tests/README.md`                           | Casos de integración pendientes antes de utilizar datos reales.                                                              |
 
 Archivo de origen: `Modelo_Fisico_KVG_PostgreSQL.sql`, entregado junto con el modelo conceptual/lógico y diccionario KVG versión 1.1, derivado del RUP de Elaboración versión 2.0. La copia conserva exactamente sus bytes.
 
@@ -43,19 +44,25 @@ sha256sum database/baseline/Modelo_Fisico_KVG_PostgreSQL.sql
 
 La baseline se conserva como referencia. Las correcciones futuras deben quedar en archivos nuevos de `migrations/`, acompañadas de su motivo y validación; no se reescribe el original para ocultar cambios.
 
-## Migraciones de identidad aplicadas en desarrollo
+## Migraciones aplicadas en desarrollo
 
 | Archivo                                     | Cambio                                                                                                                                                               |
 | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `202610280001_server_sessions.sql`          | Crea `kvg_servidor.sesion_web` y el rol limitado `kvg_session_store` para la persistencia técnica; SID como hash, carga cifrada y marcas de revocación.              |
 | `202610280002_identity_session_context.sql` | Añade el helper privado `consultar_sesion()` y la operación fija `sesion.consultar` en `public.kvg_operar`, conservando el despachador y los privilegios ordinarios. |
+| `202610280003_record_creation_requests.sql` | Garantía transaccional de reintento por actor, operación y UUID. Tabla privada con hash/recurso, sin datos personales; revalida alcance en cada repetición.          |
+| `202610280004_case_responsible_names.sql`   | Añade nombres de responsables exclusivamente al detalle de expediente ya autorizado, sin exponer directorio global.                                                  |
 
 Se aplicaron explícitamente como propietario, con verificación posterior. La API
 no ejecuta estas migraciones al arrancar. La tabla técnica se mantiene fuera de las
 37 tablas de negocio de `kvg`, y su rol no obtiene permisos sobre KVG, Auth o
 Storage. La nueva función de contexto incrementa el inventario de funciones KVG
 respecto a las 43 de la baseline. El contrato está en
-[identity-session-contract.md](identity-session-contract.md).
+[identity-session-contract.md](identity-session-contract.md). Las migraciones 003/004
+y su contrato están en [clients-and-cases.md](../docs/clients-and-cases.md). El
+registro de checksum impide repetir o cambiar una migración ya aplicada.
+`npm run setup:records:dev` prepara explícitamente el entorno ficticio y
+`npm run test:records:schema` comprueba los privilegios privados en solo lectura.
 
 ## Instalación inicial (solo para un entorno nuevo)
 

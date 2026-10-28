@@ -3,10 +3,12 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request, Response } from 'express';
+import { randomUUID } from 'node:crypto';
 import { IdentityService } from '../application/identity.service';
 import {
   PUBLIC_ROUTE,
@@ -17,6 +19,7 @@ import { ServerSessions } from './server-sessions.service';
 
 @Injectable()
 export class AuthenticationGuard implements CanActivate {
+  private readonly logger = new Logger('AuthorizationSecurity');
   constructor(
     private readonly reflector: Reflector,
     private readonly sessions: ServerSessions,
@@ -66,16 +69,27 @@ export class AuthenticationGuard implements CanActivate {
     }
     const required = this.reflector.getAllAndOverride<{
       permission: string;
-      context: string;
+      context: string | readonly string[];
     }>(REQUIRED_PERMISSION, handlers);
     if (required) {
       if (
         !request.identity?.capabilities.some(
           (capability) =>
             capability.permission === required.permission &&
-            capability.context === required.context,
+            (typeof required.context === 'string'
+              ? capability.context === required.context
+              : required.context.includes(capability.context)),
         )
       ) {
+        this.logger.warn(
+          JSON.stringify({
+            action: 'AUTORIZACION_DENEGADA',
+            result: 'DENEGADO',
+            actorId: request.identity?.user.id,
+            permission: required.permission,
+            correlationId: randomUUID(),
+          }),
+        );
         throw new ForbiddenException('Operación no autorizada.');
       }
       // El caso de uso y RPC siguen comprobando el recurso y su alcance exacto.
@@ -87,6 +101,14 @@ export class AuthenticationGuard implements CanActivate {
         handlers,
       )
     ) {
+      this.logger.warn(
+        JSON.stringify({
+          action: 'POLITICA_AUSENTE',
+          result: 'DENEGADO',
+          actorId: request.identity?.user.id,
+          correlationId: randomUUID(),
+        }),
+      );
       throw new ForbiddenException(
         'La operación no tiene una política de acceso.',
       );

@@ -17,7 +17,7 @@ export function configureApp(app: INestApplication): void {
   server.disable('x-powered-by');
   app.use(helmet());
   app.use(
-    '/api/v1/auth',
+    '/api/v1',
     (_request: Request, response: Response, next: NextFunction) => {
       response.setHeader('Cache-Control', 'no-store');
       next();

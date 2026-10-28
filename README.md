@@ -1,12 +1,11 @@
 # Sistema Jurídico KVG
 
 Aplicación web interna para gestionar clientes, expedientes y documentos del despacho.
-La base incluye la conexión Supabase verificada y CU023/CU024: inicio y cierre de
-sesión con contraseña, MFA TOTP y sesión del servidor. El recorrido de identidad se
-comprobó por HTTP con Auth y RPC reales en desarrollo; la prueba en navegador y el
-despliegue de producción siguen pendientes. Por petición del usuario, la interfaz
-tiene estilos mínimos para espaciado, formularios y botones; el diseño definitivo
-queda para después.
+La base incluye acceso con MFA y el recorrido mínimo de registrar/consultar clientes
+y crear/consultar expedientes con alcance real. Se verificaron HTTP, RPC y PostgreSQL
+en desarrollo y un recorrido de Chromium local, incluidos formularios y vista móvil.
+El prototipo completo y su despliegue de prueba siguen pendientes. La interfaz
+conserva estilos mínimos; el diseño definitivo queda para después.
 
 ## Arquitectura elegida
 
@@ -28,7 +27,7 @@ apps/
     test/               Pruebas HTTP y de identidad
   web/                  Interfaz React con estilos mínimos
     src/app/            Composición de la aplicación
-    src/features/       Acceso y MFA; siguientes funcionalidades
+    src/features/       Acceso, clientes y expedientes mínimos
     src/shared/api/     Comunicación HTTP
 packages/contracts/     Tipos públicos compartidos de la API
 database/               SQL original, migraciones y pruebas de datos
@@ -37,8 +36,8 @@ docs/                   Arquitectura, análisis y siguientes avances
 ```
 
 Identidad incluye sus endpoints, sesión persistente cifrada y controles de acceso.
-Los demás módulos están registrados, con responsabilidades definidas; sus
-controladores, casos de uso y adaptadores se añadirán al desarrollar cada función.
+Clientes y expedientes incluyen sus capas, formularios y RPC del recorrido mínimo.
+Los demás módulos están registrados y se completarán por caso de uso.
 El trabajador de archivos y respaldos tendrá una entrada independiente dentro del
 mismo backend cuando se implemente el procesamiento persistente.
 
@@ -68,7 +67,8 @@ también `API_PROXY_TARGET` en el archivo de la web. Reinicia los procesos despu
 de cambiar la configuración. `APP_ORIGIN` debe coincidir con el origen de la web;
 usa siempre el mismo host, sin alternar entre `127.0.0.1` y `localhost`.
 
-Ya se prepararon dos cuentas ficticias de desarrollo, administrador y abogado, sin
+Ya se prepararon tres cuentas ficticias de desarrollo: administrador, abogado y
+Secretaría, sin
 enviar correos. Sus credenciales y claves TOTP están en
 `apps/api/.local/identity-development-accounts.json`, ignorado por Git y con permisos
 `0600`. Abre ese archivo únicamente de forma local. Los factores TOTP ya fueron
@@ -93,6 +93,9 @@ Las herramientas de identidad se ejecutan explícitamente desde la raíz:
 npm run setup:identity:dev
 npm run test:identity:schema
 npm run test:identity:live
+npm run setup:records:dev
+npm run test:records:schema
+npm run test:records:live
 ```
 
 `setup:identity:dev` sólo se permite en desarrollo: puede aplicar las migraciones
@@ -102,7 +105,9 @@ realizó en este entorno; no hace falta repetirla para abrir la aplicación.
 `test:identity:schema` verifica el contrato SQL y revierte su transacción.
 `test:identity:live` usa Auth, MFA, sesiones y RPC reales, y modifica únicamente el
 entorno de desarrollo preparado para esas pruebas. Consulta sus requisitos y
-alcance en [identity.md](docs/identity.md).
+alcance en [identity.md](docs/identity.md). La preparación y pruebas de clientes y
+expedientes están en [clients-and-cases.md](docs/clients-and-cases.md). Se ejecutan
+explícitamente en desarrollo; no forman parte del arranque ni de CI.
 
 Después de compilar, `npm run start:api` inicia la API compilada. El resultado de
 la web queda en `apps/web/dist`. El alojamiento final deberá servir web y `/api`
@@ -111,8 +116,8 @@ bajo el mismo origen HTTPS; el despliegue todavía no está configurado.
 ## Base de datos
 
 Se conserva intacta la baseline SQL entregada, instalada previamente por el usuario
-y verificada en Supabase. Se aplicaron después las dos migraciones del incremento
-de identidad, sin reinstalar la baseline. Ninguna instalación, migración o bootstrap
+y verificada en Supabase. Se aplicaron después las migraciones de identidad y del recorrido de clientes y
+expedientes, sin reinstalar la baseline. Ninguna instalación, migración o bootstrap
 se ejecuta al arrancar la API. El procedimiento de instalación nueva se conserva
 como referencia de reconstrucción.
 
@@ -135,21 +140,25 @@ porque el modelo suministrado restringe ese acceso. Consulta el
 - [Arquitectura y decisiones](docs/architecture.md).
 - [Configurar y verificar el Supabase existente](docs/supabase-setup.md).
 - [Inicio/cierre de sesión, MFA y pruebas de identidad](docs/identity.md).
+- [Cliente y expediente mínimos: contrato, preparación y evidencia](docs/clients-and-cases.md).
 - [Actores, reglas y trazabilidad de los 31 casos de uso con Jira](docs/requirements.md).
 - [Orden de implementación y ejemplos de futuras peticiones](docs/roadmap.md).
 
-El siguiente avance es el **paso 3: cliente y expediente mínimos**, aprovechando la
-sesión y los controles ya implementados. La administración completa de usuarios y
-roles (CU018/CU019) sigue pendiente. Puedes pedirlo así:
+El recorrido mínimo de clientes/expedientes del **paso 3A** está implementado y
+verificado en desarrollo. El siguiente avance es **3B: carga privada segura y
+recuperación del prototipo RUP 16.6**, seguido del despliegue de prueba **3C**.
+La administración completa de usuarios/roles y las ampliaciones siguen pendientes.
+Puedes pedirlo así:
 
-> Implementa el paso 3: registrar y consultar un cliente ficticio (CU001/CU002,
-> SCRUM-13/SCRUM-14), crear su expediente y consultarlo (CU004/CU005,
-> SCRUM-41/SCRUM-42). Usa la sesión existente y el contrato RPC; incluye validación,
-> permiso, alcance y auditoría, con acceso permitido y denegado verificados. Mantén
-> los formularios funcionales con el estilo mínimo existente.
+> Continúa el paso 3B a partir del cliente y expediente mínimos: implementa la carga
+> privada para un expediente autorizado, cuarentena, verificación real de contenido,
+> antimalware y SHA-256, y consulta/descarga autorizadas. Incluye denegación para otra
+> identidad y prepara el ensayo de copia/recuperación de datos, objetos y manifiesto
+> necesario para cerrar RUP 16.6. Mantén el estilo mínimo y documenta qué falta para
+> desplegar el prototipo en el entorno de prueba separado del paso 3C.
 
-Commit sugerido para el incremento de identidad:
+Commit sugerido para el incremento de clientes/expedientes:
 
 ```text
-feat(identity): implementar inicio y cierre de sesion con MFA
+feat(records): implementar clientes y expedientes con alcance e idempotencia
 ```

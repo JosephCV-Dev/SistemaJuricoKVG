@@ -6,5 +6,7 @@ export const REQUIRED_PERMISSION = 'kvg:required-permission';
 
 export const Public = () => SetMetadata(PUBLIC_ROUTE, true);
 export const Authenticated = () => SetMetadata(SELF_AUTHENTICATED_ROUTE, true);
-export const RequirePermission = (permission: string, context: string) =>
-  SetMetadata(REQUIRED_PERMISSION, { permission, context });
+export const RequirePermission = (
+  permission: string,
+  context: string | readonly string[],
+) => SetMetadata(REQUIRED_PERMISSION, { permission, context });

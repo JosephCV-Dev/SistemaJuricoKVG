@@ -8,15 +8,17 @@ import type {
 
 const authBase = '/api/v1/auth';
 
-export class AuthRequestError extends Error {
-  readonly status: number;
+export { AuthRequestError } from '../../shared/api/session-http.ts';
+import {
+  getJson as getSessionJson,
+  mutate as mutateSession,
+  readJson,
+} from '../../shared/api/session-http.ts';
 
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = 'AuthRequestError';
-    this.status = status;
-  }
-}
+const getJson = (path: string, signal: AbortSignal) =>
+  getSessionJson(`${authBase}/${path}`, signal);
+const mutate = (path: string, body: object, signal: AbortSignal) =>
+  mutateSession(`${authBase}/${path}`, body, signal);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -99,75 +101,6 @@ function readAuthState(value: unknown): AuthState {
   }
 
   return invalidResponse();
-}
-
-async function readJson(response: Response): Promise<unknown> {
-  if (!response.ok) {
-    let message = 'No fue posible completar la operación de acceso.';
-
-    try {
-      const body: unknown = await response.json();
-
-      if (isRecord(body)) {
-        if (isText(body.message, 500)) {
-          message = body.message;
-        } else if (
-          Array.isArray(body.message) &&
-          body.message.length <= 10 &&
-          body.message.every((item: unknown) => isText(item, 200))
-        ) {
-          message = body.message.join(' ');
-        }
-      }
-    } catch {
-      // Un error sin JSON conserva el mensaje público genérico.
-    }
-
-    throw new AuthRequestError(message, response.status);
-  }
-
-  try {
-    return await response.json();
-  } catch {
-    return invalidResponse();
-  }
-}
-
-async function getJson(path: string, signal: AbortSignal): Promise<unknown> {
-  return readJson(
-    await fetch(`${authBase}/${path}`, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      credentials: 'same-origin',
-      cache: 'no-store',
-      signal,
-    }),
-  );
-}
-
-async function mutate(
-  path: string,
-  body: object,
-  signal: AbortSignal,
-): Promise<Response> {
-  // El servidor puede rotar el token tras login o MFA; no se conserva entre cambios.
-  const csrf = await getJson('csrf', signal);
-
-  if (!isRecord(csrf) || !isText(csrf.csrfToken, 4096)) {
-    return invalidResponse();
-  }
-
-  return fetch(`${authBase}/${path}`, {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': csrf.csrfToken,
-    },
-    body: JSON.stringify(body),
-    signal,
-  });
 }
 
 export async function getSession(signal: AbortSignal): Promise<AuthState> {

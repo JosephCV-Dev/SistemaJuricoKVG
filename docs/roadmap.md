@@ -2,11 +2,11 @@
 
 ## Estado de partida
 
-El proyecto es un monorepo de npm workspaces: `apps/web` para React/TypeScript/Vite, `apps/api` para NestJS y `packages/contracts` para tipos HTTP compartidos. La instalación Supabase existente está verificada y CU023/CU024 tienen un recorrido de acceso implementado y probado en desarrollo. El siguiente incremento es cliente y expediente mínimos; después corresponde demostrar el prototipo de RUP 16.6.
+El proyecto es un monorepo de npm workspaces: `apps/web` para React/TypeScript/Vite, `apps/api` para NestJS y `packages/contracts` para tipos HTTP compartidos. La instalación Supabase existente está verificada y CU023/CU024 tienen un recorrido de acceso implementado y probado en desarrollo. El recorrido mínimo de cliente y expediente del paso 3A ya está implementado y verificado; faltan el recorrido documental/recuperación 3B y el despliegue temprano 3C para completar RUP 16.6.
 
 **Paso 1 completado: conectividad y catálogo verificados.** El 28 de octubre de 2026 se comprobó directamente el catálogo por PostgreSQL, con TLS validado y una transacción de solo lectura. La comparación inicial confirmó las 37 tablas, 338 columnas y 43 funciones de la baseline, sus privilegios RPC, RLS y los dos buckets privados. HTTP y SQL corresponden al mismo proyecto. La evidencia de esa revisión está en [supabase-verification.md](supabase-verification.md).
 
-**Paso 2 implementado y verificado en desarrollo.** Se aplicaron explícitamente las migraciones de persistencia técnica y contexto de sesión y se inicializaron dos identidades Auth ficticias distintas. Se probó el proveedor real con contraseña, MFA y sesión KVG, operaciones RPC permitidas y denegadas y rechazo tras revocación o expiración. Las pruebas HTTP locales cubren también CSRF/origen, cookies, renovación concurrente, cierre, cuenta inactiva y permiso/contexto mediante puertos simulados. El recorrido en navegador queda pendiente. Esto no completa la administración de usuarios/permisos ni acredita acceso a expedientes, procesamiento de archivos o recuperación. El contrato y el alcance están en [identity.md](identity.md).
+**Paso 2 implementado y verificado en desarrollo.** Se aplicaron explícitamente las migraciones de persistencia técnica y contexto de sesión y se inicializaron dos identidades Auth ficticias distintas. Se probó el proveedor real con contraseña, MFA y sesión KVG, operaciones RPC permitidas y denegadas y rechazo tras revocación o expiración. Las pruebas HTTP locales cubren también CSRF/origen, cookies, renovación concurrente, cierre, cuenta inactiva y permiso/contexto mediante puertos simulados. El acceso se comprobó después en Chromium local con el paso 3A. Esto no completa la administración de usuarios/permisos ni el procesamiento de archivos o recuperación. El contrato y el alcance están en [identity.md](identity.md).
 
 La trazabilidad y los requisitos están en [requirements.md](requirements.md). La estructura permite avanzar mediante casos de uso completos: entrada funcional, validación del servidor, reglas, persistencia, autorización, resultado verificable y pruebas relevantes. El usuario autorizó estilos mínimos para que los formularios sean legibles y ordenados: fondo neutro, secciones, espaciado y botones sencillos, sin animaciones. Cada interfaz conserva controles HTML semánticos y mensajes comprensibles. El diseño definitivo permanece en el paso 7 y la usabilidad se verifica en cada entrega.
 
@@ -33,9 +33,22 @@ CU023/CU024 — SCRUM-149/SCRUM-150 están implementados y verificados en desarr
 
 Las migraciones `202610280001_server_sessions.sql` y `202610280002_identity_session_context.sql` se aplicaron explícitamente. La primera separa la persistencia web en `kvg_servidor`, con un rol técnico restringido; la segunda añade `sesion.consultar` a `public.kvg_operar`. El bootstrap utiliza dos identidades ficticias confirmadas para desarrollo, sin registro público ni secretos en el repositorio. Esto prepara bases de CU018/CU019, cuyos recorridos completos de administración siguen pendientes. Los límites de ocho horas y treinta minutos de inactividad y la matriz definitiva siguen sujetos a PT02/PT07.
 
-La verificación real cubre Auth/MFA, sesión KVG, RPC permitida/denegada, revocación y expiración. Las pruebas HTTP con puertos simulados cubren cuenta inactiva, capacidades/contextos, denegación de rutas sin política, CSRF/origen, rotaciones de cookie, renovación concurrente y reutilización de una cookie cerrada. Falta QA en navegador. La denegación entre identidades sobre expedientes y archivos se demostrará al implementar esos recursos, sin atribuirla a las pruebas de permisos simuladas.
+La verificación real cubre Auth/MFA, sesión KVG, RPC permitida/denegada, revocación y expiración. Las pruebas HTTP con puertos simulados cubren cuenta inactiva, capacidades/contextos, denegación de rutas sin política, CSRF/origen, rotaciones de cookie, renovación concurrente y reutilización de una cookie cerrada. El paso 3A añade Chromium local y denegación real entre identidades sobre clientes y expedientes. La denegación de archivos se demostrará con su integración, sin atribuirla a pruebas simuladas.
 
 ### 3. Cliente y expediente mínimos, prototipo completo y despliegue temprano
+
+**3A implementado y verificado en desarrollo.** Registro/consulta de cliente y
+creación/consulta de expediente con sesión MFA, DTO, permisos por contexto, alcance,
+auditoría y reintentos idempotentes. Se preparó una cuenta ficticia de Secretaría
+mediante RPC ordinario y conciliación técnica, sin ampliar la matriz ni conceder
+lectura jurídica al administrador. Se probaron duplicados normalizados, denegación
+entre identidades, asignación por RPC y revocación con cookie vigente. Pasaron 37
+comprobaciones reales de este recorrido y 14 en Chromium local, incluida vista
+móvil. El contrato y límites están en [clients-and-cases.md](clients-and-cases.md).
+
+**3B y 3C pendientes. El paso 3 completo sigue abierto.** Lo que sigue detalla sus
+criterios originales: el recorrido mínimo ya se demostró localmente; todavía no
+existen carga privada verificada, recuperación del conjunto ni despliegue de prueba.
 
 Después del acceso, implementar un recorrido mínimo de CU001/CU002 — SCRUM-13/SCRUM-14 y CU004/CU005 — SCRUM-41/SCRUM-42: registrar y consultar un cliente ficticio, crear su expediente y consultarlo con alcance autorizado. Incorporar la asignación o concesión explícita mínima que exija el contrato, sin abrir acceso global para simplificar la demostración.
 
@@ -98,7 +111,7 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 > Implementa CU023 y CU024, SCRUM-149 y SCRUM-150: inicio y cierre de sesión con Supabase Auth, MFA y sesión operativa del servidor mediante cookie HttpOnly. Incluye renovación/revocación, protección CSRF, autorización básica y auditoría. Verifica cuenta inactiva, sesión vencida y acceso sin autorización. Usa formularios funcionales con el estilo mínimo existente y documenta los valores propuestos de sesión.
 
-**Siguiente petición recomendada: cliente y expediente mínimos:**
+**Recorrido mínimo 3A (implementado y verificado en desarrollo; referencia):**
 
 > Implementa el paso 3: un recorrido mínimo de CU001/CU002 y CU004/CU005 para registrar y consultar un cliente ficticio, crear su expediente y consultarlo con identidad, permiso y alcance reales. Incluye los prerrequisitos mínimos de rol/asignación que exija el contrato, auditoría y pruebas permitidas/denegadas. Mantén controles funcionales con el estilo mínimo existente y registra lo que falta para el prototipo RUP 16.6.
 
@@ -114,7 +127,7 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 > Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz con el estilo mínimo existente.
 
-**Prototipo y despliegue temprano:**
+**Siguiente petición recomendada: prototipo 3B y despliegue temprano 3C:**
 
 > Con acceso y cliente/expediente mínimos funcionando, completa el prototipo de RUP 16.6 con datos ficticios: identidad real, carga privada segura, consulta autorizada, denegación para otra identidad y copia/recuperación verificable de datos y objetos. Despliégalo en un entorno de prueba con HTTPS y registra la evidencia. Mantén la usabilidad funcional con el estilo mínimo existente y distingue este ensayo de la gestión completa de respaldos de la etapa 6.
 

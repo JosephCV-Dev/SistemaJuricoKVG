@@ -44,6 +44,6 @@ import { AuthenticationGuard } from './presentation/authentication.guard';
     AuthRateLimitGuard,
     { provide: APP_GUARD, useClass: AuthenticationGuard },
   ],
-  exports: [ServerSessions, IdentityService],
+  exports: [ServerSessions, IdentityService, CsrfGuard],
 })
 export class IdentityModule {}

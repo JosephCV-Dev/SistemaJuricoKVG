@@ -13,6 +13,14 @@ locales con puertos simulados. La evidencia y los límites están en
 [identity.md](../../docs/identity.md). Esto no acredita todos los escenarios de la
 tabla ni los casos de uso de negocio pendientes.
 
+El paso 3A añade `records.sql` (`npm run test:records:schema`) para comprobar
+metadatos, RLS y ausencia de privilegios directos. `npm run test:records:live` pasó
+37 comprobaciones reales de cliente/expediente: duplicados normalizados, reintento
+concurrente sin dobles altas, alcance entre identidades, asignación, revocación y
+auditoría. También se comprobó el recorrido en Chromium local. Los escenarios de
+archivos, recuperación y ampliaciones de la tabla siguen pendientes; ver
+[clients-and-cases.md](../../docs/clients-and-cases.md).
+
 Las pruebas deben ejecutar los puntos de entrada reales, con identidades y sesiones de Supabase Auth, y verificar el estado persistido mediante una conexión de inspección exclusiva del entorno de pruebas. Los clientes de usuario y de servicio conservan los mismos privilegios que tendrán en operación.
 
 | Área / referencia            | Caso y resultado esperado                                                                                                                                                                                                                                                    |

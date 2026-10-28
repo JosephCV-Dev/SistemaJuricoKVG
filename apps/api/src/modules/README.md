@@ -1,8 +1,9 @@
 # Módulos del backend
 
 Cada módulo delimita un área funcional. `identity` implementa CU023/CU024 con sus
-capas y endpoints de acceso. Los demás módulos están registrados y todavía no
-exponen operaciones de negocio.
+capas y endpoints de acceso. `clients` y `cases` implementan el recorrido mínimo
+de registro/consulta del paso 3A con sus capas y RPC. Los demás módulos están
+registrados y todavía no exponen operaciones de negocio.
 
 | Carpeta         | Responsabilidad                                                   |
 | --------------- | ----------------------------------------------------------------- |

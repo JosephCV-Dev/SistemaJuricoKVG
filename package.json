@@ -25,7 +25,10 @@
     "setup:identity:dev": "npm run setup:identity:dev --workspace @kvg/api",
     "test:web": "npm run test --workspace @kvg/web",
     "test:identity:live": "npm run build --workspace @kvg/api && npm run test:identity:live --workspace @kvg/api",
-    "test:identity:schema": "npm run test:identity:schema --workspace @kvg/api"
+    "test:identity:schema": "npm run test:identity:schema --workspace @kvg/api",
+    "setup:records:dev": "npm run build --workspace @kvg/api && npm run setup:records:dev --workspace @kvg/api",
+    "test:records:live": "npm run build --workspace @kvg/api && npm run test:records:live --workspace @kvg/api",
+    "test:records:schema": "npm run test:records:schema --workspace @kvg/api"
   },
   "devDependencies": {
     "concurrently": "10.0.6",

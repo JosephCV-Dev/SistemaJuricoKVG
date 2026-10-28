@@ -124,11 +124,13 @@ definiciones de todos los índices y restricciones.
 Las pruebas HTTP locales complementan el recorrido real con cuenta inactiva,
 permisos/contextos revocados, rutas sin política, DTO inválidos, límites de intentos
 y fallos transitorios del proveedor. Usan dobles de prueba y no sustituyen ensayos
-de todos esos escenarios contra Supabase. No se ha probado el formulario en un
-navegador ni la cookie `Secure` detrás del proxy HTTPS de producción.
+de todos esos escenarios contra Supabase. El formulario se probó posteriormente en Chromium local durante el paso 3A; no
+se ha probado la cookie `Secure` detrás del proxy HTTPS de producción.
 
-El siguiente avance es cliente y expediente mínimos (CU001/CU002 y CU004/CU005),
-seguido del prototipo de RUP 16.6. La carga privada, análisis, descarga autorizada,
+El recorrido mínimo CU001/CU002 y CU004/CU005 ya se verificó después con una
+cuenta ficticia adicional de Secretaría y las migraciones 003/004: 37 comprobaciones
+reales de datos/alcance y 14 en Chromium local. Su evidencia y límites están en
+[clients-and-cases.md](clients-and-cases.md). El prototipo RUP 16.6 sigue abierto. La carga privada, análisis, descarga autorizada,
 respaldo y recuperación siguen pendientes. Al cierre del proyecto se configurará
 y verificará producción, incluidos Auth, permisos/RLS, Storage, secretos, proxy,
 monitoreo y restauración, según [roadmap.md](roadmap.md).

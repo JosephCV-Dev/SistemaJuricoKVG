@@ -1,8 +1,9 @@
 # Funcionalidades
 
 `identity/` contiene el acceso con contraseña y MFA y la consulta, renovación y
-cierre de sesión. Aquí se incorporarán después los formularios de clientes,
-expedientes, documentos, auditoría, configuración y recuperación.
+cierre de sesión. `records/` contiene el recorrido mínimo de clientes y expedientes,
+con formularios separados de registro/apertura, listados y detalles. Documentos,
+auditoría, configuración y recuperación se incorporarán después.
 
 Cada incremento debe identificar sus casos de uso y criterios de aceptación. La
 validación del navegador complementa la del servidor; el acceso efectivo siempre
