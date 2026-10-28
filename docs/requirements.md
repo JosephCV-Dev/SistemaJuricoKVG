@@ -1,0 +1,114 @@
+# Análisis del proyecto y trazabilidad
+
+## Propósito y alcance
+
+El Sistema de Gestión Documental KVG es una aplicación web interna para centralizar clientes, expedientes, responsables y documentos del despacho. Debe permitir encontrar información, seguir los asuntos y conservar evidencia de operaciones, versiones y recuperación.
+
+La primera versión contempla clientes, expedientes, asignaciones, documentos privados, versiones, revisión documental, avances, retiro y recuperación de documentos, usuarios, permisos, auditoría, configuración y respaldos con restauración.
+
+La búsqueda comprende metadatos: nombre, categoría, expediente, cliente y fecha. Quedan fuera el portal de clientes, la firma electrónica, la integración con tribunales, la facturación, los pagos, el OCR y la búsqueda dentro del contenido completo de archivos.
+
+Esta preparación implementa únicamente la base del proyecto y su comprobación de salud. Los casos de uso y los controles siguientes son requisitos pendientes de implementación; la existencia de carpetas, módulos o SQL no acredita que estén integrados o probados. El diseño visual se pospone por instrucción del usuario.
+
+## Fuentes y diferencias resueltas
+
+Se analizaron los cinco archivos proporcionados, conservando la distinción entre requisitos documentales, propuestas pendientes de validación y el trabajo autorizado en esta etapa.
+
+| Fuente                                         | Uso en esta preparación                                                                                                                                                                                                                                  |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RUP Fase de Construcción.pdf`                 | Contiene la revisión de Elaboración **v2.0, de 3 de octubre de 2026**: 31 casos de uso, RN01–RN23 y arquitectura de monolito modular con React, NestJS y Supabase. Es la referencia de requisitos más reciente entre los documentos RUP entregados.      |
+| `Proyecto RUP_Fase de Elaboración.pdf`         | Antecedente con 22 casos de uso y propuesta PHP/MySQL/Apache/XAMPP. La revisión v2.0 identifica expresamente esta versión anterior y cambia la propuesta tecnológica. Se conservan los identificadores CU001–CU022.                                      |
+| `Modelo_Logico_Conceptual_Diccionario_KVG.pdf` | Modelo **v1.1, de 4 de octubre de 2026**, derivado del RUP v2.0: 37 relaciones y 337 atributos lógicos, con trazabilidad a los 31 CU. Sigue siendo una propuesta para validación.                                                                        |
+| `Modelo_Fisico_KVG_PostgreSQL.sql`             | Implementación física suministrada para PostgreSQL 15 o superior con Supabase Auth y Storage. Su instalación y compatibilidad necesitan verificación en un entorno de desarrollo; no basta un PostgreSQL vacío sin los servicios y esquemas de Supabase. |
+| `Jira-SCRUM-completo.md`                       | Copia de lectura con 7 épicas, 31 elementos de tipo Feature y 183 subtareas. Permite vincular el código futuro con el trabajo registrado; no se modificó Jira.                                                                                           |
+
+La elección para el repositorio sigue la revisión v2.0 y los modelos posteriores: **React + TypeScript + Vite; Node + NestJS; PostgreSQL con Supabase Auth y Storage privado**. XAMPP, PHP y MySQL pertenecen al antecedente y no se mezclan con esta base.
+
+Jira asigna al Sprint 1 las funcionalidades y subtareas de clientes. Eso no elimina la dependencia técnica de identidad, sesiones, alcance y auditoría. El orden propuesto en [roadmap.md](roadmap.md) incorpora esos prerrequisitos. Las subtareas de formularios se abordarán con controles funcionales y HTML semántico; los colores, animaciones y demás diseño visual quedan para otra etapa.
+
+Los documentos siguen pendientes de validación del despacho en los puntos PT01–PT08. Esta preparación no convierte las propuestas en decisiones aprobadas ni acredita la aceptación formal de Elaboración.
+
+## Actores y alcance de acceso
+
+| Actor         | Responsabilidad                                                                        | Límite                                                                                                                                                                |
+| ------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Secretaria    | Registrar clientes y expedientes, organizar documentos y gestionar asignaciones.       | Cada operación requiere permiso y alcance. Las decisiones jurídicas de conclusión, reapertura o validación exigen facultad específica.                                |
+| Abogado       | Consultar expedientes autorizados, incorporar y revisar documentos, registrar avances. | La condición de abogado no concede lectura global: requiere asignación o acceso explícito al expediente. Principal y colaboradores pueden tener facultades distintas. |
+| Administrador | Gestionar identidades, permisos, configuración, auditoría y recuperación.              | La administración técnica no concede acceso jurídico automático. Sus operaciones deben usar los metadatos mínimos necesarios.                                         |
+| Cliente       | Proporcionar información al despacho.                                                  | Es una entidad del negocio, sin acceso directo a esta versión del sistema.                                                                                            |
+
+Una persona puede reunir varios roles mediante asignaciones explícitas y auditadas. La autorización combina cuenta y sesión vigentes, permiso de operación y alcance del recurso; ocultar un botón en el navegador no constituye autorización.
+
+## Catálogo completo de casos de uso
+
+Los nombres de carpetas están en inglés y los identificadores de negocio conservan los del RUP y Jira. La tabla indica responsabilidad funcional, sin declarar ninguna funcionalidad terminada.
+
+| CU    | Función                             | Jira Feature | Módulo principal           |
+| ----- | ----------------------------------- | ------------ | -------------------------- |
+| CU001 | Registrar cliente                   | SCRUM-13     | `clients`                  |
+| CU002 | Consultar cliente                   | SCRUM-14     | `clients`                  |
+| CU003 | Actualizar cliente                  | SCRUM-15     | `clients`                  |
+| CU004 | Crear expediente                    | SCRUM-41     | `cases`                    |
+| CU005 | Consultar expediente                | SCRUM-42     | `cases`                    |
+| CU006 | Actualizar estado del expediente    | SCRUM-43     | `cases`                    |
+| CU007 | Asignar expediente a abogado        | SCRUM-44     | `cases`                    |
+| CU008 | Subir documento                     | SCRUM-127    | `documents`                |
+| CU009 | Clasificar documento                | SCRUM-128    | `documents`                |
+| CU010 | Relacionar documento con expediente | SCRUM-129    | `documents`                |
+| CU011 | Buscar documento                    | SCRUM-130    | `documents`                |
+| CU012 | Consultar documento                 | SCRUM-131    | `documents`                |
+| CU013 | Descargar documento                 | SCRUM-132    | `documents`                |
+| CU014 | Actualizar documento                | SCRUM-133    | `documents`                |
+| CU015 | Consultar expedientes asignados     | SCRUM-45     | `cases`                    |
+| CU016 | Revisar documentos del expediente   | SCRUM-134    | `documents`                |
+| CU017 | Actualizar avance del expediente    | SCRUM-46     | `cases`                    |
+| CU018 | Administrar usuarios                | SCRUM-138    | `identity`                 |
+| CU019 | Administrar roles y permisos        | SCRUM-139    | `identity`                 |
+| CU020 | Consultar bitácora                  | SCRUM-168    | `audit`                    |
+| CU021 | Configurar sistema                  | SCRUM-169    | `configuration`            |
+| CU022 | Gestionar respaldos                 | SCRUM-196    | `operations`               |
+| CU023 | Iniciar sesión                      | SCRUM-149    | `identity`                 |
+| CU024 | Cerrar sesión                       | SCRUM-150    | `identity`                 |
+| CU025 | Reasignar expediente                | SCRUM-47     | `cases`                    |
+| CU026 | Cambiar estado del documento        | SCRUM-135    | `documents`                |
+| CU027 | Retirar documento                   | SCRUM-136    | `documents`                |
+| CU028 | Recuperar registro                  | SCRUM-198    | `operations` / `documents` |
+| CU029 | Consultar versiones del documento   | SCRUM-137    | `documents`                |
+| CU030 | Restaurar respaldo                  | SCRUM-197    | `operations`               |
+| CU031 | Actualizar datos del expediente     | SCRUM-48     | `cases`                    |
+
+CU018 agrupa alta, actualización y desactivación de usuarios. CU014 distingue edición de metadatos y publicación de una nueva versión. CU028 se concreta en documentos, el recurso que tiene retiro previsto en esta línea base. `audit` interviene transversalmente: consultar la bitácora no sustituye el registro automático de las operaciones.
+
+## Reglas que condicionan la implementación
+
+| Reglas RUP | Comportamiento requerido                                                                                                                                                                                                                                                                                                      |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RN01–RN03  | Identidad verificada, cuenta activa y sesión operativa vigente. Denegación por defecto; permisos por operación y recurso aplicados también a listados, conteos y archivos. El administrador no obtiene lectura jurídica automática.                                                                                           |
+| RN04–RN06  | Cada expediente conserva un cliente principal registrado y un folio interno único y estable, separado del identificador externo. Puede comenzar sin abogado, pero necesita un principal activo antes de entrar en proceso. Los colaboradores y las reasignaciones conservan historial y revisan accesos.                      |
+| RN07       | Los expedientes usan `NUEVO`, `EN_PROCESO`, `PENDIENTE`, `CONCLUIDO` y `ARCHIVADO`. Las transiciones siguen una matriz; conclusión y reapertura requieren motivo y autorización específica.                                                                                                                                   |
+| RN08–RN10  | Todo documento disponible pertenece a un expediente. Las cargas quedan en cuarentena privada hasta superar tamaño, contenido real, antimalware y SHA-256 calculado de forma confiable. La propuesta de formatos es PDF, DOCX, JPG y PNG de hasta 20 MB, pendiente de PT03. Un fallo de análisis mantiene el bloqueo.          |
+| RN11–RN12  | Cada versión nueva conserva un objeto distinto y los originales anteriores. El estado documental corresponde a la versión vigente: `RECIBIDO`, `EN_REVISION`, `VALIDADO`, `ARCHIVADO`. La verificación técnica y la revisión jurídica son procesos separados; esta última se vincula a una versión exacta.                    |
+| RN13–RN14  | Cambiar la asociación documental exige acceso al origen y destino, motivo y trazabilidad. Las identificaciones declaradas únicas se normalizan y verifican; coincidir en nombre sólo genera advertencia y no basta para rechazar un cliente como duplicado.                                                                   |
+| RN15–RN16  | Retirar un documento es una operación lógica recuperable. No hay borrado físico automático ni cascadas destructivas. Recuperar exige relaciones y archivos verificables y aplica permisos actuales; la recuperación incompleta no habilita disponibilidad.                                                                    |
+| RN17–RN18  | Autor e instante de servidor en UTC, con presentación propuesta en `America/Merida`. Auditoría de acciones críticas y resultados protegida frente a edición; sin credenciales, tokens ni contenido jurídico completo. Las importaciones conservan procedencia y no inventan fechas históricas.                                |
+| RN19–RN20  | El respaldo abarca datos, objetos y manifiestos; requiere copia cifrada independiente y prueba de recuperación. Los datos relacionados se modifican mediante transacciones y revisiones para concurrencia. PostgreSQL y Storage no forman una sola transacción: hacen falta estados, reintentos, compensación y conciliación. |
+| RN21–RN23  | Recabar únicamente información necesaria y respetar conservación/restricciones jurídicas. Desactivar catálogos usados sin romper referencias. Restaurar con permiso específico, autenticación reforzada, autorización operativa y verificación aislada antes de sustituir producción.                                         |
+
+Otros requisitos transversales del RUP: cuentas individuales por invitación, sin registro público; MFA en producción; sesión operativa verificada en el servidor; cookie con `HttpOnly`, `Secure` y `SameSite` explícito; protección CSRF para cambios; limitación de intentos y errores de autenticación genéricos. Ninguno se considera implementado por esta estructura inicial.
+
+## Decisiones pendientes del despacho
+
+Estos puntos se registran para no fijar políticas de negocio por accidente. No impiden preparar el repositorio; deben resolverse al abordar el comportamiento afectado.
+
+| ID   | Tema pendiente                | Propuesta de los documentos                                                                                                                                                  |
+| ---- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PT01 | Tipos de cliente y asuntos    | Un cliente principal por expediente. Validar personas morales y varios clientes por asunto.                                                                                  |
+| PT02 | Acceso, asignaciones y sesión | Principal, colaboradores y accesos explícitos, sin consulta global por defecto. Validar matriz y límites propuestos de 30 minutos de inactividad y 8 horas de sesión máxima. |
+| PT03 | Formatos y volumen            | PDF, DOCX, JPG y PNG hasta 20 MB. Inventariar archivos reales y revisar necesidad de XLSX.                                                                                   |
+| PT04 | Recuperación                  | RPO de una hora y RTO de cuatro horas como objetivos sujetos a costo y ensayo, sin garantía actual.                                                                          |
+| PT05 | Conservación                  | Definir plazos de documentos, versiones, auditoría y respaldos; restricciones jurídicas prevalecen.                                                                          |
+| PT06 | Conectividad y nube           | Validar Internet, región, tratamiento de datos y acceso remoto autorizado.                                                                                                   |
+| PT07 | Facultades jurídicas          | Designar quién puede concluir/reabrir expedientes y validar documentos.                                                                                                      |
+| PT08 | Operación y presupuesto       | Definir planes, titularidad de cuentas, soporte y responsables posteriores a la entrega.                                                                                     |
+
+Cada decisión futura debe registrar el responsable que la autorizó, fecha, valor acordado y requisitos afectados. Los ambientes de desarrollo usarán datos ficticios y credenciales propias.

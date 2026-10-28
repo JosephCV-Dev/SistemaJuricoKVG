@@ -1,0 +1,30 @@
+{
+  "name": "sistema-juridico-kvg",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": "^24.0.0 || ^26.0.0",
+    "npm": ">=11"
+  },
+  "scripts": {
+    "dev": "concurrently --kill-others --names api,web \"npm run dev --workspace @kvg/api\" \"npm run dev --workspace @kvg/web\"",
+    "dev:api": "npm run dev --workspace @kvg/api",
+    "dev:web": "npm run dev --workspace @kvg/web",
+    "build": "npm run build --workspace @kvg/contracts && npm run build --workspace @kvg/api && npm run build --workspace @kvg/web",
+    "start:api": "npm run start --workspace @kvg/api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run build --workspace @kvg/api && npm run test --workspace @kvg/api",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run format:check && npm run typecheck && npm run build && npm run test --workspace @kvg/api"
+  },
+  "devDependencies": {
+    "concurrently": "10.0.6",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3"
+  }
+}
