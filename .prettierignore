@@ -4,3 +4,4 @@ coverage/
 package-lock.json
 database/baseline/
 *.tsbuildinfo
+.local/

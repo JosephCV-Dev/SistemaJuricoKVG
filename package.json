@@ -20,7 +20,12 @@
     "test": "npm run build --workspace @kvg/api && npm run test --workspace @kvg/api",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run format:check && npm run typecheck && npm run build && npm run test --workspace @kvg/api"
+    "check": "npm run format:check && npm run typecheck && npm run build && npm run test --workspace @kvg/api && npm run test:web",
+    "check:supabase": "npm run build --workspace @kvg/api && npm run check:supabase --workspace @kvg/api",
+    "setup:identity:dev": "npm run setup:identity:dev --workspace @kvg/api",
+    "test:web": "npm run test --workspace @kvg/web",
+    "test:identity:live": "npm run build --workspace @kvg/api && npm run test:identity:live --workspace @kvg/api",
+    "test:identity:schema": "npm run test:identity:schema --workspace @kvg/api"
   },
   "devDependencies": {
     "concurrently": "10.0.6",

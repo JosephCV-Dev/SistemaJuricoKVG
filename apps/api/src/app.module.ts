@@ -9,10 +9,12 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { ConfigurationModule } from './modules/configuration/configuration.module';
 import { OperationsModule } from './modules/operations/operations.module';
+import { SupabaseModule } from './infrastructure/supabase/supabase.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
+    SupabaseModule,
     HealthModule,
     IdentityModule,
     ClientsModule,

@@ -1,4 +1,4 @@
-# Arquitectura inicial
+# Arquitectura del sistema
 
 ## Decisión de referencia
 
@@ -21,24 +21,30 @@ flowchart TD
   api --> identity[Identidad y permisos]
   api --> business[Clientes, expedientes y documentos]
   api --> management[Auditoría y configuración]
-  identity -. Integración pendiente .-> auth[Supabase Auth]
-  business -. RPC con identidad del usuario .-> db[PostgreSQL / kvg_operar]
+  identity -->|Contraseña y TOTP MFA| auth[Supabase Auth]
+  identity -->|RPC con JWT real del usuario| db[PostgreSQL / kvg_operar]
+  identity -->|Rol técnico restringido / contenido cifrado| sessions[PostgreSQL / kvg_servidor.sesion_web]
+  business -. RPC con identidad del usuario .-> db
   business -. Autorización y transferencia controlada .-> storage[Storage privado]
   worker[Trabajador futuro / mismo backend] -. Trabajo técnico / kvg_trabajar .-> db
   worker -. Verificación y conciliación .-> storage
   worker -. Datos, objetos y manifiestos .-> backup[Copia cifrada independiente]
 ```
 
-Las conexiones a Supabase, Storage, trabajador y copia independiente representan
-la arquitectura prevista. Esta entrega ejecuta únicamente React, la API y su
-comprobación de salud; no implementa todavía esos procesos externos.
+React y la API incluyen inicio/cierre de sesión con Supabase Auth, MFA TOTP y
+sesión operativa KVG. La persistencia de la cookie del servidor está separada de
+las tablas de negocio. Las conexiones discontinuas representan trabajo pendiente:
+clientes/expedientes, transferencia de archivos, trabajador y recuperación. La
+verificación de identidad en desarrollo no acredita todavía el prototipo completo.
 
 ## Límites del código
 
 `apps/web` consume HTTP y presenta resultados. Las funcionalidades futuras irán en
 `src/features/<funcionalidad>`, mientras `src/app` compone la aplicación y
-`src/shared` contiene utilidades realmente compartidas. No se añaden componentes
-visuales, CSS ni animaciones durante esta etapa.
+`src/shared` contiene utilidades realmente compartidas. Por petición del usuario,
+`src/app/styles.css` aporta estilos mínimos de espaciado, formularios, botones y
+foco de teclado, adaptados a pantallas pequeñas. Se usa CSS sin dependencias nuevas;
+el diseño definitivo y las animaciones siguen pospuestos.
 
 `apps/api/src/modules` delimita identidad, clientes, expedientes, documentos,
 auditoría, configuración y operaciones. Las capas se crean cuando tienen código:
@@ -63,22 +69,62 @@ TypeScript por sí solos no validan datos recibidos por HTTP.
 ## Acceso a datos y confianza
 
 La baseline restringe las operaciones ordinarias a `public.kvg_operar` y las
-técnicas a `public.kvg_trabajar`. El backend futuro creará el cliente ordinario por
-petición, usando identidad real del usuario conservada en su sesión del servidor.
-La API elegirá operaciones concretas a partir de endpoints definidos; no ofrecerá
+técnicas a `public.kvg_trabajar`. La fábrica del backend crea un cliente ordinario
+por llamada con el token obtenido de la sesión validada del servidor.
+La API elige operaciones concretas a partir de endpoints definidos; no ofrece
 un puente RPC libre que acepte operaciones arbitrarias del navegador.
 
-Las cookies de sesión protegidas, MFA, renovación, revocación, CSRF y comprobación
-del alcance todavía deben implementarse. El SQL exige `aal2` y sesión operativa KVG;
-un inicio de sesión Auth de primer factor no completa esa integración.
+`src/infrastructure/supabase` contiene los adaptadores transversales de conexión y
+RPC. `SupabaseModule` exporta `KvgRpcService`; cada módulo funcional que lo necesite
+importará ese módulo. No se mantienen sesiones globales mutables ni se reutiliza un
+cliente autenticado entre usuarios. El adaptador comprueba el envoltorio de éxito
+o rechazo y conserva los resultados como `unknown` para validarlos en cada caso de
+uso. Los errores de transporte y del SQL se traducen sin exponer detalles internos.
+
+La configuración Supabase es opcional para health y exige ambas variables cuando
+se utiliza. El diagnóstico CLI usa solo GET y se complementa con la inspección SQL
+de metadatos. No llama `kvg_operar`: la función puede registrar actividad y auditoría.
+El procedimiento está en [supabase-setup.md](supabase-setup.md).
+
+El módulo `identity` conserva los tokens Auth únicamente en el servidor y expone al
+navegador una cookie opaca `HttpOnly`, `SameSite=Lax`, con `Secure` y prefijo
+`__Host-` en producción. El segundo factor TOTP es obligatorio para abrir la sesión
+operativa: el SQL exige `aal2`. Los identificadores Auth y usuario KVG se mantienen
+separados. La interfaz presenta correo/contraseña, inscripción/verificación MFA y
+cierre/actualización mediante controles HTML con estilos mínimos.
+
+`ServerSessions` serializa las operaciones que leen o renuevan tokens mediante
+bloqueos PostgreSQL por SID y recarga la sesión antes de cambiarlos. Su almacén usa
+el rol `kvg_session_store`, que solo tiene acceso a `kvg_servidor.sesion_web`; el
+SID se guarda como SHA-256 y el contenido se cifra con AES-256-GCM y clave externa.
+Una respuesta antigua solo puede tocar la expiración y no reemplaza tokens nuevos.
+Las marcas de revocación impiden reactivar una cookie cerrada por una escritura tardía.
+No se usa `MemoryStore` en la aplicación: aparece únicamente en pruebas locales.
+
+El servidor comprueba identidad Auth y estado de la sesión operativa mediante
+`sesion.consultar` en cada petición privada. El guard global deniega por defecto;
+`@RequirePermission` comprueba permiso y contexto vigentes y cada RPC sigue
+comprobando el recurso concreto. `@Authenticated` se reserva a información de la
+propia sesión. Las mutaciones de acceso requieren origen exacto y token CSRF;
+login/MFA/renovación tienen límites de intentos por IP y cuenta/sesión por instancia.
+Las futuras mutaciones de negocio deben incorporar también la protección CSRF.
+
+La sesión previa a MFA vence en diez minutos. La operativa usa la duración devuelta
+por SQL (actualmente ocho horas máximas y treinta minutos de inactividad, sujetos a
+PT02). La renovación del proveedor no amplía el límite absoluto. El cierre intenta
+revocar la sesión KVG y Auth y destruye la cookie local incluso si el proveedor falla.
+La auditoría SQL de sesiones se complementa con eventos fijos del backend, sin
+contraseñas, códigos, secretos TOTP ni tokens. La pantalla de bitácora es posterior.
 
 Los roles funcionales se combinan con permisos y alcance del expediente. La cuenta
 administradora técnica no obtiene lectura jurídica automáticamente. Las claves
 privilegiadas se reservan al proceso que las necesita; nunca se incluyen en variables
 `VITE_*`, contratos compartidos ni respuestas del frontend.
 
-El esquema trae RLS y restricciones de privilegios. No se configura conexión directa
-como propietario ni un ORM para evitar esas restricciones. El contrato completo y
+El esquema trae RLS y restricciones de privilegios. El proceso HTTP usa conexión SQL
+directa solo con el rol restringido del almacén de sesiones. `DATABASE_URL` y la
+clave administrativa se reservan a herramientas de preparación/verificación de
+desarrollo; no se usan como acceso ordinario ni para evitar RLS. El contrato completo y
 el procedimiento de instalación están en [database/README.md](../database/README.md).
 
 ## Base ejecutable y configuración
@@ -88,14 +134,23 @@ Helmet y un formato común de error que oculta fallos internos. La configuració
 valida el entorno y el puerto antes de abrir el servidor. Las aplicaciones escuchan
 en loopback de forma predeterminada para desarrollo.
 
-`GET /api/v1/health` es público y solo informa de la salud del proceso. Los módulos
-de negocio no tienen rutas todavía. Antes de añadirlas deberán incorporarse las
-sesiones y la autorización con denegación por defecto.
+`GET /api/v1/health` es público y solo informa de la salud del proceso. El contrato
+de `/api/v1/auth` y los pasos para probarlo están en [identity.md](identity.md).
+Los módulos de negocio todavía no tienen rutas; usarán la política de acceso por
+defecto y los puertos RPC existentes.
 
 El proxy Vite permite consumir `/api` desde el mismo origen durante desarrollo.
 En producción habrá que configurar el servicio o proxy que entregue los archivos
 estáticos de la web y reenvíe `/api` a Nest bajo HTTPS. Esta preparación no despliega
-servicios ni configura CORS, cookies o persistencia de sesiones de producción.
+servicios ni el proxy de producción. La configuración de cookies y persistencia
+del servidor está implementada; su validación bajo HTTPS y el endurecimiento del
+entorno desplegado siguen pendientes. El frontend no necesita CORS entre orígenes.
+
+Las migraciones y la preparación de identidades son comandos explícitos y no se
+ejecutan al arrancar Nest. La configuración de sesiones requiere URL SQL de rol
+restringido, secreto HMAC y clave de cifrado juntos. Desarrollo permite arrancar
+solo health sin ellos; producción rechaza su ausencia. Los secretos quedan fuera
+del repositorio. La provisión ficticia y las pruebas remotas están separadas de CI.
 
 Se usa npm workspaces con versiones directas exactas y `package-lock.json` para
 instalación reproducible. `.nvmrc`, `.node-version` y CI seleccionan Node 24 LTS;
@@ -119,14 +174,18 @@ pendientes PT01–PT08 están registradas en [requirements.md](requirements.md).
 
 ## Verificación
 
-`npm run check` comprueba formato, tipos, compilación y pruebas HTTP de la base.
-Las pruebas verifican el contrato consumido por React, cabeceras, errores de rutas
-y rechazo de configuración inválida. Son independientes de Supabase.
+`npm run check` comprueba formato, tipos, compilación, pruebas HTTP/almacén del
+backend y cliente HTTP de React. Son independientes de Supabase y cubren identidad,
+MFA simulado, CSRF/origen, límites de intentos, permisos, revocación y renovación
+concurrente. El almacén tiene pruebas de cifrado, integridad y escrituras tardías.
 
-En la preparación del 27 de octubre de 2026 se verificaron `npm ci` con Node
-24.22.1 y `npm run check` con Node 24.22.1 y 26.11.1: tipos y compilación correctos,
-tres pruebas aprobadas. También se comprobó por HTTP el arranque de web, API y
-proxy local. No se ejecutaron pruebas en navegador ni integración con Supabase.
+`npm run test:identity:schema` comprueba el contrato SQL y denegación sin identidad
+dentro de una transacción revertida. `npm run test:identity:live` ejercita Auth,
+TOTP, RPC, persistencia cifrada y revocación reales contra el proyecto de desarrollo
+con cuentas ficticias. Estas pruebas no se ejecutan en CI ni usan datos reales.
+La evidencia y los límites están en [identity.md](identity.md) y
+[supabase-verification.md](supabase-verification.md). No se ha probado la interfaz
+en un navegador ni se ha configurado producción.
 
 Antes de considerar validada la arquitectura completa se necesita demostrar con
 datos ficticios: identidad real, expediente accesible, carga privada segura, consulta

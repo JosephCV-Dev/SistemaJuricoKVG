@@ -1,7 +1,8 @@
 # Módulos del backend
 
-Cada módulo delimita un área funcional. Las clases `*.module.ts` están registradas,
-pero todavía no exponen operaciones de negocio.
+Cada módulo delimita un área funcional. `identity` implementa CU023/CU024 con sus
+capas y endpoints de acceso. Los demás módulos están registrados y todavía no
+exponen operaciones de negocio.
 
 | Carpeta         | Responsabilidad                                                   |
 | --------------- | ----------------------------------------------------------------- |

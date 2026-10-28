@@ -1,14 +1,31 @@
 # Base de datos KVG
 
-La base utiliza PostgreSQL 15 o superior con Supabase Auth y Storage privado. El SQL recibido contiene 37 tablas en `kvg`, funciones internas en `kvg_privado`, restricciones, catálogos, políticas RLS y puntos de entrada RPC. Esta preparación conserva el entregable; no acredita que se haya instalado o probado.
+La base utiliza PostgreSQL 15 o superior con Supabase Auth y Storage privado. El SQL recibido contiene 37 tablas en `kvg`, funciones internas en `kvg_privado`, restricciones, catálogos, políticas RLS y puntos de entrada RPC. La revisión de catálogo del 28 de octubre de 2026 confirmó los elementos comparados de la baseline. El alcance de esa revisión está en [el informe de verificación](../docs/supabase-verification.md).
+
+El usuario aplicó el modelo en su proyecto Supabase y se completó
+[el diagnóstico de la instalación existente](diagnostics/README.md). La
+configuración HTTP del backend se restauró y se confirmó que corresponde al mismo
+proyecto. El procedimiento está en [la guía de integración](../docs/supabase-setup.md).
+La instalación nueva descrita a continuación solo se utiliza para reconstruir
+otro entorno; no se repite sobre la base ya instalada.
+
+CU023/CU024 están implementados y verificados en desarrollo. Se aplicaron
+explícitamente las dos migraciones de sesión y se ejecutó el bootstrap con dos
+identidades Auth ficticias distintas y confirmadas. Las pruebas con el proveedor
+real comprobaron contraseña/MFA, sesión operativa, RPC permitida/denegada,
+revocación y expiración. Las pruebas HTTP locales cubren además CSRF, cookies,
+renovación concurrente, cierre, cuenta inactiva y capacidades/contextos mediante
+puertos simulados. Falta QA en navegador; esto no acredita operaciones sobre
+expedientes, procesamiento de Storage ni respaldos/restauración. Consulta
+[identidad y evidencia](../docs/identity.md).
 
 ## Archivos y procedencia
 
-| Ruta                                        | Propósito                                                                                            |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `baseline/Modelo_Fisico_KVG_PostgreSQL.sql` | Copia íntegra del modelo físico entregado por el usuario.                                            |
-| `migrations/`                               | Cambios incrementales posteriores a una instalación de la baseline. Todavía no contiene migraciones. |
-| `tests/README.md`                           | Casos de integración pendientes antes de utilizar datos reales.                                      |
+| Ruta                                        | Propósito                                                                                                            |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `baseline/Modelo_Fisico_KVG_PostgreSQL.sql` | Copia íntegra del modelo físico entregado por el usuario.                                                            |
+| `migrations/`                               | Cambios incrementales explícitos sobre la baseline, incluidas las dos migraciones de sesión aplicadas en desarrollo. |
+| `tests/README.md`                           | Casos de integración pendientes antes de utilizar datos reales.                                                      |
 
 Archivo de origen: `Modelo_Fisico_KVG_PostgreSQL.sql`, entregado junto con el modelo conceptual/lógico y diccionario KVG versión 1.1, derivado del RUP de Elaboración versión 2.0. La copia conserva exactamente sus bytes.
 
@@ -26,7 +43,21 @@ sha256sum database/baseline/Modelo_Fisico_KVG_PostgreSQL.sql
 
 La baseline se conserva como referencia. Las correcciones futuras deben quedar en archivos nuevos de `migrations/`, acompañadas de su motivo y validación; no se reescribe el original para ocultar cambios.
 
-## Instalación inicial futura
+## Migraciones de identidad aplicadas en desarrollo
+
+| Archivo                                     | Cambio                                                                                                                                                               |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `202610280001_server_sessions.sql`          | Crea `kvg_servidor.sesion_web` y el rol limitado `kvg_session_store` para la persistencia técnica; SID como hash, carga cifrada y marcas de revocación.              |
+| `202610280002_identity_session_context.sql` | Añade el helper privado `consultar_sesion()` y la operación fija `sesion.consultar` en `public.kvg_operar`, conservando el despachador y los privilegios ordinarios. |
+
+Se aplicaron explícitamente como propietario, con verificación posterior. La API
+no ejecuta estas migraciones al arrancar. La tabla técnica se mantiene fuera de las
+37 tablas de negocio de `kvg`, y su rol no obtiene permisos sobre KVG, Auth o
+Storage. La nueva función de contexto incrementa el inventario de funciones KVG
+respecto a las 43 de la baseline. El contrato está en
+[identity-session-contract.md](identity-session-contract.md).
+
+## Instalación inicial (solo para un entorno nuevo)
 
 1. Preparar un proyecto Supabase de desarrollo nuevo y sin datos. Para desarrollo local se necesita la plataforma Supabase completa, incluidos Auth y Storage; una instancia aislada de PostgreSQL no satisface los prerrequisitos.
 2. Comprobar PostgreSQL 15+, las tablas `auth.users`, `auth.sessions`, `storage.buckets` y `storage.objects`, los roles de Supabase y la capacidad del propietario para instalar `pgcrypto` y `btree_gist`.
@@ -37,7 +68,9 @@ La baseline se conserva como referencia. Las correcciones futuras deben quedar e
 
 La instalación no es reejecutable: rechaza un esquema `kvg` previo y no actualiza una instalación existente. No se debe solucionar un fallo borrando esquemas o datos automáticamente. Los cambios sobre una instalación existente requieren una migración explícita.
 
-No se ha creado un proyecto Supabase, aplicado el SQL ni ejecutado el bootstrap durante esta preparación.
+El entorno actual ya tiene baseline, migraciones y bootstrap de desarrollo. Los
+pasos anteriores son una referencia para reconstruir otro entorno; no se repiten
+sobre el proyecto verificado.
 
 ## Bootstrap de identidades
 
@@ -53,19 +86,26 @@ public.kvg_inicializar(
 ) → jsonb
 ```
 
-Se ejecuta como propietario, una única vez y después de instalar la baseline. Se requieren dos identidades distintas ya existentes en Supabase Auth, ambas con correo confirmado: un responsable técnico y un responsable jurídico. También se requiere una referencia identificable de aprobación; no se sustituyen por usuarios ficticios ni contraseñas compartidas.
+Se ejecuta como propietario, una única vez y después de instalar la baseline. Se requieren dos identidades distintas ya existentes en Supabase Auth, ambas con correo confirmado: un responsable técnico y un responsable jurídico. También se requiere una referencia identificable de aprobación. En producción deben corresponder a los responsables designados; para este entorno de desarrollo se utilizaron dos identidades ficticias distintas autorizadas para pruebas, con credenciales individuales fuera del repositorio.
 
 La función exige que `kvg.usuario` esté vacío. Crea los perfiles operativos, asigna `ADMINISTRADOR` y `ABOGADO`, carga la matriz inicial de capacidades y registra los parámetros de sesión. Devuelve `administrador_usuario_id` y `responsable_juridico_usuario_id`, que son identificadores operativos KVG, distintos de los identificadores Auth de entrada.
 
 `anon`, `authenticated` y `service_role` no pueden ejecutar esta función. El resto de las altas se tramitará mediante los casos de uso de administración y la conciliación de identidad; no mediante inserciones manuales en las tablas.
 
+El bootstrap de desarrollo ya está realizado; no se ejecuta otra vez. La consulta
+de conteos del [contrato de sesión](identity-session-contract.md) permite revisar
+su estado sin publicar nombres, correos ni identificadores. Las interfaces y los
+recorridos completos de CU018/CU019 siguen pendientes; el bootstrap y el contexto
+vigente constituyen sus prerrequisitos.
+
 ## Contrato de acceso de la aplicación
 
-| Identidad de conexión                               | Punto de entrada                                       | Uso                                                            |
-| --------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------- |
-| JWT real del usuario, rol `authenticated`           | `public.kvg_operar(p_operacion text, p_datos jsonb)`   | Operaciones del personal, incluidas consultas.                 |
-| Credencial técnica del servidor, rol `service_role` | `public.kvg_trabajar(p_operacion text, p_datos jsonb)` | Trabajos de archivos, conciliación de identidades y respaldos. |
-| Propietario de la instalación                       | `public.kvg_inicializar(...)`                          | Bootstrap inicial.                                             |
+| Identidad de conexión                               | Punto de entrada                                                       | Uso                                                                               |
+| --------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| JWT real del usuario, rol `authenticated`           | `public.kvg_operar(p_operacion text, p_datos jsonb)`                   | Operaciones del personal, incluidas consultas.                                    |
+| Credencial técnica del servidor, rol `service_role` | `public.kvg_trabajar(p_operacion text, p_datos jsonb)`                 | Trabajos de archivos, conciliación de identidades y respaldos.                    |
+| Propietario de la instalación                       | `public.kvg_inicializar(...)`                                          | Bootstrap inicial.                                                                |
+| Rol técnico `kvg_session_store`                     | `kvg_servidor.sesion_web`, mediante su conexión PostgreSQL restringida | Persistencia cifrada de sesiones web; sin acceso directo a las tablas de negocio. |
 
 El adaptador del backend crea un cliente Supabase por petición con el JWT del usuario. Un ejemplo de llamada para el futuro caso de uso de consulta es:
 
@@ -102,8 +142,9 @@ El envoltorio anterior corresponde a `kvg_operar`. `kvg_trabajar` devuelve el re
 
 - La identidad y sesión proceden de `auth.uid()` y `auth.jwt()`, nunca de campos de autor, roles o permisos enviados en `p_datos`.
 - La operación `sesion.iniciar`, con `p_datos: {}`, requiere JWT con MFA `aal2`, sesión Auth real y cuenta KVG activa. Registra la sesión operativa; un token Auth de primer factor no basta.
+- `sesion.consultar`, con `p_datos: {}`, revalida la sesión y devuelve identidad operativa, roles, capacidades por contexto y límites efectivos, sin datos jurídicos. La API lo utiliza antes de autorizar cada petición privada; no concede por sí mismo alcance a un expediente.
 - Las operaciones posteriores comprueban la cuenta, la sesión operativa, los permisos actuales y el alcance del expediente. La configuración inicial permite hasta 8 horas de sesión y 30 minutos de inactividad; son valores del SQL sujetos a la validación funcional pendiente PT02.
-- `sesion.cerrar` revoca la sesión operativa KVG. La implementación de autenticación deberá cerrar también la sesión del proveedor y limpiar el estado del navegador.
+- `sesion.cerrar` revoca la sesión operativa KVG. El flujo implementado coordina el cierre del proveedor, la revocación de la sesión web y la limpieza de la cookie; se comprueba el rechazo de su reutilización.
 - Los roles funcionales son `SECRETARIA`, `ABOGADO` y `ADMINISTRADOR`. Los contextos de capacidad son `PRINCIPAL`, `COLABORADOR`, `EXPLICITO`, `GLOBAL_OPERATIVO` y `REGISTRO_PROPIO`. Tener un rol no concede acceso automático a todos los expedientes.
 - Los privilegios finales deniegan acceso directo a tablas, secuencias y funciones privadas a `anon`, `authenticated` y `service_role`. Las políticas RLS complementan el control por funciones; no habilitan consultas directas ni CRUD mediante un ORM.
 - La credencial `service_role` pertenece exclusivamente al servidor y a trabajadores técnicos. No representa al usuario para operaciones de negocio y nunca debe incluirse en variables `VITE_*`.

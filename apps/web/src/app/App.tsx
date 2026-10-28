@@ -1,5 +1,6 @@
 import type { HealthResponse } from '@kvg/contracts';
 import { useEffect, useRef, useState } from 'react';
+import { IdentitySection } from '../features/identity/IdentitySection';
 import { getHealth } from '../shared/api/http-client';
 
 type HealthState =
@@ -45,16 +46,16 @@ export function App() {
 
   return (
     <main>
-      <h1>Sistema Jurídico KVG</h1>
-      <p>Base inicial de desarrollo.</p>
-      <p>
-        La estructura del proyecto está preparada. Los casos de uso se
-        implementarán por incrementos funcionales.
-      </p>
+      <header className="app-header">
+        <h1>Sistema Jurídico KVG</h1>
+      </header>
 
-      <section aria-labelledby="api-heading">
+      <IdentitySection />
+
+      <section className="panel" aria-labelledby="api-heading">
         <h2 id="api-heading">Comunicación con la API</h2>
         <button
+          className="button-secondary"
           type="button"
           onClick={() => void checkApi()}
           disabled={state.status === 'loading'}

@@ -1,7 +1,9 @@
 import { Controller, Get } from '@nestjs/common';
 import type { HealthResponse } from '@kvg/contracts';
+import { Public } from '../modules/identity/presentation/access.decorators';
 
 @Controller('health')
+@Public()
 export class HealthController {
   @Get()
   getHealth(): HealthResponse {

@@ -1,9 +1,12 @@
 # Sistema Jurídico KVG
 
 Aplicación web interna para gestionar clientes, expedientes y documentos del despacho.
-Esta entrega prepara la arquitectura inicial y una comprobación de comunicación entre
-la interfaz y la API. El desarrollo de los casos de uso se hará por incrementos; el
-diseño visual queda para una etapa posterior.
+La base incluye la conexión Supabase verificada y CU023/CU024: inicio y cierre de
+sesión con contraseña, MFA TOTP y sesión del servidor. El recorrido de identidad se
+comprobó por HTTP con Auth y RPC reales en desarrollo; la prueba en navegador y el
+despliegue de producción siguen pendientes. Por petición del usuario, la interfaz
+tiene estilos mínimos para espaciado, formularios y botones; el diseño definitivo
+queda para después.
 
 ## Arquitectura elegida
 
@@ -22,18 +25,19 @@ apps/
       audit/            Bitácora
       configuration/    Catálogos y parámetros
       operations/       Procesamiento y recuperación
-    test/               Pruebas HTTP de la base inicial
-  web/                  Interfaz React sin estilos
+    test/               Pruebas HTTP y de identidad
+  web/                  Interfaz React con estilos mínimos
     src/app/            Composición de la aplicación
-    src/features/       Funcionalidades futuras
+    src/features/       Acceso y MFA; siguientes funcionalidades
     src/shared/api/     Comunicación HTTP
 packages/contracts/     Tipos públicos compartidos de la API
-database/               SQL original, futuras migraciones y pruebas previstas
+database/               SQL original, migraciones y pruebas de datos
 docs/                   Arquitectura, análisis y siguientes avances
 .github/workflows/      Comprobaciones automáticas
 ```
 
-Los módulos de negocio están registrados, con responsabilidades definidas. Sus
+Identidad incluye sus endpoints, sesión persistente cifrada y controles de acceso.
+Los demás módulos están registrados, con responsabilidades definidas; sus
 controladores, casos de uso y adaptadores se añadirán al desarrollar cada función.
 El trabajador de archivos y respaldos tendrá una entrada independiente dentro del
 mismo backend cuando se implemente el procesamiento persistente.
@@ -49,19 +53,28 @@ npm ci
 npm run dev
 ```
 
-Abre `http://127.0.0.1:5173` y pulsa **Comprobar API**. La API escucha en
-`http://127.0.0.1:3000`; su endpoint es `GET /api/v1/health`.
-Vite reenvía `/api` al backend durante desarrollo.
+Abre `http://127.0.0.1:5173`. El formulario permite iniciar sesión, verificar MFA,
+consultar la sesión y cerrarla. La API escucha en `http://127.0.0.1:3000`; Vite
+reenvía `/api` al backend durante desarrollo.
 
-No necesitas cuenta Supabase ni credenciales para esta comprobación inicial.
-La salud confirma que responde el proceso HTTP; no comprueba base de datos,
-autenticación, almacenamiento ni preparación para producción.
+**Comprobar API** sigue disponible sin credenciales mediante `GET /api/v1/health`.
+Sólo confirma que responde el proceso HTTP. Para el acceso completo necesitas la
+configuración de sesión y las identidades de desarrollo de la [guía de identidad](docs/identity.md).
 
 La configuración predeterminada permite arrancar sin archivos `.env`. Para
 cambiarla, copia `apps/api/.env.example` a `apps/api/.env` y
 `apps/web/.env.example` a `apps/web/.env`. Si cambias el puerto de la API, ajusta
 también `API_PROXY_TARGET` en el archivo de la web. Reinicia los procesos después
-de cambiar la configuración.
+de cambiar la configuración. `APP_ORIGIN` debe coincidir con el origen de la web;
+usa siempre el mismo host, sin alternar entre `127.0.0.1` y `localhost`.
+
+Ya se prepararon dos cuentas ficticias de desarrollo, administrador y abogado, sin
+enviar correos. Sus credenciales y claves TOTP están en
+`apps/api/.local/identity-development-accounts.json`, ignorado por Git y con permisos
+`0600`. Abre ese archivo únicamente de forma local. Los factores TOTP ya fueron
+verificados por las pruebas: importa la clave `totpSecret` de la cuenta elegida en
+tu aplicación de autenticación para obtener el código de acceso manual. Sus valores
+no deben copiarse a documentación ni capturas.
 
 ## Comprobaciones
 
@@ -69,10 +82,27 @@ de cambiar la configuración.
 npm run check
 ```
 
-Comprueba formato, tipos estrictos, compilación y pruebas HTTP. La CI ejecuta el
+Comprueba formato, tipos estrictos, compilación y pruebas de API y cliente HTTP. La CI ejecuta el
 mismo comando con Node 24. También están disponibles `npm run typecheck`,
 `npm run build`, `npm test`, `npm run format`, `npm run dev:api` y
 `npm run dev:web`.
+
+Las herramientas de identidad se ejecutan explícitamente desde la raíz:
+
+```sh
+npm run setup:identity:dev
+npm run test:identity:schema
+npm run test:identity:live
+```
+
+`setup:identity:dev` sólo se permite en desarrollo: puede aplicar las migraciones
+de identidad, aprovisionar el rol de sesiones, generar secretos locales, crear las
+cuentas ficticias y ejecutar el bootstrap si está vacío. La preparación ya se
+realizó en este entorno; no hace falta repetirla para abrir la aplicación.
+`test:identity:schema` verifica el contrato SQL y revierte su transacción.
+`test:identity:live` usa Auth, MFA, sesiones y RPC reales, y modifica únicamente el
+entorno de desarrollo preparado para esas pruebas. Consulta sus requisitos y
+alcance en [identity.md](docs/identity.md).
 
 Después de compilar, `npm run start:api` inicia la API compilada. El resultado de
 la web queda en `apps/web/dist`. El alojamiento final deberá servir web y `/api`
@@ -80,9 +110,20 @@ bajo el mismo origen HTTPS; el despliegue todavía no está configurado.
 
 ## Base de datos
 
-Se conserva una copia exacta del SQL entregado. **No se ha ejecutado** ni se aplica
-automáticamente al arrancar. Requiere Supabase completo y un proyecto de desarrollo
-nuevo, con un procedimiento de inicialización de identidades.
+Se conserva intacta la baseline SQL entregada, instalada previamente por el usuario
+y verificada en Supabase. Se aplicaron después las dos migraciones del incremento
+de identidad, sin reinstalar la baseline. Ninguna instalación, migración o bootstrap
+se ejecuta al arrancar la API. El procedimiento de instalación nueva se conserva
+como referencia de reconstrucción.
+
+El backend ya incluye configuración validada y un adaptador RPC por identidad de
+usuario. El catálogo remoto se verificó por PostgreSQL; los resultados están en
+[el informe de verificación](docs/supabase-verification.md). La configuración HTTP
+está restaurada y se confirmó que corresponde al mismo proyecto. El bootstrap de
+desarrollo y las sesiones Auth/KVG se comprobaron con identidades ficticias.
+Sigue la [guía de integración](docs/supabase-setup.md) para completar
+`apps/api/.env`, ejecutar `npm run check:supabase` y revisar el SQL de diagnóstico
+de metadatos. El comando no ejecuta migraciones ni operaciones de negocio.
 
 El SQL expone operaciones RPC: el acceso ordinario conserva el JWT real del usuario;
 el trabajador técnico utiliza otra identidad. No se añade un ORM ni CRUD directo
@@ -92,20 +133,23 @@ porque el modelo suministrado restringe ese acceso. Consulta el
 ## Documentación y siguientes avances
 
 - [Arquitectura y decisiones](docs/architecture.md).
+- [Configurar y verificar el Supabase existente](docs/supabase-setup.md).
+- [Inicio/cierre de sesión, MFA y pruebas de identidad](docs/identity.md).
 - [Actores, reglas y trazabilidad de los 31 casos de uso con Jira](docs/requirements.md).
 - [Orden de implementación y ejemplos de futuras peticiones](docs/roadmap.md).
 
-El siguiente avance recomendado es **preparar y verificar Supabase en desarrollo**;
-después, implementar CU023/CU024 (inicio/cierre de sesión) y las bases de permisos y
-auditoría antes de los clientes. Puedes pedirlo así:
+El siguiente avance es el **paso 3: cliente y expediente mínimos**, aprovechando la
+sesión y los controles ya implementados. La administración completa de usuarios y
+roles (CU018/CU019) sigue pendiente. Puedes pedirlo así:
 
-> Prepara y verifica la integración con Supabase en desarrollo usando datos ficticios.
-> Revisa el SQL existente, comprueba Auth, Storage y permisos, y documenta lo ejecutado.
-> Después abordaremos CU023 y CU024. Mantén la arquitectura actual y no trabajes el
-> diseño visual.
+> Implementa el paso 3: registrar y consultar un cliente ficticio (CU001/CU002,
+> SCRUM-13/SCRUM-14), crear su expediente y consultarlo (CU004/CU005,
+> SCRUM-41/SCRUM-42). Usa la sesión existente y el contrato RPC; incluye validación,
+> permiso, alcance y auditoría, con acceso permitido y denegado verificados. Mantén
+> los formularios funcionales con el estilo mínimo existente.
 
-Commit sugerido para esta preparación:
+Commit sugerido para el incremento de identidad:
 
 ```text
-chore: inicializar arquitectura modular del sistema juridico KVG
+feat(identity): implementar inicio y cierre de sesion con MFA
 ```

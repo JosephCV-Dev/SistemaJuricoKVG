@@ -1,6 +1,17 @@
-# Pruebas de integración pendientes
+# Pruebas de integración de datos
 
-Esta carpeta documenta la validación que debe implementarse cuando exista un entorno Supabase de desarrollo. Actualmente no contiene pruebas ejecutables ni acredita que la baseline funcione. No se utilizan datos reales del despacho.
+Esta carpeta conserva los escenarios de validación del modelo. `identity-session.sql`
+ya es ejecutable mediante `npm run test:identity:schema`: comprueba el contrato de
+identidad y el rechazo sin identidad en una transacción revertida. El recorrido con
+Auth/MFA y sesiones reales se ejecuta con `npm run test:identity:live`; sus scripts
+están en `apps/api/scripts`. No se utilizan datos reales del despacho.
+
+El incremento CU023/CU024 probó identidad real, TOTP, sesión operativa, RPC permitida
+y denegada, renovación concurrente, cierre/revocación y vencimiento. Cuenta inactiva,
+permisos/contextos, errores transitorios y límites de intentos tienen pruebas HTTP
+locales con puertos simulados. La evidencia y los límites están en
+[identity.md](../../docs/identity.md). Esto no acredita todos los escenarios de la
+tabla ni los casos de uso de negocio pendientes.
 
 Las pruebas deben ejecutar los puntos de entrada reales, con identidades y sesiones de Supabase Auth, y verificar el estado persistido mediante una conexión de inspección exclusiva del entorno de pruebas. Los clientes de usuario y de servicio conservan los mismos privilegios que tendrán en operación.
 

@@ -1,44 +1,61 @@
-# Próximos avances sin diseño visual
+# Próximos avances funcionales
 
 ## Estado de partida
 
-Esta entrega prepara un monorepo de npm workspaces: `apps/web` para React/TypeScript/Vite, `apps/api` para NestJS y `packages/contracts` para tipos HTTP compartidos. La funcionalidad inicial se limita a comprobar la salud de la aplicación. Los módulos de negocio, la conexión a Supabase y los controles de seguridad quedan pendientes.
+El proyecto es un monorepo de npm workspaces: `apps/web` para React/TypeScript/Vite, `apps/api` para NestJS y `packages/contracts` para tipos HTTP compartidos. La instalación Supabase existente está verificada y CU023/CU024 tienen un recorrido de acceso implementado y probado en desarrollo. El siguiente incremento es cliente y expediente mínimos; después corresponde demostrar el prototipo de RUP 16.6.
 
-La trazabilidad y los requisitos están en [requirements.md](requirements.md). La estructura permite avanzar mediante casos de uso completos: entrada funcional, validación del servidor, reglas, persistencia, autorización, resultado verificable y pruebas relevantes. El trabajo visual se realizará después; cada interfaz provisional usará controles HTML semánticos y mensajes comprensibles.
+**Paso 1 completado: conectividad y catálogo verificados.** El 28 de octubre de 2026 se comprobó directamente el catálogo por PostgreSQL, con TLS validado y una transacción de solo lectura. La comparación inicial confirmó las 37 tablas, 338 columnas y 43 funciones de la baseline, sus privilegios RPC, RLS y los dos buckets privados. HTTP y SQL corresponden al mismo proyecto. La evidencia de esa revisión está en [supabase-verification.md](supabase-verification.md).
+
+**Paso 2 implementado y verificado en desarrollo.** Se aplicaron explícitamente las migraciones de persistencia técnica y contexto de sesión y se inicializaron dos identidades Auth ficticias distintas. Se probó el proveedor real con contraseña, MFA y sesión KVG, operaciones RPC permitidas y denegadas y rechazo tras revocación o expiración. Las pruebas HTTP locales cubren también CSRF/origen, cookies, renovación concurrente, cierre, cuenta inactiva y permiso/contexto mediante puertos simulados. El recorrido en navegador queda pendiente. Esto no completa la administración de usuarios/permisos ni acredita acceso a expedientes, procesamiento de archivos o recuperación. El contrato y el alcance están en [identity.md](identity.md).
+
+La trazabilidad y los requisitos están en [requirements.md](requirements.md). La estructura permite avanzar mediante casos de uso completos: entrada funcional, validación del servidor, reglas, persistencia, autorización, resultado verificable y pruebas relevantes. El usuario autorizó estilos mínimos para que los formularios sean legibles y ordenados: fondo neutro, secciones, espaciado y botones sencillos, sin animaciones. Cada interfaz conserva controles HTML semánticos y mensajes comprensibles. El diseño definitivo permanece en el paso 7 y la usabilidad se verifica en cada entrega.
 
 ## Orden recomendado
 
-### 1. Verificar la instalación de datos y la integración
+### 1. Conectar y verificar la instalación existente
 
-Preparar un entorno Supabase de desarrollo con datos ficticios, comprobar Auth y Storage y revisar/aplicar el modelo físico suministrado mediante el flujo de migraciones. Verificar funciones, permisos, RLS y la superficie expuesta antes de usar datos del negocio. Registrar el procedimiento y sus resultados; no ejecutar la instalación inicial sobre un esquema existente para forzarla a pasar.
+Usar el proyecto Supabase donde el usuario ya aplicó el modelo, identificando su entorno y trabajando con datos ficticios. Revisar conectividad, Auth, API de datos y los metadatos de PostgreSQL/Storage. No volver a ejecutar la baseline ni crear otro proyecto por defecto. La instalación inicial queda como procedimiento para reconstrucción explícita o un entorno nuevo que realmente la necesite.
 
-La integración ordinaria debe conservar la identidad autenticada del usuario. Las operaciones privilegiadas tienen adaptadores e identidades limitadas y separados del acceso ordinario. Una conexión de propietario o una clave con capacidad de omitir RLS no sirve como sustituto de la autorización por usuario.
+La API puede arrancar localmente sin conexión configurada para comprobar salud. La configuración parcial o inválida se rechaza; los endpoints de acceso necesitan su configuración completa. La fábrica de clientes ordinarios conserva el JWT del usuario al invocar `public.kvg_operar`. La credencial de propietario o una clave privilegiada no sustituye esa identidad. No se añade CRUD directo de negocio ni un endpoint que acepte nombres RPC arbitrarios enviados por el navegador.
 
-Terminado cuando la instalación sea reproducible en desarrollo, las comprobaciones de esquema y permisos tengan evidencia y la API pueda ejercer una operación permitida y rechazar otra no autorizada. La salud del proceso por sí sola no demuestra conexión o disponibilidad de Supabase.
+Para cerrar este paso se necesita:
+
+- Identificar y configurar el proyecto existente como entorno de desarrollo, con credenciales fuera del repositorio y sin exponerlas en respuestas ni diagnósticos.
+- Ejecutar el diagnóstico CLI de lectura y registrar la comprobación de conectividad y superficie de Auth/API de datos, con sus fallos o límites.
+- Ejecutar el diagnóstico SQL de lectura en ese entorno y revisar esquemas, 37 tablas de negocio, firmas RPC, privilegios, RLS y buckets privados esperados, además del estado de inicialización necesario para la siguiente etapa. Registrar evidencia sin incluir información sensible.
+- Documentar diferencias y correcciones necesarias mediante nuevas migraciones, sin reescribir la baseline ni aplicarlas al arrancar la API. Repetir únicamente las verificaciones afectadas por cualquier corrección.
+
+La revisión de metadatos no demuestra una operación de negocio autorizada. El paso 2 añade evidencia real de identidad, MFA, sesión operativa y RPC permitida/denegada. El alcance sobre un cliente, expediente o archivo concreto se comprobará con el caso de uso correspondiente. La salud HTTP confirma únicamente el proceso local.
 
 ### 2. Acceso, sesiones, permisos y auditoría base
 
-Implementar CU023/CU024 — SCRUM-149/SCRUM-150 y las bases necesarias de CU018/CU019. Integrar cuentas invitadas, MFA, sesión operativa del servidor, cookie protegida, renovación/revocación, CSRF y autorización por operación y alcance. Incorporar el registro de auditoría desde las primeras operaciones, aunque la pantalla de CU020 llegue después.
+CU023/CU024 — SCRUM-149/SCRUM-150 están implementados y verificados en desarrollo. El recorrido incluye primer factor, inscripción/verificación TOTP con el proveedor, sesión operativa KVG, persistencia cifrada del servidor, cookie `HttpOnly` y `SameSite=Lax` (`Secure` en producción), rotación del identificador, comprobación de origen/CSRF, renovación y cierre. Las rutas privadas deniegan acceso por defecto y consultan capacidades vigentes; cada futuro caso de negocio sigue siendo responsable del alcance sobre su recurso. Se incorpora auditoría base, sin completar la pantalla de CU020.
 
-Definir el alta inicial de un administrador sin registro público ni claves privilegiadas en el frontend. La asignación de un rol no debe conceder lectura de expedientes automáticamente. Los valores de duración de sesión y la matriz definitiva se documentan con PT02/PT07.
+Las migraciones `202610280001_server_sessions.sql` y `202610280002_identity_session_context.sql` se aplicaron explícitamente. La primera separa la persistencia web en `kvg_servidor`, con un rol técnico restringido; la segunda añade `sesion.consultar` a `public.kvg_operar`. El bootstrap utiliza dos identidades ficticias confirmadas para desarrollo, sin registro público ni secretos en el repositorio. Esto prepara bases de CU018/CU019, cuyos recorridos completos de administración siguen pendientes. Los límites de ocho horas y treinta minutos de inactividad y la matriz definitiva siguen sujetos a PT02/PT07.
 
-Terminado cuando se comprueben inicio/cierre de sesión, cuenta inactiva, sesión vencida o revocada, peticiones de cambio sin protección CSRF, MFA y acceso cruzado entre identidades. Las denegaciones deben ocurrir en el servidor y las credenciales no deben aparecer en respuestas ni logs.
+La verificación real cubre Auth/MFA, sesión KVG, RPC permitida/denegada, revocación y expiración. Las pruebas HTTP con puertos simulados cubren cuenta inactiva, capacidades/contextos, denegación de rutas sin política, CSRF/origen, rotaciones de cookie, renovación concurrente y reutilización de una cookie cerrada. Falta QA en navegador. La denegación entre identidades sobre expedientes y archivos se demostrará al implementar esos recursos, sin atribuirla a las pruebas de permisos simuladas.
 
-### 3. Clientes
+### 3. Cliente y expediente mínimos, prototipo completo y despliegue temprano
 
-Implementar CU001–CU003 — SCRUM-13/SCRUM-14/SCRUM-15: registro, consulta y actualización con formularios sencillos, búsqueda y paginación. Validar datos en servidor, normalizar identificaciones, distinguir coincidencia de nombre de duplicado real y comprobar alcance. Conservar autoría, revisión y auditoría; probar cambios concurrentes.
+Después del acceso, implementar un recorrido mínimo de CU001/CU002 — SCRUM-13/SCRUM-14 y CU004/CU005 — SCRUM-41/SCRUM-42: registrar y consultar un cliente ficticio, crear su expediente y consultarlo con alcance autorizado. Incorporar la asignación o concesión explícita mínima que exija el contrato, sin abrir acceso global para simplificar la demostración.
 
-Terminado cuando un usuario autorizado pueda registrar, encontrar y corregir un cliente, y las entradas inválidas, los identificadores únicos duplicados, las consultas ajenas y las revisiones desactualizadas reciban el resultado esperado. No añadir eliminación de clientes: no está definida como caso de uso en esta versión.
+Antes de ampliar exhaustivamente los módulos, demostrar el prototipo de **RUP 16.6**: identidad autenticada, expediente accesible, carga privada segura, consulta autorizada, denegación para otra identidad y recuperación verificable con datos ficticios. Esto adelanta el recorrido mínimo de CU008/CU012/CU013 y un ensayo acotado de copia y recuperación de datos, objetos y manifiesto. La verificación de contenido, antimalware y hash debe ser real; las herramientas simuladas no demuestran ese requisito.
 
-### 4. Expedientes y seguimiento
+Desplegar ese prototipo en un entorno de prueba separado, con HTTPS, web/API bajo el mismo origen, secretos de servidor y datos ficticios. Verificar allí el mismo recorrido, la privacidad de cuarentena y la restauración aislada del conjunto ficticio. Registrar cómo se hizo la copia, qué se recuperó y qué limitaciones permanecen. El ensayo no sustituye la gestión completa de respaldos de la etapa 6 ni acredita objetivos RPO/RTO de producción.
 
-Implementar CU004/CU005/CU031 — SCRUM-41/SCRUM-42/SCRUM-48 para alta, consulta y edición. Continuar con CU007/CU025/CU015 — SCRUM-44/SCRUM-47/SCRUM-45 para asignaciones y acceso, y CU006/CU017 — SCRUM-43/SCRUM-46 para estados y avances.
+Terminado cuando el recorrido mínimo y las denegaciones tengan evidencia tanto local como en el despliegue de prueba, y la recuperación se haya verificado. El despliegue y el prototipo están pendientes; las verificaciones de acceso de los pasos 1 y 2 no los acreditan. Se busca reducir pronto los riesgos de integración y operación sin esperar a completar todos los formularios y funcionalidades.
+
+### 4. Ampliar clientes, expedientes y seguimiento
+
+Completar CU001–CU003 — SCRUM-13/SCRUM-14/SCRUM-15 con edición, búsqueda y paginación. Validar datos en servidor, normalizar identificaciones y distinguir coincidencia de nombre de duplicado real. Verificar revisiones desactualizadas y auditoría. No añadir eliminación de clientes: no está definida en esta versión.
+
+Ampliar CU004/CU005/CU031 — SCRUM-41/SCRUM-42/SCRUM-48 para consulta y edición completas. Continuar con CU007/CU025/CU015 — SCRUM-44/SCRUM-47/SCRUM-45 para asignaciones y acceso, y CU006/CU017 — SCRUM-43/SCRUM-46 para estados y avances.
 
 Terminado cuando se conserve el cliente principal y el folio estable, haya un único principal activo, las reasignaciones mantengan historial, los listados respeten alcance y los cambios cumplan la matriz de estados. Los avances agregan historial en lugar de sobrescribirlo. Conclusión y reapertura deben comprobar la facultad jurídica acordada.
 
-### 5. Documentos y recorrido arquitectónico completo
+### 5. Ampliar la gestión documental
 
-Comenzar por CU008/CU012/CU013 — SCRUM-127/SCRUM-131/SCRUM-132: autorizar la carga para un expediente, transferir a cuarentena, registrar un trabajo persistente, verificar contenido/antimalware/hash y habilitar consulta o descarga exclusivamente al recurso autorizado. El trabajador se ejecuta como proceso del mismo proyecto, fuera de las peticiones interactivas.
+Ampliar el recorrido de CU008/CU012/CU013 — SCRUM-127/SCRUM-131/SCRUM-132 ya probado en el prototipo: autorizar la carga para un expediente, transferir a cuarentena, registrar un trabajo persistente, verificar contenido/antimalware/hash y habilitar consulta o descarga exclusivamente al recurso autorizado. El trabajador se ejecuta como proceso del mismo proyecto, fuera de las peticiones interactivas.
 
 Continuar con clasificación, asociación y búsqueda (CU009–CU011), metadatos y versiones (CU014/CU029), revisión y estados (CU016/CU026) y retiro/recuperación (CU027/CU028). Conservar el original y vincular la revisión jurídica a la versión precisa. PT03 y PT05 afectan formatos y conservación.
 
@@ -48,29 +65,46 @@ Terminado cuando un documento ficticio recorra carga privada, verificación, con
 
 Completar interfaces de usuarios/permisos (CU018/CU019), consulta de bitácora (CU020) y configuración (CU021). Los catálogos usados se desactivan sin romper referencias y los parámetros no permiten anular controles obligatorios.
 
-Implementar respaldos y restauración (CU022/CU030 — SCRUM-196/SCRUM-197): datos, objetos y manifiesto; almacenamiento cifrado independiente; verificación aislada; permisos y autenticación reforzada; restricciones actuales antes de reactivar servicio. Las bases de auditoría, trabajos y recuperación se habrán incorporado durante los pasos anteriores.
+Completar la gestión de respaldos y restauración (CU022/CU030 — SCRUM-196/SCRUM-197) a partir del ensayo acotado del prototipo: datos, objetos y manifiesto; almacenamiento cifrado independiente; programación, historial, reintentos y supervisión; verificación aislada; permisos y autenticación reforzada; restricciones actuales antes de reactivar servicio. Las bases de auditoría, trabajos y recuperación se habrán incorporado durante los pasos anteriores.
 
 Terminado cuando la administración respete las facultades y metadatos mínimos y exista un ensayo documentado de restauración con verificación de datos y objetos. Medir RPO/RTO y compararlos con PT04. No declarar respaldo completo a partir de un volcado que omita archivos.
 
 ### 7. Diseño del frontend
 
-Con los recorridos funcionales y sus contratos estables, abordar colores, tipografía, distribución, componentes visuales, estados de interacción y animaciones que se acuerden. Mantener las reglas y verificaciones de los pasos anteriores.
+Con los recorridos funcionales y sus contratos estables, abordar colores, tipografía, distribución, componentes visuales y animaciones que se acuerden. Mantener las reglas y verificaciones de los pasos anteriores. La claridad de los mensajes, el uso por teclado, las etiquetas de formularios y los estados funcionales de carga/error se verifican desde cada avance anterior.
+
+### 8. Configuración de producción, revisión de seguridad y lanzamiento
+
+Antes del lanzamiento final, elegir y documentar alojamiento y operación según PT06/PT08, sin fijar todavía un proveedor. Separar desarrollo, pruebas y producción y revisar los recorridos funcionales completos en el entorno de destino.
+
+- Configurar secretos, su custodia y rotación; retirar credenciales de propietario del proceso ordinario y comprobar los privilegios mínimos del rol de sesiones y de los trabajadores.
+- Revisar Supabase Auth, invitaciones, MFA, recuperación y límites de intentos. La limitación local por proceso debe adaptarse a varias instancias y coordinarse con los controles del proveedor.
+- Configurar web y API bajo el origen HTTPS acordado, proxy confiable, cookies `Secure`/`HttpOnly`/`SameSite`, CSRF y expiración; verificarlos en navegador sobre ese alojamiento.
+- Comprobar permisos de PostgreSQL, RLS, funciones y políticas de Storage con identidades autorizadas y denegadas. Aplicar migraciones de forma controlada y documentar el procedimiento de reversión o recuperación sin ejecutarlas al arrancar.
+- Verificar respaldos de datos y objetos, claves de recuperación, manifiestos y restauración aislada; medir RPO/RTO conforme a PT04 y registrar las restricciones vigentes antes de habilitar servicio.
+- Configurar monitoreo y alertas de fallos de acceso, sesiones, trabajos, almacenamiento y copias, con logs sin secretos ni contenido jurídico completo. Definir responsables, mantenimiento y respuesta a incidentes.
+
+Terminado cuando la revisión y las pruebas del alojamiento final tengan evidencia, las decisiones pendientes aplicables estén resueltas y el responsable acuerde el lanzamiento. El despliegue temprano del prototipo ayuda a esta preparación, pero no sustituye esta revisión final.
 
 ## Cómo solicitar el siguiente avance
 
 Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultado y preparar un commit con un propósito concreto. Conviene indicar comportamiento esperado, criterios de aceptación y que el diseño sigue pospuesto. Si un prerrequisito todavía no existe, el avance debe incluirlo o dividirse en entregas ejecutables.
 
-**Primera petición recomendada:**
+**Conexión inicial (completada; referencia):**
 
-> Prepara y verifica la integración con Supabase en desarrollo usando datos ficticios. Revisa el modelo físico y el flujo de migraciones, comprueba Auth/Storage y permisos, y documenta lo ejecutado y cualquier pendiente. Mantén el acceso ordinario con identidad del usuario. No hagas diseño visual ni uses datos reales.
+> Conecta y verifica el proyecto Supabase donde ya apliqué el modelo físico. No reinstales la baseline ni crees un proyecto nuevo. Ejecuta los diagnósticos de lectura de API y SQL, revisa funciones, permisos, RLS y buckets, y registra la evidencia y las diferencias. No modifiques datos ni crees identidades durante este diagnóstico. Mantén las credenciales fuera del repositorio y señala qué falta para cerrar el paso 1.
 
-**Acceso:**
+**Acceso (implementado y verificado en desarrollo; referencia):**
 
-> Implementa CU023 y CU024, SCRUM-149 y SCRUM-150: inicio y cierre de sesión con Supabase Auth, MFA y sesión operativa del servidor mediante cookie HttpOnly. Incluye renovación/revocación, protección CSRF, autorización básica y auditoría. Verifica cuenta inactiva, sesión vencida y acceso sin autorización. Usa formularios funcionales sin diseño visual y documenta los valores propuestos de sesión.
+> Implementa CU023 y CU024, SCRUM-149 y SCRUM-150: inicio y cierre de sesión con Supabase Auth, MFA y sesión operativa del servidor mediante cookie HttpOnly. Incluye renovación/revocación, protección CSRF, autorización básica y auditoría. Verifica cuenta inactiva, sesión vencida y acceso sin autorización. Usa formularios funcionales con el estilo mínimo existente y documenta los valores propuestos de sesión.
 
-**Primer caso de clientes:**
+**Siguiente petición recomendada: cliente y expediente mínimos:**
 
-> Implementa CU001, SCRUM-13: registrar cliente de principio a fin. Usa el modelo existente, valida campos en servidor, normaliza identificaciones, impide duplicados cuando la identificación exige unicidad y registra auditoría. Requiere permiso y alcance. Incluye un formulario funcional sin estilos y pruebas de éxito, datos inválidos, duplicado y acceso denegado. Indica el nombre sugerido del commit.
+> Implementa el paso 3: un recorrido mínimo de CU001/CU002 y CU004/CU005 para registrar y consultar un cliente ficticio, crear su expediente y consultarlo con identidad, permiso y alcance reales. Incluye los prerrequisitos mínimos de rol/asignación que exija el contrato, auditoría y pruebas permitidas/denegadas. Mantén controles funcionales con el estilo mínimo existente y registra lo que falta para el prototipo RUP 16.6.
+
+**Ampliación del registro de clientes:**
+
+> Implementa CU001, SCRUM-13: registrar cliente de principio a fin. Usa el modelo existente, valida campos en servidor, normaliza identificaciones, impide duplicados cuando la identificación exige unicidad y registra auditoría. Requiere permiso y alcance. Incluye un formulario funcional con estilos mínimos y pruebas de éxito, datos inválidos, duplicado y acceso denegado. Indica el nombre sugerido del commit.
 
 **Expedientes:**
 
@@ -78,7 +112,15 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 **Carga documental:**
 
-> Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz sin diseño visual.
+> Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz con el estilo mínimo existente.
+
+**Prototipo y despliegue temprano:**
+
+> Con acceso y cliente/expediente mínimos funcionando, completa el prototipo de RUP 16.6 con datos ficticios: identidad real, carga privada segura, consulta autorizada, denegación para otra identidad y copia/recuperación verificable de datos y objetos. Despliégalo en un entorno de prueba con HTTPS y registra la evidencia. Mantén la usabilidad funcional con el estilo mínimo existente y distingue este ensayo de la gestión completa de respaldos de la etapa 6.
+
+**Lanzamiento final:**
+
+> Prepara el paso 8: configura el alojamiento de producción acordado y revisa secretos, privilegios, Auth/MFA, límites para varias instancias, HTTPS/proxy/cookies/CSRF, PostgreSQL/RLS/Storage, migraciones, restauración y monitoreo. Verifica los recorridos en ese entorno y documenta la evidencia y los pendientes antes del lanzamiento.
 
 ## Criterio común de terminado
 
@@ -87,4 +129,4 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 - Los cambios relevantes conservan autoría, auditoría y coherencia transaccional/concurrencia según el caso.
 - Pasan las comprobaciones del repositorio y las pruebas relevantes del comportamiento y sus denegaciones. Se describen las verificaciones que no pudieron ejecutarse.
 - Se actualizan contratos y documentación afectados, se declara cualquier dependencia pendiente y se propone un nombre de commit acorde al cambio.
-- Los controles HTML son utilizables y comprensibles; colores, animaciones y diseño visual siguen pendientes hasta que se soliciten.
+- Se verifica usabilidad en cada avance: etiquetas y mensajes claros, navegación y operación por teclado, y estados funcionales de carga, error y ausencia de datos. Se reutiliza el estilo mínimo autorizado; el diseño definitivo y las animaciones siguen pendientes.

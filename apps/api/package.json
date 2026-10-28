@@ -7,7 +7,11 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "check:supabase": "node scripts/check-supabase.mjs",
+    "setup:identity:dev": "node scripts/setup-identity-dev.mjs",
+    "test:identity:live": "node scripts/test-identity-live.mjs",
+    "test:identity:schema": "node scripts/test-identity-schema.mjs"
   },
   "dependencies": {
     "@kvg/contracts": "*",
@@ -15,14 +19,20 @@
     "@nestjs/config": "12.0.1",
     "@nestjs/core": "12.3.2",
     "@nestjs/platform-express": "12.3.2",
+    "@supabase/supabase-js": "2.118.0",
     "class-transformer": "0.5.1",
     "class-validator": "0.15.1",
+    "express-session": "1.19.0",
     "helmet": "8.3.0",
+    "pg": "8.23.1",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"
   },
   "devDependencies": {
+    "@nestjs/testing": "12.3.2",
     "@types/express": "5.0.6",
-    "@types/node": "24.10.1"
+    "@types/express-session": "1.19.0",
+    "@types/node": "24.10.1",
+    "@types/pg": "8.23.1"
   }
 }
