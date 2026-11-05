@@ -64,6 +64,11 @@ try {
     await page
       .getByRole('button', { name: 'Verificar código', exact: true })
       .click();
+    await page.getByRole('heading', { name: 'Inicio', exact: true }).waitFor();
+    await page
+      .getByRole('navigation', { name: 'Navegación principal' })
+      .getByRole('button', { name: 'Mi sesión', exact: true })
+      .click();
     await page
       .getByText(`Sesión iniciada: ${account.name}.`, { exact: true })
       .waitFor();
@@ -72,6 +77,10 @@ try {
   }
   stage = 'FORMULARIOS';
   const { page, context } = await login('SECRETARIA');
+  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Nuevo cliente', exact: true })
+    .click();
   const name = `Cliente navegador ficticio ${randomUUID().slice(0, 8)}`;
   await page.getByLabel('Nombre completo', { exact: true }).fill(name);
   await page
@@ -90,6 +99,9 @@ try {
     .getByRole('heading', { name: `Cliente: ${name}`, exact: true })
     .waitFor();
   check(true, 'alta_cliente_con_revision_confirmacion_y_detalle');
+  await page
+    .getByRole('button', { name: 'Crear expediente', exact: true })
+    .click();
   await page
     .getByLabel('Descripción', { exact: true })
     .fill('Asunto ficticio verificado por navegador.');
@@ -114,8 +126,39 @@ try {
     'expediente_nuevo_sin_asignacion_fingida',
   );
 
+  await page.getByRole('button', { name: 'Historial', exact: true }).click();
+  check(
+    await page
+      .getByRole('heading', { name: 'Historial de estados', exact: true })
+      .isVisible(),
+    'seccion_historial_accesible',
+  );
+  await page.getByRole('button', { name: 'Avances', exact: true }).click();
+  check(
+    await page
+      .getByText('Sin avances registrados.', { exact: true })
+      .isVisible(),
+    'seccion_avances_sin_datos_inventados',
+  );
+  await page.getByRole('button', { name: 'Resumen', exact: true }).click();
+  const desktopScreenshot = `${localDirectory}/records-browser-desktop.png`;
+  await page.screenshot({ path: desktopScreenshot, fullPage: true });
+  await chmod(desktopScreenshot, 0o600);
+  check(
+    await page
+      .locator('.brand img')
+      .evaluate((img) => img.complete && img.naturalWidth > 0),
+    'logo_local_cargado',
+  );
+  check(
+    (await page
+      .getByRole('button', { name: 'Subir documento', exact: true })
+      .count()) === 0,
+    'sin_accion_de_carga_no_implementada',
+  );
   stage = 'PERSISTENCIA_Y_MOVIL';
   await page.reload();
+  await page.getByRole('button', { name: 'Expedientes', exact: true }).click();
   await page.getByLabel('Folio o descripción', { exact: true }).fill(folio);
   await page
     .getByRole('button', { name: 'Buscar expedientes', exact: true })
@@ -140,7 +183,7 @@ try {
     ),
     'vista_movil_sin_desbordamiento_horizontal',
   );
-  await page.getByLabel('Nombre completo', { exact: true }).focus();
+  await page.getByRole('button', { name: 'Resumen', exact: true }).focus();
   await page.keyboard.press('Tab');
   check(
     await page.evaluate(
@@ -151,6 +194,7 @@ try {
   const screenshot = `${localDirectory}/records-browser-mobile.png`;
   await page.screenshot({ path: screenshot, fullPage: true });
   await chmod(screenshot, 0o600);
+  await page.getByRole('button', { name: 'Mi sesión', exact: true }).click();
   await page
     .getByRole('button', { name: 'Cerrar sesión', exact: true })
     .click();
@@ -161,7 +205,7 @@ try {
   );
   check(
     (await page
-      .getByRole('heading', { name: 'Clientes y expedientes', exact: true })
+      .getByRole('heading', { name: 'Área de trabajo', exact: true })
       .count()) === 0,
     'logout_limpia_contenido_privado',
   );
@@ -187,7 +231,7 @@ try {
   );
   check(errors.length === 0, 'sin_errores_javascript');
   const report = {
-    date: '2026-10-28',
+    date: '2026-11-04',
     result: 'passed',
     checks,
     browser: await browser.version(),

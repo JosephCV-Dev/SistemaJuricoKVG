@@ -4,8 +4,8 @@ Aplicación web interna para gestionar clientes, expedientes y documentos del de
 La base incluye acceso con MFA y el recorrido mínimo de registrar/consultar clientes
 y crear/consultar expedientes con alcance real. Se verificaron HTTP, RPC y PostgreSQL
 en desarrollo y un recorrido de Chromium local, incluidos formularios y vista móvil.
-El prototipo completo y su despliegue de prueba siguen pendientes. La interfaz
-conserva estilos mínimos; el diseño definitivo queda para después.
+El prototipo completo y su despliegue de prueba siguen pendientes. La interfaz adopta el diseño entregado por el usuario: menú lateral, logo KVG,
+formularios y vistas separadas, con acciones según las capacidades de la sesión.
 
 ## Arquitectura elegida
 
@@ -25,7 +25,7 @@ apps/
       configuration/    Catálogos y parámetros
       operations/       Procesamiento y recuperación
     test/               Pruebas HTTP y de identidad
-  web/                  Interfaz React con estilos mínimos
+  web/                  Interfaz React con diseño KVG
     src/app/            Composición de la aplicación
     src/features/       Acceso, clientes y expedientes mínimos
     src/shared/api/     Comunicación HTTP
@@ -56,7 +56,7 @@ Abre `http://127.0.0.1:5173`. El formulario permite iniciar sesión, verificar M
 consultar la sesión y cerrarla. La API escucha en `http://127.0.0.1:3000`; Vite
 reenvía `/api` al backend durante desarrollo.
 
-**Comprobar API** sigue disponible sin credenciales mediante `GET /api/v1/health`.
+El diagnóstico de API está disponible sin credenciales mediante `GET /api/v1/health`.
 Sólo confirma que responde el proceso HTTP. Para el acceso completo necesitas la
 configuración de sesión y las identidades de desarrollo de la [guía de identidad](docs/identity.md).
 
@@ -138,6 +138,7 @@ porque el modelo suministrado restringe ese acceso. Consulta el
 ## Documentación y siguientes avances
 
 - [Arquitectura y decisiones](docs/architecture.md).
+- [Diseño KVG, navegación y alcance visual](docs/interface.md).
 - [Configurar y verificar el Supabase existente](docs/supabase-setup.md).
 - [Inicio/cierre de sesión, MFA y pruebas de identidad](docs/identity.md).
 - [Cliente y expediente mínimos: contrato, preparación y evidencia](docs/clients-and-cases.md).

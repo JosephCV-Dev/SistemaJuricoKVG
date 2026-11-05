@@ -43,9 +43,14 @@ verificación de identidad en desarrollo no acredita todavía el prototipo compl
 `apps/web` consume HTTP y presenta resultados. Las funcionalidades futuras irán en
 `src/features/<funcionalidad>`, mientras `src/app` compone la aplicación y
 `src/shared` contiene utilidades realmente compartidas. Por petición del usuario,
-`src/app/styles.css` aporta estilos mínimos de espaciado, formularios, botones y
-foco de teclado, adaptados a pantallas pequeñas. Se usa CSS sin dependencias nuevas;
-el diseño definitivo y las animaciones siguen pospuestos.
+`src/app/styles.css` adapta el diseño HTML entregado por el usuario: menú lateral,
+tablas, formularios en columnas y secciones de detalle. `App` compone el acceso y
+la navegación en memoria; `Sidebar` muestra destinos según capacidades vigentes.
+Los componentes de negocio permanecen en `features`; los tipos de navegación
+compartidos están en `shared/navigation.ts`. Se usa CSS sin dependencias nuevas,
+con foco visible, salto al contenido y adaptación móvil. El logo se sirve desde
+`public/kvg-logo.jpg`; no se cargan fuentes ni scripts de terceros. Véase
+[el alcance de la adaptación visual](interface.md).
 
 `apps/api/src/modules` delimita identidad, clientes, expedientes, documentos,
 auditoría, configuración y operaciones. Las capas se crean cuando tienen código:

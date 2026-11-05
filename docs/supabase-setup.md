@@ -51,6 +51,36 @@ desarrollo y utiliza datos ficticios. La cuenta con la que se entra al Dashboard
 de Supabase administra la plataforma; no sustituye a las cuentas individuales de
 Supabase Auth y sus perfiles KVG.
 
+### Distinguir las dos conexiones PostgreSQL
+
+| Variable               | Identidad y uso                                                                                           |
+| ---------------------- | --------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`         | Propietario `postgres`, con sufijo de proyecto en el pooler; solo herramientas autorizadas de desarrollo. |
+| `SESSION_DATABASE_URL` | Rol limitado `kvg_session_store`, con el mismo sufijo si usa pooler; persistencia de sesiones de la API.  |
+
+Cada rol tiene su propia contraseña. **No copiar la URI de `postgres` en
+`SESSION_DATABASE_URL`**, ni cambiar solo el usuario conservando la contraseña del
+propietario. La preparación de desarrollo genera la credencial del rol limitado;
+si se pierde, debe recuperarse o restablecerse únicamente esa credencial, sin
+reinstalar la base ni regenerar las claves de firma y cifrado de las sesiones.
+
+Cuando la conexión directa no sea accesible desde una red IPv4, utilizar
+**Connect / Connection string / Session pooler**, puerto **5432**. Mantener el
+modo de sesión: el almacén utiliza bloqueos PostgreSQL ligados a la conexión.
+Fuera de loopback, `SESSION_DATABASE_URL` exige `sslmode=verify-full`; configurar
+también `sslrootcert` con la ruta local de la CA correspondiente. La preparación
+de desarrollo añade esos parámetros a las conexiones que genera. No desactivar
+la validación TLS para resolver errores. El contrato completo está en
+[identity.md](identity.md#configuración-del-servidor).
+
+Tras modificar `.env`, reiniciar la API. Un **502 del proxy acompañado de
+`ECONNREFUSED` hacia el puerto 3000** indica que el backend no está escuchando:
+revisar primero su arranque y configuración. Un **500 o 503 devuelto por la API**
+requiere identificar la ruta y comprobar, entre otras causas, el almacén de
+sesiones; el mensaje público genérico no permite atribuirlo al modelo físico.
+Comprobar `/api/v1/health` directamente y mediante el proxy, sin cookies, ayuda a
+distinguir ambos casos. No compartir las URI ni contraseñas en logs o capturas.
+
 ## 2. Diagnóstico de conectividad
 
 Desde la raíz del repositorio:

@@ -8,7 +8,7 @@ El proyecto es un monorepo de npm workspaces: `apps/web` para React/TypeScript/V
 
 **Paso 2 implementado y verificado en desarrollo.** Se aplicaron explícitamente las migraciones de persistencia técnica y contexto de sesión y se inicializaron dos identidades Auth ficticias distintas. Se probó el proveedor real con contraseña, MFA y sesión KVG, operaciones RPC permitidas y denegadas y rechazo tras revocación o expiración. Las pruebas HTTP locales cubren también CSRF/origen, cookies, renovación concurrente, cierre, cuenta inactiva y permiso/contexto mediante puertos simulados. El acceso se comprobó después en Chromium local con el paso 3A. Esto no completa la administración de usuarios/permisos ni el procesamiento de archivos o recuperación. El contrato y el alcance están en [identity.md](identity.md).
 
-La trazabilidad y los requisitos están en [requirements.md](requirements.md). La estructura permite avanzar mediante casos de uso completos: entrada funcional, validación del servidor, reglas, persistencia, autorización, resultado verificable y pruebas relevantes. El usuario autorizó estilos mínimos para que los formularios sean legibles y ordenados: fondo neutro, secciones, espaciado y botones sencillos, sin animaciones. Cada interfaz conserva controles HTML semánticos y mensajes comprensibles. El diseño definitivo permanece en el paso 7 y la usabilidad se verifica en cada entrega.
+La trazabilidad y los requisitos están en [requirements.md](requirements.md). La estructura permite avanzar mediante casos de uso completos: entrada funcional, validación del servidor, reglas, persistencia, autorización, resultado verificable y pruebas relevantes. El usuario autorizó estilos mínimos para que los formularios sean legibles y ordenados: fondo neutro, secciones, espaciado y botones sencillos, sin animaciones. Cada interfaz conserva controles HTML semánticos y mensajes comprensibles. El 4 de noviembre de 2026 el usuario adelantó la adaptación del diseño HTML y logo KVG; véase [interface.md](interface.md). La usabilidad se verifica en cada entrega.
 
 ## Orden recomendado
 
@@ -84,7 +84,7 @@ Terminado cuando la administración respete las facultades y metadatos mínimos 
 
 ### 7. Diseño del frontend
 
-Con los recorridos funcionales y sus contratos estables, abordar colores, tipografía, distribución, componentes visuales y animaciones que se acuerden. Mantener las reglas y verificaciones de los pasos anteriores. La claridad de los mensajes, el uso por teclado, las etiquetas de formularios y los estados funcionales de carga/error se verifican desde cada avance anterior.
+La base visual se adelantó por petición del usuario el 4 de noviembre de 2026, usando su maqueta y logo. Con los recorridos funcionales y sus contratos estables, completar las pantallas futuras sobre esa base y revisar la consistencia visual y las mejoras que se acuerden. Mantener las reglas y verificaciones de los pasos anteriores. La claridad de los mensajes, el uso por teclado, las etiquetas de formularios y los estados funcionales de carga/error se verifican desde cada avance anterior.
 
 ### 8. Configuración de producción, revisión de seguridad y lanzamiento
 

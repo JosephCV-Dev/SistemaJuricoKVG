@@ -1,3 +1,6 @@
+import { CaseDetailView } from './CaseDetailView';
+import { showDate } from './record-format';
+import type { WorkspaceView } from '../../shared/navigation';
 import { ClientRegistration } from './ClientRegistration';
 import { CaseCreation } from './CaseCreation';
 import { useEffect, useRef, useState } from 'react';
@@ -26,15 +29,16 @@ const emptyPage = <T,>(): RecordPage<T> => ({
   offset: 0,
   hasMore: false,
 });
-const showDate = (date: string) =>
-  new Intl.DateTimeFormat('es-MX', {
-    dateStyle: 'medium',
-    timeZone: 'America/Merida',
-  }).format(new Date(date));
 
 export function RecordsWorkspace({
   onSessionExpired,
+  view,
+  onNavigate,
+  onCapabilities,
 }: {
+  view: WorkspaceView;
+  onNavigate: (view: WorkspaceView) => void;
+  onCapabilities: (capabilities: SessionCapabilities['capabilities']) => void;
   onSessionExpired: () => void;
 }) {
   const [capabilities, setCapabilities] = useState<
@@ -96,6 +100,7 @@ export function RecordsWorkspace({
     void run(async (signal) => {
       const result = await getCapabilities(signal);
       setCapabilities(result.capabilities);
+      onCapabilities(result.capabilities);
       if (
         result.capabilities.some(
           (item) => item.permission === 'cliente.registrar',
@@ -127,6 +132,7 @@ export function RecordsWorkspace({
     setClients(await searchClients('', 0, signal));
     setClientText('');
     setClientQuery('');
+    onNavigate('client');
   }
   async function onCaseCreated(created: CaseSummary, signal: AbortSignal) {
     setNotice(`Expediente creado con folio ${created.folio}, en estado NUEVO.`);
@@ -135,6 +141,7 @@ export function RecordsWorkspace({
     setCaseText('');
     setCaseStatus('');
     setCaseQuery({ text: '', status: '' });
+    onNavigate('case');
   }
   function loadClients(offset: number, text = clientQuery) {
     void run(async (signal) => {
@@ -156,18 +163,75 @@ export function RecordsWorkspace({
     void run(async (signal) => {
       setClient(null);
       setClient(await getClient(id, signal));
+      onNavigate('client');
     });
   }
   function openCase(id: string) {
     void run(async (signal) => {
       setCaseDetail(null);
       setCaseDetail(await getCase(id, signal));
+      onNavigate('case');
     });
   }
 
   return (
     <section aria-labelledby="records-heading" aria-busy={busy}>
-      <h2 id="records-heading">Clientes y expedientes</h2>
+      <h2 id="records-heading" className="sr-only">
+        Área de trabajo
+      </h2>
+      {view === 'home' && (
+        <section className="home-grid">
+          <div className="panel">
+            <h2>Acciones rápidas</h2>
+            <p className="sub">Selecciona una tarea para comenzar.</p>
+            <div className="actions">
+              {can('cliente.registrar') && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onNavigate('new-client')}
+                >
+                  Nuevo cliente
+                </button>
+              )}
+              {can('cliente.consultar') && (
+                <button
+                  className="button-secondary"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onNavigate('clients')}
+                >
+                  Consultar clientes
+                </button>
+              )}
+              {can('expediente.consultar') && (
+                <button
+                  className="button-secondary"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onNavigate('cases')}
+                >
+                  Consultar expedientes
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="panel">
+            <h2>Tu espacio de trabajo</h2>
+            <p>
+              Los clientes y expedientes disponibles dependen de tus permisos y
+              asignaciones vigentes.
+            </p>
+            <button
+              className="button-secondary"
+              type="button"
+              onClick={() => onNavigate('session')}
+            >
+              Consultar mi sesión
+            </button>
+          </div>
+        </section>
+      )}
       <div role="status" aria-live="polite" aria-atomic="true">
         {busy && <p>Procesando solicitud…</p>}
         {notice && <p>{notice}</p>}
@@ -187,80 +251,149 @@ export function RecordsWorkspace({
           </p>
         )}
 
-      {can('cliente.registrar') && (
-        <ClientRegistration
-          types={types}
-          busy={busy}
-          run={run}
-          onCreated={onClientCreated}
-        />
+      {view === 'new-client' && can('cliente.registrar') && (
+        <>
+          <button
+            className="breadcrumb"
+            type="button"
+            disabled={busy}
+            onClick={() => onNavigate('clients')}
+          >
+            Clientes / Volver al listado
+          </button>
+          <ClientRegistration
+            types={types}
+            busy={busy}
+            run={run}
+            onCreated={onClientCreated}
+          />
+        </>
       )}
 
-      {can('cliente.consultar') && (
+      {['clients', 'client'].includes(view) && can('cliente.consultar') && (
         <section className="panel" aria-labelledby="clients-heading">
-          <h3 id="clients-heading">Consultar clientes</h3>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              loadClients(0, clientText);
-            }}
-          >
-            <fieldset disabled={busy}>
-              <legend>Buscar por nombre</legend>
-              <p>
-                <label htmlFor="client-search">Nombre del cliente</label>
-                <input
-                  id="client-search"
-                  value={clientText}
-                  onChange={(event) => setClientText(event.target.value)}
-                  maxLength={200}
-                />
-              </p>
-              <button type="submit">Buscar clientes</button>
-            </fieldset>
-          </form>
-          {!busy && clients.items.length === 0 && (
-            <p>No hay clientes visibles que coincidan con la búsqueda.</p>
-          )}
-          {clients.items.length > 0 && (
-            <ul className="record-list">
-              {clients.items.map((item) => (
-                <li key={item.id}>
-                  <span>{item.name}</span>
-                  <button
-                    className="button-secondary"
-                    type="button"
-                    disabled={busy}
-                    onClick={() => openClient(item.id)}
-                    aria-label={`Consultar cliente ${item.name}`}
-                  >
-                    Consultar
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="actions">
-            <button
-              className="button-secondary"
-              type="button"
-              disabled={busy || clients.offset === 0}
-              onClick={() =>
-                loadClients(Math.max(0, clients.offset - clients.limit))
-              }
+          <div className="section-header">
+            <h2 id="clients-heading">
+              {view === 'client'
+                ? (client?.name ?? 'Detalle del cliente')
+                : 'Clientes'}
+            </h2>
+            <div className="actions">
+              {view === 'clients' && can('cliente.registrar') && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onNavigate('new-client')}
+                >
+                  Nuevo cliente
+                </button>
+              )}
+              {view === 'client' && (
+                <button
+                  className="button-secondary"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onNavigate('clients')}
+                >
+                  Volver a clientes
+                </button>
+              )}
+              {view === 'client' && client && can('expediente.crear') && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onNavigate('new-case')}
+                >
+                  Crear expediente
+                </button>
+              )}
+            </div>
+          </div>
+          <div hidden={view !== 'clients'}>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                loadClients(0, clientText);
+              }}
             >
-              Clientes anteriores
-            </button>
-            <button
-              className="button-secondary"
-              type="button"
-              disabled={busy || !clients.hasMore}
-              onClick={() => loadClients(clients.offset + clients.limit)}
-            >
-              Clientes siguientes
-            </button>
-          </p>
-          {client && (
+              <fieldset disabled={busy}>
+                <legend>Buscar por nombre</legend>
+                <p>
+                  <label htmlFor="client-search">Nombre del cliente</label>
+                  <input
+                    id="client-search"
+                    value={clientText}
+                    onChange={(event) => setClientText(event.target.value)}
+                    maxLength={200}
+                  />
+                </p>
+                <button type="submit">Buscar clientes</button>
+              </fieldset>
+            </form>
+            {!busy && clients.items.length === 0 && (
+              <p>No hay clientes visibles que coincidan con la búsqueda.</p>
+            )}
+            {clients.items.length > 0 && (
+              <div className="table-wrap">
+                <table>
+                  <caption className="sr-only">Clientes disponibles</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Nombre</th>
+                      <th scope="col">Tipo</th>
+                      <th scope="col">Registrado</th>
+                      <th scope="col">Detalle</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clients.items.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.name}</td>
+                        <td>
+                          {item.type === 'PERSONA_FISICA'
+                            ? 'Persona física'
+                            : item.type}
+                        </td>
+                        <td>{showDate(item.createdAt)}</td>
+                        <td>
+                          <button
+                            className="table-link"
+                            type="button"
+                            disabled={busy}
+                            onClick={() => openClient(item.id)}
+                            aria-label={`Consultar cliente ${item.name}`}
+                          >
+                            Consultar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="actions">
+              <button
+                className="button-secondary"
+                type="button"
+                disabled={busy || clients.offset === 0}
+                onClick={() =>
+                  loadClients(Math.max(0, clients.offset - clients.limit))
+                }
+              >
+                Clientes anteriores
+              </button>
+              <button
+                className="button-secondary"
+                type="button"
+                disabled={busy || !clients.hasMore}
+                onClick={() => loadClients(clients.offset + clients.limit)}
+              >
+                Clientes siguientes
+              </button>
+            </p>
+          </div>
+          {view === 'client' && client && (
             <div className="record-detail">
               <h4>Cliente: {client.name}</h4>
               <dl>
@@ -299,166 +432,171 @@ export function RecordsWorkspace({
         </section>
       )}
 
-      {client && can('expediente.crear') && (
-        <CaseCreation
-          key={client.id}
-          client={client}
-          busy={busy}
-          run={run}
-          onCreated={onCaseCreated}
-          setError={setError}
-        />
+      {view === 'new-case' && client && can('expediente.crear') && (
+        <>
+          <button
+            className="breadcrumb"
+            type="button"
+            disabled={busy}
+            onClick={() => onNavigate('client')}
+          >
+            Cliente / Volver al detalle
+          </button>
+          <CaseCreation
+            key={client.id}
+            client={client}
+            busy={busy}
+            run={run}
+            onCreated={onCaseCreated}
+            setError={setError}
+          />
+        </>
       )}
 
-      {can('expediente.consultar') && (
+      {['cases', 'case'].includes(view) && can('expediente.consultar') && (
         <section className="panel" aria-labelledby="cases-heading">
-          <h3 id="cases-heading">Consultar expedientes</h3>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              loadCases(0, { text: caseText, status: caseStatus });
-            }}
-          >
-            <fieldset disabled={busy}>
-              <legend>Buscar por folio o descripción</legend>
-              <p>
-                <label htmlFor="case-search">Folio o descripción</label>
-                <input
-                  id="case-search"
-                  value={caseText}
-                  onChange={(event) => setCaseText(event.target.value)}
-                  maxLength={200}
-                />
-              </p>
-              <p>
-                <label htmlFor="case-status">Estado</label>
-                <select
-                  id="case-status"
-                  value={caseStatus}
-                  onChange={(event) => setCaseStatus(event.target.value)}
+          <div className="section-header">
+            <h2 id="cases-heading">
+              {view === 'case'
+                ? (caseDetail?.folio ?? 'Detalle del expediente')
+                : 'Expedientes'}
+            </h2>
+            <div className="actions">
+              {view === 'case' && (
+                <button
+                  className="button-secondary"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onNavigate('cases')}
                 >
-                  <option value="">Todos los estados</option>
-                  {[
-                    'NUEVO',
-                    'EN_PROCESO',
-                    'PENDIENTE',
-                    'CONCLUIDO',
-                    'ARCHIVADO',
-                  ].map((state) => (
-                    <option key={state}>{state}</option>
-                  ))}
-                </select>
-              </p>
-              <button type="submit">Buscar expedientes</button>
-            </fieldset>
-          </form>
-          {!busy && cases.items.length === 0 && (
-            <p>No hay expedientes visibles que coincidan con la búsqueda.</p>
-          )}
-          {cases.items.length > 0 && (
-            <ul className="record-list">
-              {cases.items.map((item) => (
-                <li key={item.id}>
-                  <span>
-                    {item.folio} · {item.status}
-                    <br />
-                    {item.description.slice(0, 120)}
-                  </span>
-                  <button
-                    className="button-secondary"
-                    type="button"
-                    disabled={busy}
-                    onClick={() => openCase(item.id)}
-                    aria-label={`Consultar expediente ${item.folio}`}
-                  >
-                    Consultar
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="actions">
-            <button
-              className="button-secondary"
-              type="button"
-              disabled={busy || cases.offset === 0}
-              onClick={() => loadCases(Math.max(0, cases.offset - cases.limit))}
-            >
-              Expedientes anteriores
-            </button>
-            <button
-              className="button-secondary"
-              type="button"
-              disabled={busy || !cases.hasMore}
-              onClick={() => loadCases(cases.offset + cases.limit)}
-            >
-              Expedientes siguientes
-            </button>
-          </p>
-          {caseDetail && (
-            <div className="record-detail">
-              <h4>Expediente {caseDetail.folio}</h4>
-              <dl>
-                <dt>Estado</dt>
-                <dd>{caseDetail.status}</dd>
-                <dt>Descripción</dt>
-                <dd>{caseDetail.description}</dd>
-                <dt>Creado</dt>
-                <dd>{showDate(caseDetail.createdAt)}</dd>
-                <dt>Número externo</dt>
-                <dd>{caseDetail.externalNumber ?? 'Sin número externo'}</dd>
-                <dt>Autoridad</dt>
-                <dd>
-                  {caseDetail.externalAuthority ?? 'Sin autoridad externa'}
-                </dd>
-              </dl>
-              {can('cliente.consultar') && (
-                <p>
-                  <button
-                    className="button-secondary"
-                    type="button"
-                    disabled={busy}
-                    onClick={() => openClient(caseDetail.clientId)}
-                  >
-                    Consultar cliente asociado
-                  </button>
-                </p>
+                  Volver a expedientes
+                </button>
               )}
-              <h4>Responsables</h4>
-              {caseDetail.assignments.filter((item) => item.active).length ? (
-                <ul>
-                  {caseDetail.assignments
-                    .filter((item) => item.active)
-                    .map((item, index) => (
-                      <li key={index}>
-                        {item.function}: {item.name}
-                      </li>
-                    ))}
-                </ul>
-              ) : (
-                <p>Sin abogado asignado.</p>
-              )}
-              <h4>Historial de estados</h4>
-              <ul>
-                {caseDetail.history.map((item, index) => (
-                  <li key={index}>
-                    {item.to} · {showDate(item.at)} · {item.reason}
-                  </li>
-                ))}
-              </ul>
-              <h4>Avances</h4>
-              {caseDetail.progress.length ? (
-                <ul>
-                  {caseDetail.progress.map((item, index) => (
-                    <li key={index}>
-                      {showDate(item.at)}: {item.description}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>Sin avances registrados.</p>
+              {view === 'cases' && can('expediente.crear') && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    onNavigate('clients');
+                    setNotice(
+                      'Selecciona un cliente para crear su expediente.',
+                    );
+                  }}
+                >
+                  Nuevo expediente
+                </button>
               )}
             </div>
+          </div>
+          <div hidden={view !== 'cases'}>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                loadCases(0, { text: caseText, status: caseStatus });
+              }}
+            >
+              <fieldset disabled={busy}>
+                <legend>Buscar por folio o descripción</legend>
+                <p>
+                  <label htmlFor="case-search">Folio o descripción</label>
+                  <input
+                    id="case-search"
+                    value={caseText}
+                    onChange={(event) => setCaseText(event.target.value)}
+                    maxLength={200}
+                  />
+                </p>
+                <p>
+                  <label htmlFor="case-status">Estado</label>
+                  <select
+                    id="case-status"
+                    value={caseStatus}
+                    onChange={(event) => setCaseStatus(event.target.value)}
+                  >
+                    <option value="">Todos los estados</option>
+                    {[
+                      'NUEVO',
+                      'EN_PROCESO',
+                      'PENDIENTE',
+                      'CONCLUIDO',
+                      'ARCHIVADO',
+                    ].map((state) => (
+                      <option key={state}>{state}</option>
+                    ))}
+                  </select>
+                </p>
+                <button type="submit">Buscar expedientes</button>
+              </fieldset>
+            </form>
+            {!busy && cases.items.length === 0 && (
+              <p>No hay expedientes visibles que coincidan con la búsqueda.</p>
+            )}
+            {cases.items.length > 0 && (
+              <div className="table-wrap">
+                <table>
+                  <caption className="sr-only">Expedientes disponibles</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Folio</th>
+                      <th scope="col">Asunto</th>
+                      <th scope="col">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cases.items.map((item) => (
+                      <tr key={item.id}>
+                        <td>
+                          <button
+                            className="table-link"
+                            type="button"
+                            disabled={busy}
+                            onClick={() => openCase(item.id)}
+                            aria-label={`Consultar expediente ${item.folio}`}
+                          >
+                            {item.folio}
+                          </button>
+                        </td>
+                        <td>{item.description.slice(0, 120)}</td>
+                        <td>
+                          <span className="badge">
+                            {item.status.replaceAll('_', ' ')}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="actions">
+              <button
+                className="button-secondary"
+                type="button"
+                disabled={busy || cases.offset === 0}
+                onClick={() =>
+                  loadCases(Math.max(0, cases.offset - cases.limit))
+                }
+              >
+                Expedientes anteriores
+              </button>
+              <button
+                className="button-secondary"
+                type="button"
+                disabled={busy || !cases.hasMore}
+                onClick={() => loadCases(cases.offset + cases.limit)}
+              >
+                Expedientes siguientes
+              </button>
+            </p>
+          </div>
+          {view === 'case' && caseDetail && (
+            <CaseDetailView
+              key={caseDetail.id}
+              caseDetail={caseDetail}
+              busy={busy}
+              canConsultClient={can('cliente.consultar')}
+              onOpenClient={openClient}
+            />
           )}
         </section>
       )}

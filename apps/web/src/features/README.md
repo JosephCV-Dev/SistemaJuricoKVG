@@ -7,8 +7,10 @@ auditoría, configuración y recuperación se incorporarán después.
 
 Cada incremento debe identificar sus casos de uso y criterios de aceptación. La
 validación del navegador complementa la del servidor; el acceso efectivo siempre
-se comprueba en la API y en los datos. Se reutilizan los estilos mínimos de
-`src/app/styles.css`; el diseño definitivo y las animaciones quedan para después.
+se comprueba en la API y en los datos. Se reutiliza la base visual KVG de `src/app/styles.css`, adaptada a la maqueta
+entregada por el usuario. La navegación separa listas, formularios y detalles;
+`CaseDetailView` presenta resumen, historial y avances. No se incluyen acciones
+de módulos pendientes ni datos de demostración incrustados.
 
 La composición de la aplicación pertenece a `src/app` y la comunicación HTTP
 compartida a `src/shared/api`. No se importan implementaciones del backend.

@@ -43,11 +43,14 @@ técnico no puede registrar clientes ni leer expedientes por su rol.
 No se implementan edición, eliminación de clientes, cambios de estado, captura de
 avances, pantallas completas de usuarios/permisos ni gestión documental. Las
 relaciones que el SQL ya devuelve se muestran; no se consideran implementados los
-casos de uso que las modifican. La interfaz conserva el estilo mínimo autorizado.
+casos de uso que las modifican. La interfaz adopta la maqueta KVG autorizada; listas, formularios y detalles
+están separados, con resumen/historial/avances en el expediente.
 
 Los errores conservan el formulario y la confirmación para corregir o reintentar.
 Un 401 limpia el estado de acceso; un 403 descarta los listados/detalles privados
-mostrados. Las solicitudes se cancelan al abandonar la vista o cerrar sesión. No
+mostrados. Las solicitudes se cancelan al desmontar el área de trabajo o cerrar sesión.
+La navegación interna conserva la solicitud en curso; los formularios se desmontan
+al salir de su sección, por lo que sus borradores no se conservan al volver. No
 se almacenan tokens ni fichas en `localStorage` o `sessionStorage`; las respuestas
 de `/api/v1` llevan `Cache-Control: no-store`.
 
