@@ -1,0 +1,11 @@
+services:
+  antivirus:
+    image: clamav/clamav@sha256:6d87c712e3391e13c1ba6e05dfb074d4b1ddb5a6834b23bb9da990d2a4ef042a
+    ports:
+      - '127.0.0.1:3310:3310'
+    volumes:
+      - signatures:/var/lib/clamav
+    mem_limit: 2g
+    restart: unless-stopped
+volumes:
+  signatures:

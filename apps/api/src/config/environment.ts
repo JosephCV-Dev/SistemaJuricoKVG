@@ -4,6 +4,9 @@ export interface Environment {
   API_PORT: number;
   SUPABASE_URL?: string;
   SUPABASE_PUBLISHABLE_KEY?: string;
+  SUPABASE_SECRET_KEY?: string;
+  CLAMAV_HOST: string;
+  CLAMAV_PORT: number;
   APP_ORIGIN: string;
   TRUST_PROXY: boolean;
   SESSION_DATABASE_URL?: string;
@@ -111,7 +114,21 @@ export function validateEnvironment(
       'SESSION_ENCRYPTION_KEY debe contener 32 bytes codificados en base64.',
     );
   }
+  const technicalKey = optionalText(
+    input.SUPABASE_SECRET_KEY,
+    'SUPABASE_SECRET_KEY',
+  );
+  if (technicalKey && !/^sb_secret_[A-Za-z0-9_-]+$/.test(technicalKey))
+    throw new Error('SUPABASE_SECRET_KEY debe ser una clave técnica secret.');
+  const clamHost =
+    optionalText(input.CLAMAV_HOST, 'CLAMAV_HOST') ?? '127.0.0.1';
+  const clamPort = Number(input.CLAMAV_PORT ?? 3310);
+  if (!Number.isInteger(clamPort) || clamPort < 1 || clamPort > 65535)
+    throw new Error('CLAMAV_PORT inválido.');
   const base: Environment = {
+    ...(technicalKey ? { SUPABASE_SECRET_KEY: technicalKey } : {}),
+    CLAMAV_HOST: clamHost,
+    CLAMAV_PORT: clamPort,
     NODE_ENV: nodeEnv,
     API_HOST: host,
     API_PORT: port,

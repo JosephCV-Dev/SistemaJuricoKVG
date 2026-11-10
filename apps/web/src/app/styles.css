@@ -439,3 +439,18 @@ code {
     margin-top: 16px;
   }
 }
+
+.upload-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  margin: 16px 0 24px;
+}
+.upload-panel summary {
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+input[type='file'] {
+  max-width: 100%;
+}

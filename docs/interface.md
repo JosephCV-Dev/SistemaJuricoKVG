@@ -27,7 +27,9 @@ para tipografía, scripts o imágenes.
 
 El menú responde a capacidades y no sustituye los controles de autorización del
 servidor y SQL. El administrador no obtiene enlaces de lectura jurídica por ser
-administrador. Documentos, usuarios, permisos, configuración, bitácora, respaldos,
+administrador. El detalle del expediente incorpora Documentos con carga privada, estado de
+análisis, detalle y descarga autorizada (paso 3B). Usuarios, permisos, configuración,
+bitácora, respaldos,
 edición, asignación, cambio de estado y captura de avances recibirán sus controles
 cuando se implemente cada recorrido del roadmap. No se reutilizan los botones de
 maqueta que aparentan guardar sin persistencia.
@@ -66,7 +68,8 @@ PLAYWRIGHT_MODULE_PATH=/ruta/externa/playwright/index.mjs node apps/api/scripts/
 ejecutaron migraciones en este cambio. El recorrido de navegador dejó únicamente
 un cliente y expediente ficticios adicionales y su auditoría de desarrollo.
 
-La adaptación visual no cierra 3B ni 3C. El siguiente avance funcional sigue siendo
-la carga privada verificada y recuperación, y después el despliegue de prueba.
+La adaptación visual no cierra el prototipo completo. Después se incorporó el
+recorrido documental local y ensayo acotado de recuperación de 3B, documentados
+en [documents.md](documents.md). Sigue el despliegue de prueba separado de 3C.
 
 Commit sugerido: `feat(web): aplicar diseño KVG y navegación por secciones`.

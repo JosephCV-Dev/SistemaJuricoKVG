@@ -1,3 +1,4 @@
+import { CaseDocuments } from '../documents/CaseDocuments';
 import { useState } from 'react';
 import type { CaseDetail } from '@kvg/contracts';
 import { showDate } from './record-format';
@@ -7,20 +8,35 @@ export function CaseDetailView({
   busy,
   canConsultClient,
   onOpenClient,
+  canConsultDocuments,
+  canUploadDocuments,
+  canDownloadDocuments,
+  onAccessFailure,
 }: {
+  canConsultDocuments: boolean;
+  canUploadDocuments: boolean;
+  canDownloadDocuments: boolean;
+  onAccessFailure: (status: number) => void;
   caseDetail: CaseDetail;
   busy: boolean;
   canConsultClient: boolean;
   onOpenClient: (id: string) => void;
 }) {
-  const [section, setSection] = useState<'summary' | 'history' | 'progress'>(
-    'summary',
-  );
+  const [section, setSection] = useState<
+    'summary' | 'history' | 'progress' | 'documents'
+  >('summary');
   return (
     <div className="record-detail">
       <h4>Expediente {caseDetail.folio}</h4>
       <div className="detail-tabs" aria-label="Secciones del expediente">
-        {(['summary', 'history', 'progress'] as const).map((item) => (
+        {(
+          [
+            'summary',
+            ...(canConsultDocuments ? ['documents' as const] : []),
+            'history',
+            'progress',
+          ] as const
+        ).map((item) => (
           <button
             className="button-secondary"
             type="button"
@@ -29,9 +45,12 @@ export function CaseDetailView({
             onClick={() => setSection(item)}
           >
             {
-              { summary: 'Resumen', history: 'Historial', progress: 'Avances' }[
-                item
-              ]
+              {
+                summary: 'Resumen',
+                history: 'Historial',
+                progress: 'Avances',
+                documents: 'Documentos',
+              }[item]
             }
           </button>
         ))}
@@ -76,6 +95,15 @@ export function CaseDetailView({
           <p>Sin abogado asignado.</p>
         )}
       </div>
+      {section === 'documents' && canConsultDocuments && (
+        <CaseDocuments
+          key={caseDetail.id}
+          caseId={caseDetail.id}
+          canUpload={canUploadDocuments}
+          canDownload={canDownloadDocuments}
+          onAccessFailure={onAccessFailure}
+        />
+      )}
       <div hidden={section !== 'history'}>
         <h4>Historial de estados</h4>
         <ul>

@@ -2,8 +2,9 @@
 
 Cada módulo delimita un área funcional. `identity` implementa CU023/CU024 con sus
 capas y endpoints de acceso. `clients` y `cases` implementan el recorrido mínimo
-de registro/consulta del paso 3A con sus capas y RPC. Los demás módulos están
-registrados y todavía no exponen operaciones de negocio.
+de registro/consulta del paso 3A con sus capas y RPC. `documents` implementa el mínimo de carga privada/consulta/descarga y
+`operations` el trabajador de verificación. Auditoría y configuración siguen
+registrados sin pantallas/endpoints propios completos.
 
 | Carpeta         | Responsabilidad                                                   |
 | --------------- | ----------------------------------------------------------------- |
@@ -26,5 +27,8 @@ Los controladores validan y delegan; los casos de uso coordinan; PostgreSQL cons
 la integridad transaccional. No consultar tablas de otro módulo directamente ni
 duplicar reglas que el SQL ya hace cumplir. Ver `database/README.md`.
 
-El trabajador futuro tendrá una entrada independiente dentro de esta aplicación y
-reutilizará `operations`. No se ha implementado un bucle de trabajos, antimalware ni copias.
+El trabajador de `src/worker.ts` se ejecuta por separado y reclama únicamente
+trabajos de carga. Usa ClamAV real y un verificador en proceso hijo. El ensayo
+cifrado de recuperación se ejecuta explícitamente como herramienta de desarrollo;
+no equivale a la operación completa de respaldos/restauración. Véase
+[documents.md](../../../../docs/documents.md).

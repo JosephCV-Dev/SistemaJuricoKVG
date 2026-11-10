@@ -49,3 +49,8 @@ Las pruebas deben ejecutar los puntos de entrada reales, con identidades y sesio
 Los identificadores CU y VD proceden del RUP de Elaboración 2.0 y del modelo lógico/diccionario 1.1. Los casos se implementarán junto al incremento funcional correspondiente. Los procesos externos necesitan adaptadores reales o entornos controlados que permitan comprobar sus efectos, sin sustituir una verificación antimalware o una restauración completa por un resultado simulado satisfactorio.
 
 En cada prueba RPC se deben distinguir un fallo de transporte y un rechazo funcional `{ "correcto": false }`. El código HTTP por sí solo no demuestra que una operación se haya confirmado.
+
+`documents.sql` verifica helpers privados, separación de RPC, ausencia de CRUD
+directo, buckets y política restrictiva de Storage, en una transacción de solo
+lectura que revierte. `recovery-platform-fixture.sql` es exclusivo del contenedor
+efímero del ensayo; no se debe ejecutar contra Supabase.

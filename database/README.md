@@ -159,3 +159,14 @@ El envoltorio anterior corresponde a `kvg_operar`. `kvg_trabajar` devuelve el re
 - La aplicación debe ejecutar la verificación técnica, antimalware, cálculo fiable de hash, copia de objetos y recuperación. El SQL registra y autoriza esos resultados; no realiza por sí mismo esos procesos externos.
 
 La baseline concreta decisiones todavía pendientes de validación en los documentos: PT01–PT08. Su conservación en el repositorio no aprueba tipos nuevos de cliente, varios clientes por expediente, facultades jurídicas, conservación automática ni objetivos de recuperación sin un ensayo real.
+
+## Documentos y ensayo 3B
+
+Las migraciones `202611040005_document_upload_workflow.sql` y
+`202611040006_document_detail_and_failed_jobs.sql` añaden estado por autor,
+reclamo exclusivo de cargas, metadatos legibles y agotamiento visible de trabajos.
+Conservan los privilegios y la baseline. Se aplican con `npm run setup:documents:dev`,
+nunca al arrancar la API. `npm run test:documents:schema` verifica el contrato
+sin escritura. El ensayo `npm run rehearse:recovery:dev` solo lee el origen y
+restaura en un PostgreSQL Docker efímero sin red: véanse
+[documentos](../docs/documents.md) y [límites de recuperación](../docs/recovery-rehearsal.md).

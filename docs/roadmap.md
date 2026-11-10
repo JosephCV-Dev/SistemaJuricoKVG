@@ -2,7 +2,7 @@
 
 ## Estado de partida
 
-El proyecto es un monorepo de npm workspaces: `apps/web` para React/TypeScript/Vite, `apps/api` para NestJS y `packages/contracts` para tipos HTTP compartidos. La instalación Supabase existente está verificada y CU023/CU024 tienen un recorrido de acceso implementado y probado en desarrollo. El recorrido mínimo de cliente y expediente del paso 3A ya está implementado y verificado; faltan el recorrido documental/recuperación 3B y el despliegue temprano 3C para completar RUP 16.6.
+El proyecto es un monorepo de npm workspaces: `apps/web` para React/TypeScript/Vite, `apps/api` para NestJS y `packages/contracts` para tipos HTTP compartidos. La instalación Supabase existente está verificada y CU023/CU024 tienen un recorrido de acceso implementado y probado en desarrollo. El recorrido mínimo de cliente y expediente del paso 3A ya está implementado y verificado; el recorrido documental y ensayo acotado de recuperación 3B están implementados localmente; falta el despliegue temprano 3C y ampliar allí la recuperación para completar la evidencia de RUP 16.6.
 
 **Paso 1 completado: conectividad y catálogo verificados.** El 28 de octubre de 2026 se comprobó directamente el catálogo por PostgreSQL, con TLS validado y una transacción de solo lectura. La comparación inicial confirmó las 37 tablas, 338 columnas y 43 funciones de la baseline, sus privilegios RPC, RLS y los dos buckets privados. HTTP y SQL corresponden al mismo proyecto. La evidencia de esa revisión está en [supabase-verification.md](supabase-verification.md).
 
@@ -46,9 +46,13 @@ entre identidades, asignación por RPC y revocación con cookie vigente. Pasaron
 comprobaciones reales de este recorrido y 14 en Chromium local, incluida vista
 móvil. El contrato y límites están en [clients-and-cases.md](clients-and-cases.md).
 
-**3B y 3C pendientes. El paso 3 completo sigue abierto.** Lo que sigue detalla sus
-criterios originales: el recorrido mínimo ya se demostró localmente; todavía no
-existen carga privada verificada, recuperación del conjunto ni despliegue de prueba.
+**3B implementado localmente; 3C pendiente. El paso 3 completo sigue abierto.**
+Se incorporaron carga privada, ClamAV real, validación estructural, SHA-256,
+publicación por trabajo persistente y consulta/descarga con alcance real. El ensayo
+cifrado reconstruye datos de negocio y originales en PostgreSQL aislado; no
+restaura el proveedor Supabase Auth ni un segundo Storage real ni reabre servicio.
+Véanse [documents.md](documents.md) y [recovery-rehearsal.md](recovery-rehearsal.md).
+Lo que sigue conserva los criterios de cierre del paso completo.
 
 Después del acceso, implementar un recorrido mínimo de CU001/CU002 — SCRUM-13/SCRUM-14 y CU004/CU005 — SCRUM-41/SCRUM-42: registrar y consultar un cliente ficticio, crear su expediente y consultarlo con alcance autorizado. Incorporar la asignación o concesión explícita mínima que exija el contrato, sin abrir acceso global para simplificar la demostración.
 

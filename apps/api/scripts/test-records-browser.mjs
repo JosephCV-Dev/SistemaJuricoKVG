@@ -1,3 +1,9 @@
+import sharp from 'sharp';
+import { ConfigService } from '@nestjs/config';
+import { PrivateFileGateway } from '../dist/modules/documents/infrastructure/private-file-gateway.js';
+import { DocumentWorker } from '../dist/modules/operations/application/document-worker.js';
+import { IsolatedFileVerifier } from '../dist/modules/operations/infrastructure/isolated-file-verifier.js';
+import { readFile } from 'node:fs/promises';
 import { writeFile, chmod } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -150,12 +156,82 @@ try {
       .evaluate((img) => img.complete && img.naturalWidth > 0),
     'logo_local_cargado',
   );
-  check(
-    (await page
-      .getByRole('button', { name: 'Subir documento', exact: true })
-      .count()) === 0,
-    'sin_accion_de_carga_no_implementada',
+  stage = 'DOCUMENTOS';
+  await page.getByRole('button', { name: 'Documentos', exact: true }).click();
+  await page
+    .getByText('Este expediente no tiene documentos visibles.', { exact: true })
+    .waitFor();
+  await page.getByText('Subir documento', { exact: true }).click();
+  const file = await sharp({
+    create: { width: 16, height: 16, channels: 3, background: '#fff' },
+  })
+    .png()
+    .toBuffer();
+  await page.getByLabel('Archivo', { exact: true }).setInputFiles({
+    name: 'prueba-navegador.png',
+    mimeType: 'image/png',
+    buffer: file,
+  });
+  await page
+    .getByLabel('Nombre del documento', { exact: true })
+    .fill('Archivo navegador ficticio');
+  const category = await page
+    .locator('#document-category option')
+    .nth(1)
+    .getAttribute('value');
+  await page.getByLabel('Categoría', { exact: true }).selectOption(category);
+  await page
+    .getByRole('button', { name: 'Enviar a análisis', exact: true })
+    .click();
+  await page
+    .getByText('Estado de la carga: En análisis.', { exact: true })
+    .waitFor();
+  check(true, 'carga_binaria_desde_formulario');
+  const worker = new DocumentWorker(
+    new PrivateFileGateway(new ConfigService(process.env)),
+    new IsolatedFileVerifier('127.0.0.1', 3310),
   );
+  check(
+    (await worker.once()) === 'published',
+    'analisis_real_del_archivo_del_navegador',
+  );
+  await page
+    .getByRole('button', { name: 'Actualizar documentos', exact: true })
+    .click();
+  await page
+    .getByText('Estado de la carga: Archivo disponible.', { exact: true })
+    .waitFor();
+  await page
+    .getByRole('button', { name: 'Archivo navegador ficticio', exact: true })
+    .click();
+  await page
+    .getByRole('heading', {
+      name: 'Documento: Archivo navegador ficticio',
+      exact: true,
+    })
+    .waitFor();
+  const downloadEvent = page.waitForEvent('download');
+  await page
+    .getByRole('button', { name: 'Descargar original', exact: true })
+    .click();
+  const downloaded = await downloadEvent;
+  check(
+    (await readFile(await downloaded.path())).equals(file),
+    'descarga_desde_interfaz_conserva_original',
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  check(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+    'documentos_movil_sin_desbordamiento',
+  );
+  await page.screenshot({
+    path: `${localDirectory}/documents-browser-mobile.png`,
+    fullPage: true,
+  });
+  await chmod(`${localDirectory}/documents-browser-mobile.png`, 0o600);
+  await page.setViewportSize({ width: 1280, height: 900 });
   stage = 'PERSISTENCIA_Y_MOVIL';
   await page.reload();
   await page.getByRole('button', { name: 'Expedientes', exact: true }).click();

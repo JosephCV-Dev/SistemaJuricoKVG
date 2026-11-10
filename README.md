@@ -2,7 +2,8 @@
 
 Aplicación web interna para gestionar clientes, expedientes y documentos del despacho.
 La base incluye acceso con MFA y el recorrido mínimo de registrar/consultar clientes
-y crear/consultar expedientes con alcance real. Se verificaron HTTP, RPC y PostgreSQL
+y crear/consultar expedientes con alcance real. Incluye carga privada, análisis
+técnico y consulta/descarga de originales autorizados dentro del expediente. Se verificaron HTTP, RPC y PostgreSQL
 en desarrollo y un recorrido de Chromium local, incluidos formularios y vista móvil.
 El prototipo completo y su despliegue de prueba siguen pendientes. La interfaz adopta el diseño entregado por el usuario: menú lateral, logo KVG,
 formularios y vistas separadas, con acciones según las capacidades de la sesión.
@@ -37,9 +38,9 @@ docs/                   Arquitectura, análisis y siguientes avances
 
 Identidad incluye sus endpoints, sesión persistente cifrada y controles de acceso.
 Clientes y expedientes incluyen sus capas, formularios y RPC del recorrido mínimo.
-Los demás módulos están registrados y se completarán por caso de uso.
-El trabajador de archivos y respaldos tendrá una entrada independiente dentro del
-mismo backend cuando se implemente el procesamiento persistente.
+Documentos incluye carga/consulta/descarga y el trabajador de verificación tiene
+una entrada independiente en el mismo backend. Los demás módulos y la operación
+completa de respaldos se completarán por caso de uso.
 
 ## Ejecutar en desarrollo
 
@@ -145,21 +146,21 @@ porque el modelo suministrado restringe ese acceso. Consulta el
 - [Actores, reglas y trazabilidad de los 31 casos de uso con Jira](docs/requirements.md).
 - [Orden de implementación y ejemplos de futuras peticiones](docs/roadmap.md).
 
-El recorrido mínimo de clientes/expedientes del **paso 3A** está implementado y
-verificado en desarrollo. El siguiente avance es **3B: carga privada segura y
-recuperación del prototipo RUP 16.6**, seguido del despliegue de prueba **3C**.
-La administración completa de usuarios/roles y las ampliaciones siguen pendientes.
-Puedes pedirlo así:
+Los pasos **3A** y el recorrido documental local de **3B** están implementados.
+3B incorpora también un ensayo acotado de datos/objetos cifrados en PostgreSQL
+Docker aislado, con los límites documentados. Sigue **3C: despliegue de prueba
+separado con HTTPS** y ampliación de la recuperación en ese entorno. El paso 3
+completo y la administración integral siguen abiertos.
 
-> Continúa el paso 3B a partir del cliente y expediente mínimos: implementa la carga
-> privada para un expediente autorizado, cuarentena, verificación real de contenido,
-> antimalware y SHA-256, y consulta/descarga autorizadas. Incluye denegación para otra
-> identidad y prepara el ensayo de copia/recuperación de datos, objetos y manifiesto
-> necesario para cerrar RUP 16.6. Mantén el estilo mínimo y documenta qué falta para
-> desplegar el prototipo en el entorno de prueba separado del paso 3C.
+- [Documentos privados, trabajador y verificación](docs/documents.md).
+- [Ensayo acotado de copia y recuperación](docs/recovery-rehearsal.md).
 
-Commit sugerido para el incremento de clientes/expedientes:
+Para cargar archivos, iniciar ClamAV con el Compose documentado y ejecutar
+`npm run worker:documents` en otra terminal junto a `npm run dev`.
+Sin el trabajador/análisis disponible la carga permanece bloqueada.
+
+Commit sugerido:
 
 ```text
-feat(records): implementar clientes y expedientes con alcance e idempotencia
+feat(documents): implementar carga privada verificada y ensayo de recuperación
 ```

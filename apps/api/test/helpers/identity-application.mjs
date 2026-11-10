@@ -1,3 +1,4 @@
+import { PrivateFiles } from '../../dist/modules/documents/application/private-files.port.js';
 import { KvgRpcService } from '../../dist/infrastructure/supabase/kvg-rpc.service.js';
 import 'reflect-metadata';
 import assert from 'node:assert/strict';
@@ -252,6 +253,8 @@ export async function application(t, options = {}) {
     .useValue(testSessionRuntime());
   if (options.rpc)
     builder.overrideProvider(KvgRpcService).useValue(options.rpc);
+  if (options.files)
+    builder.overrideProvider(PrivateFiles).useValue(options.files);
   const module = await builder.compile();
   const app = module.createNestApplication({
     logger: false,
@@ -299,7 +302,7 @@ export async function application(t, options = {}) {
       });
     },
   };
-  return { ...ports, browser };
+  return { ...ports, browser, origin };
 }
 
 export function assertNoProviderTokens(body) {

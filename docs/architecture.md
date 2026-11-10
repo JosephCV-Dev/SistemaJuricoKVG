@@ -25,16 +25,17 @@ flowchart TD
   identity -->|RPC con JWT real del usuario| db[PostgreSQL / kvg_operar]
   identity -->|Rol técnico restringido / contenido cifrado| sessions[PostgreSQL / kvg_servidor.sesion_web]
   business -->|Clientes y expedientes / RPC con identidad del usuario| db
-  business -. Autorización y transferencia controlada .-> storage[Storage privado]
-  worker[Trabajador futuro / mismo backend] -. Trabajo técnico / kvg_trabajar .-> db
-  worker -. Verificación y conciliación .-> storage
+  business -->|Autorización por JWT y broker técnico acotado| storage[Storage privado]
+  worker[Trabajador de cargas / mismo backend] -->|Trabajo técnico / kvg_trabajar| db
+  worker -->|Verificación de cargas y originales| storage
   worker -. Datos, objetos y manifiestos .-> backup[Copia cifrada independiente]
 ```
 
 React y la API incluyen inicio/cierre de sesión con Supabase Auth, MFA TOTP y
 sesión operativa KVG. La persistencia de la cookie del servidor está separada de
 las tablas de negocio. Las conexiones discontinuas representan trabajo pendiente:
-documentos, transferencia de archivos, trabajador y recuperación. Los módulos de
+recuperación operativa completa y respaldos programados. Documentos, transferencia
+privada y trabajador de cargas están implementados según [documents.md](documents.md). Los módulos de
 clientes y expedientes ya implementan el recorrido mínimo del paso 3A. La
 verificación de identidad en desarrollo no acredita todavía el prototipo completo.
 
@@ -129,9 +130,12 @@ privilegiadas se reservan al proceso que las necesita; nunca se incluyen en vari
 `VITE_*`, contratos compartidos ni respuestas del frontend.
 
 El esquema trae RLS y restricciones de privilegios. El proceso HTTP usa conexión SQL
-directa solo con el rol restringido del almacén de sesiones. `DATABASE_URL` y la
-clave administrativa se reservan a herramientas de preparación/verificación de
-desarrollo; no se usan como acceso ordinario ni para evitar RLS. El contrato completo y
+directa solo con el rol restringido del almacén de sesiones. `DATABASE_URL` se reserva a herramientas de preparación/verificación y ensayo
+de desarrollo. `SUPABASE_SECRET_KEY` se usa además en el broker privado de archivos
+de la API y el trabajador, exclusivamente para RPC técnico y Storage tras
+autorización ordinaria; no sustituyen las comprobaciones de identidad, permiso
+y alcance del negocio. El acceso técnico a Storage queda limitado por los
+endpoints y autorizaciones del broker, según el contrato suministrado. El contrato completo y
 el procedimiento de instalación están en [database/README.md](../database/README.md).
 
 ## Base ejecutable y configuración
@@ -165,18 +169,19 @@ instalación reproducible. `.nvmrc`, `.node-version` y CI seleccionan Node 24 LT
 el motor permite también Node 26 en desarrollo. TypeScript se mantiene en 5.9.3
 como versión compatible con la compilación de decoradores de Nest.
 
-## Procesamiento y consistencia pendientes
+## Procesamiento y consistencia
 
-El trabajador futuro procesará trabajos persistentes con arrendamientos, reintentos
-y conciliación. No se añade una segunda cola ni un temporizador en memoria mientras
-el contrato operativo del SQL no se haya integrado y probado.
+El trabajador de cargas procesa trabajos persistentes con leases, reintentos y
+backoff del SQL. El sondeo local no sustituye la cola persistente y no reclama
+trabajos de identidad, respaldo o restauración. La conciliación automática de
+objetos huérfanos y recepción abandonada sigue pendiente.
 
-La publicación de un documento exigirá cuarentena, verificación real, antimalware y
+La publicación exige cuarentena, verificación estructural real, ClamAV y
 hash confiable. Una verificación técnica apta no equivale a validación jurídica.
 Las versiones conservan objetos distintos e historial; los retiros son recuperables.
 
-PostgreSQL y Storage no comparten transacción. La coordinación requerirá estados y
-compensaciones. Los respaldos deberán incluir datos, objetos y manifiestos, con
+PostgreSQL y Storage no comparten transacción. La carga coordina estados, objetos inmutables y reintentos; faltan los barridos
+automáticos y la gestión operativa completa. Los respaldos deberán incluir datos, objetos y manifiestos, con
 restauración aislada y aplicación de las restricciones vigentes. Las propuestas
 pendientes PT01–PT08 están registradas en [requirements.md](requirements.md).
 

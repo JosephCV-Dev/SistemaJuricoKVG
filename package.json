@@ -28,7 +28,12 @@
     "test:identity:schema": "npm run test:identity:schema --workspace @kvg/api",
     "setup:records:dev": "npm run build --workspace @kvg/api && npm run setup:records:dev --workspace @kvg/api",
     "test:records:live": "npm run build --workspace @kvg/api && npm run test:records:live --workspace @kvg/api",
-    "test:records:schema": "npm run test:records:schema --workspace @kvg/api"
+    "test:records:schema": "npm run test:records:schema --workspace @kvg/api",
+    "worker:documents": "npm run build --workspace @kvg/api && npm run worker:documents --workspace @kvg/api",
+    "setup:documents:dev": "npm run build --workspace @kvg/api && npm run setup:documents:dev --workspace @kvg/api",
+    "test:documents:live": "npm run build --workspace @kvg/api && npm run test:documents:live --workspace @kvg/api",
+    "test:documents:schema": "npm run test:documents:schema --workspace @kvg/api",
+    "rehearse:recovery:dev": "npm run build --workspace @kvg/api && npm run rehearse:recovery:dev --workspace @kvg/api"
   },
   "devDependencies": {
     "concurrently": "10.0.6",

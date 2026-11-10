@@ -134,3 +134,23 @@ reales de datos/alcance y 14 en Chromium local. Su evidencia y límites están e
 respaldo y recuperación siguen pendientes. Al cierre del proyecto se configurará
 y verificará producción, incluidos Auth, permisos/RLS, Storage, secretos, proxy,
 monitoreo y restauración, según [roadmap.md](roadmap.md).
+
+## Actualización: recorrido documental 3B, 4 de noviembre de 2026
+
+Se aplicaron explícitamente las migraciones `202611040005` y `202611040006`,
+con ledger/checksum e integridad de la baseline conservada. El contrato SQL de
+identidad y clientes/expedientes pasó de nuevo; la inspección documental verificó
+helpers privados, privilegios, buckets y bloqueo restrictivo.
+
+Pasaron 43 comprobaciones reales de carga/RPC/Storage/ClamAV, incluidos EICAR,
+contenido inválido, idempotencia, hash, descarga, denegación entre identidades,
+rechazo de acceso directo a Storage incluso para el autor y revocación con cookie
+vigente. El recorrido Chromium integrado pasó 21 comprobaciones. El proyecto
+conserva datos y archivos ficticios de prueba y su auditoría; no hubo borrado ni
+correos. Las claves del broker técnico permanecen solo en el servidor.
+
+El ensayo cifrado de negocio restauró 37 tablas y tres originales en PostgreSQL
+efímero sin red, con 92 verificaciones. No restaura Supabase Auth ni otro Storage
+real ni reabre producción. El despliegue separado con HTTPS y la recuperación
+operativa completa siguen pendientes. Alcance: [documents.md](documents.md) y
+[recovery-rehearsal.md](recovery-rehearsal.md).

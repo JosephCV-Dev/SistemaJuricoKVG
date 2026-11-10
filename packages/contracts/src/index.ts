@@ -34,3 +34,5 @@ export type {
   RecordPage,
   SessionCapabilities,
 } from './records';
+
+export type * from './documents';

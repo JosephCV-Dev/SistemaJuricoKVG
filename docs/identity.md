@@ -42,7 +42,7 @@ Usar el Supabase existente de desarrollo y las variables de [supabase-setup.md](
 | `APP_ORIGIN`               | Origen visible de la web: por ejemplo, `http://127.0.0.1:5173` en desarrollo, sin ruta. Debe coincidir con el origen del navegador; el puerto interno de Nest no es el origen de la web cuando se usa el proxy Vite. |
 | `TRUST_PROXY`              | Configuración explícita de confianza en el proxy. Desactivada para acceso local directo. Sólo activarla cuando el alojamiento use un proxy confiable que permita reconocer HTTPS correctamente.                      |
 
-Las herramientas de preparación y prueba también requieren `DATABASE_URL` de propietario para el proyecto de desarrollo. `setup:identity:dev` necesita además `SUPABASE_SECRET_KEY` para crear las identidades ficticias sin correos. Estas variables se reservan a esas herramientas; no sustituyen el rol restringido del almacén ni la identidad del usuario en RPC.
+Las herramientas de preparación y prueba también requieren `DATABASE_URL` de propietario para el proyecto de desarrollo. `setup:identity:dev` necesita además `SUPABASE_SECRET_KEY` para crear las identidades ficticias sin correos. `DATABASE_URL` se reserva a esas herramientas; desde 3B la clave técnica también se usa en el broker privado de archivos y su trabajador. Ninguna sustituye el rol restringido del almacén ni la identidad del usuario en RPC. Véase [documents.md](documents.md).
 
 `SESSION_DATABASE_URL`, `SESSION_SECRET` y `SESSION_ENCRYPTION_KEY` se configuran juntas. La comprobación pública de salud puede utilizarse sin la integración de identidad; eso no vuelve operativos los endpoints de sesión.
 

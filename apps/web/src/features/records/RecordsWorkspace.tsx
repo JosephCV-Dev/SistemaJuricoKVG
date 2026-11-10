@@ -596,6 +596,20 @@ export function RecordsWorkspace({
               busy={busy}
               canConsultClient={can('cliente.consultar')}
               onOpenClient={openClient}
+              canConsultDocuments={can('documento.consultar')}
+              canUploadDocuments={can('documento.cargar')}
+              canDownloadDocuments={can('documento.descargar')}
+              onAccessFailure={(status) => {
+                setClient(null);
+                setCaseDetail(null);
+                setClients(emptyPage());
+                setCases(emptyPage());
+                if (status === 401) onSessionExpired();
+                else
+                  setError(
+                    'Acceso documental denegado. Actualiza tus consultas.',
+                  );
+              }}
             />
           )}
         </section>
