@@ -59,7 +59,10 @@ export async function uploadAvailability(
 ): Promise<DocumentUploadAvailability> {
   const result = obj(await getJson(base + '/upload-availability', signal));
   if (typeof result.enabled !== 'boolean') return invalid();
-  return { enabled: result.enabled };
+  return {
+    enabled: result.enabled,
+    ...(result.beta === true ? { beta: true } : {}),
+  };
 }
 export async function categories(
   signal: AbortSignal,
@@ -112,6 +115,7 @@ export async function getDocument(
           format: text(v.format),
           status: text(v.status),
           publishedAt: text(v.publishedAt),
+          ...(v.beta === true ? { beta: true } : {}),
         }
       : null,
   };

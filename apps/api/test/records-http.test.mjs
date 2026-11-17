@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { ForbiddenException } from '@nestjs/common';
 import {
   application,
+  APP_ORIGIN,
   authenticated,
   assertNoProviderTokens,
 } from './helpers/identity-application.mjs';
@@ -44,8 +45,19 @@ async function recordsApp(t) {
           return clientRow;
         case 'cliente.buscar':
           return [clientRow, { ...clientRow, cliente_id: FOREIGN }];
+        case 'cliente.actualizar':
+          return {
+            ...clientRow,
+            nombre_presentacion: input.nombre,
+            revision: 2,
+          };
         case 'cliente.consultar':
-          return { ...clientRow, contactos: [], identificaciones: [] };
+          return {
+            ...clientRow,
+            puede_editar: true,
+            contactos: [],
+            identificaciones: [],
+          };
         case 'expediente.crear':
           return caseRow;
         case 'expediente.buscar':
@@ -77,6 +89,7 @@ async function recordsApp(t) {
   result.state.capabilities = [
     ['cliente.registrar', 'GLOBAL_OPERATIVO'],
     ['cliente.consultar', 'REGISTRO_PROPIO'],
+    ['cliente.actualizar', 'REGISTRO_PROPIO'],
     ['expediente.crear', 'GLOBAL_OPERATIVO'],
     ['expediente.consultar', 'EXPLICITO'],
   ].map(([permission, context]) => ({
@@ -304,4 +317,51 @@ test('la denegación de recurso no revela datos ni invalida otra consulta permit
     );
   }
   assert.equal((await browser.request(`clients/${CLIENT}`)).status, 200);
+});
+
+test('edición exige revisión, CSRF y alcance y envía solo campos editables', async (t) => {
+  const { browser, calls } = await recordsApp(t);
+  await authenticated(browser);
+  const patch = (id, body, csrf = browser.csrfToken) =>
+    browser.request(`clients/${id}`, {
+      method: 'PATCH',
+      body,
+      headers: { Origin: APP_ORIGIN, 'X-CSRF-Token': csrf },
+    });
+  const initial = calls.length;
+  assert.equal(
+    (await patch(CLIENT, { revision: 1, name: 'Nuevo' }, '')).status,
+    403,
+  );
+  for (const invalid of [
+    { name: 'Nuevo' },
+    { revision: '1', name: 'Nuevo' },
+    { revision: 1 },
+    { revision: 1, name: null },
+    { revision: 1, contacts: null },
+    { revision: 1, name: 'Nuevo', createdBy: FOREIGN },
+    { revision: 1, contacts: [{ type: 'CORREO', value: 'incorrecto' }] },
+  ])
+    assert.equal((await patch(CLIENT, invalid)).status, 400);
+  assert.equal(calls.length, initial);
+  assert.equal(
+    (await patch(FOREIGN, { revision: 1, name: 'Nuevo' })).status,
+    403,
+  );
+  const result = await patch(CLIENT, { revision: 1, name: '  Nuevo  ' });
+  assert.equal(result.status, 200);
+  assert.equal((await result.json()).revision, 2);
+  assert.deepEqual(calls.at(-1), {
+    operation: 'cliente.actualizar',
+    input: { cliente_id: CLIENT, nombre: 'Nuevo', revision: 1 },
+  });
+  assert.equal(
+    (await browser.request('clients?identification=FIC-123')).status,
+    200,
+  );
+  assert.equal(calls.at(-1).input.identificacion, 'FIC-123');
+  assert.equal(
+    (await browser.request('clients?identification=' + 'x'.repeat(101))).status,
+    400,
+  );
 });

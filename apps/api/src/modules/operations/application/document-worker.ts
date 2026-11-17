@@ -40,9 +40,15 @@ export class DocumentWorker {
   constructor(
     private readonly files: WorkerFiles,
     private readonly verifier: ContentVerifier,
+    private readonly beta = false,
   ) {}
   async once(): Promise<'idle' | 'published' | 'rejected' | 'retry'> {
-    const job = obj(await this.files.execute('trabajo.tomar_carga', {}));
+    const job = obj(
+      await this.files.execute(
+        this.beta ? 'trabajo.tomar_carga_beta' : 'trabajo.tomar_carga',
+        {},
+      ),
+    );
     if (!job.trabajo_id) return 'idle';
     const lease = {
       trabajo_id: text(job.trabajo_id),
@@ -65,6 +71,8 @@ export class DocumentWorker {
         bytes,
         text(upload.nombre_original),
       );
+      if (this.beta ? verified.engine !== null : !verified.engine)
+        throw new Error();
       await this.files.execute('trabajo.renovar', lease);
       await this.files.putImmutable(
         'kvg-originales',
@@ -77,15 +85,19 @@ export class DocumentWorker {
         verified.sha256
       )
         throw new Error();
-      await this.files.execute('carga.publicar', {
-        ...lease,
-        antimalware_apto: true,
-        tamano_bytes: verified.size,
-        sha256: verified.sha256,
-        formato: verified.format,
-        mime_verificado: verified.mime,
-        motor_version: verified.engine,
-      });
+      await this.files.execute(
+        this.beta ? 'carga.publicar_beta' : 'carga.publicar',
+        {
+          ...lease,
+          ...(this.beta
+            ? {}
+            : { antimalware_apto: true, motor_version: verified.engine }),
+          tamano_bytes: verified.size,
+          sha256: verified.sha256,
+          formato: verified.format,
+          mime_verificado: verified.mime,
+        },
+      );
       return 'published';
     } catch (error) {
       if (error instanceof RejectedContent) {

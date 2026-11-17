@@ -3,7 +3,7 @@ export abstract class PrivateFiles {
   abstract completeReception(id: string, size: number): Promise<void>;
   abstract authorizeDelivery(
     id: string,
-  ): Promise<{ path: string; size: number }>;
+  ): Promise<{ path: string; size: number; beta?: true }>;
   abstract read(
     bucket: 'kvg-cuarentena' | 'kvg-originales',
     path: string,

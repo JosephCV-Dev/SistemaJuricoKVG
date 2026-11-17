@@ -10,9 +10,10 @@ formularios y vistas separadas, con acciones según las capacidades de la sesió
 
 **Alcance actual:** seguimos en desarrollo local con el Supabase existente y datos
 ficticios, sin nuevas cuentas ni servicios. Antivirus y despliegue separado se
-posponen; las cargas nuevas están pausadas por defecto. Los documentos previamente
-verificados conservan consulta/descarga autorizada. Seguimos con clientes en el
-paso 4A. Consulta [seguridad y alcance vigente](docs/security-current-scope.md).
+posponen. La demostración local puede habilitar cargas ficticias en modo beta
+sin antivirus. El paso 4A añade consulta y
+edición de clientes, verificadas localmente. Queda aplicar su migración al Supabase
+de desarrollo. Consulta [seguridad y alcance vigente](docs/security-current-scope.md).
 
 ## Arquitectura elegida
 
@@ -157,16 +158,17 @@ porque el modelo suministrado restringe ese acceso. Consulta el
 Los pasos **3A** y el recorrido documental local de **3B** están implementados.
 3B incorpora también un ensayo acotado de datos/objetos cifrados en PostgreSQL
 Docker aislado, con los límites documentados. **3C queda pospuesto** por acuerdo
-del usuario. Sigue **4A: consulta y actualización de clientes**, sin nuevos
-servicios. El paso 3 completo y la administración integral siguen abiertos.
+del usuario. **4A** está implementado y probado localmente. Cuando la conexión SQL esté
+disponible, aplica `npm run setup:clients:dev` para activar la edición y la búsqueda
+por identificación en Supabase. El paso 3 completo y la administración integral siguen abiertos.
 
 - [Documentos privados, trabajador y verificación](docs/documents.md).
 - [Ensayo acotado de copia y recuperación](docs/recovery-rehearsal.md).
 
-Las cargas están pausadas (`DOCUMENT_UPLOAD_MODE=paused`, también por defecto).
-Para trabajar ahora basta `npm run dev`; no inicies el trabajador ni ClamAV.
-No se publican archivos pendientes. Para retomar posteriormente el análisis real,
-consulta [documents.md](docs/documents.md); no existe un modo de omitirlo.
+Para usar documentos en el desarrollo actual, ejecuta `npm run dev:beta` si la
+API y la web están detenidas. Si ya usas `npm run dev`, añade el trabajador en
+otra terminal con `npm run worker:documents`. Consulta
+[los comandos y límites de la beta](docs/document-beta.md).
 
 Se conserva el paquete de imágenes/proxy y las pruebas HTTPS locales como trabajo
 preparado para el futuro, sin exigir ahora servidor, dominio ni segundo Supabase.
@@ -175,5 +177,5 @@ preparado para el futuro, sin exigir ahora servidor, dominio ni segundo Supabase
 Commit sugerido:
 
 ```text
-feat(security): pausar cargas sin analizador y ajustar el roadmap local
+feat(clients): ampliar búsqueda y editar con control de revisión
 ```

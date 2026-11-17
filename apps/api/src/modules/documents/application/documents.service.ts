@@ -1,6 +1,7 @@
 import {
   Injectable,
   ConflictException,
+  ForbiddenException,
   ServiceUnavailableException,
   BadGatewayException,
 } from '@nestjs/common';
@@ -53,6 +54,10 @@ export class DocumentsService {
   async download(token: string, versionId: string) {
     const auth = await this.repository.authorizeDownload(token, versionId);
     let destination = await this.files.authorizeDelivery(auth.id);
+    if (destination.beta && !this.uploads.availability().beta)
+      throw new ForbiddenException(
+        'El archivo está disponible solo durante la beta.',
+      );
     const path = destination.path;
     const bytes = await this.files.read('kvg-originales', path);
     if (

@@ -3,7 +3,7 @@
 Decisión del usuario del 10 de noviembre de 2026: continuar con el proyecto
 Supabase existente, desarrollo local y datos ficticios. No crear cuentas, contratar
 servicios ni integrar APIs externas adicionales. Se posponen antivirus operativo y
-despliegue separado; el siguiente avance funcional es clientes 4A.
+despliegue separado. El paso 4A ya está implementado localmente y conserva este alcance.
 
 ## Controles disponibles sin servicios nuevos
 
@@ -14,7 +14,7 @@ despliegue separado; el siguiente avance funcional es clientes 4A.
 | Peticiones              | Origen exacto y CSRF para mutaciones, DTO y errores sin secretos, límites de intentos por proceso                       | Límites distribuidos pendientes si se adoptan varias instancias                          |
 | Autorización            | Guards que deniegan por defecto y RPC con identidad, permiso/contexto y alcance del recurso; RLS/privilegios existentes | Cada nuevo CU requiere pruebas específicas; administrador no equivale a lectura jurídica |
 | Integridad              | Restricciones SQL, auditoría, solicitudes idempotentes y revisiones según el CU                                         | La pantalla de bitácora y varias actualizaciones siguen pendientes                       |
-| Archivos ya habilitados | Buckets privados, autorización ordinaria antes del broker técnico, hash y reautorización en descarga                    | Nuevas cargas pausadas; no se afirma seguridad por extensión/MIME/hash                   |
+| Archivos ya habilitados | Buckets privados, autorización ordinaria antes del broker técnico, hash y reautorización en descarga                    | Las cargas beta indican que falta antimalware                                            |
 | Secretos                | Fuera de Git/frontend, rol SQL limitado de sesiones; soporte de archivos montados, imágenes sin `.env`                  | Custodia y rotación de producción pendientes                                             |
 | Recuperación            | Herramienta de ensayo cifrado y restauración aislada en PostgreSQL local                                                | No sustituye copia programada completa ni restauración de Supabase Auth/Storage          |
 
@@ -23,34 +23,17 @@ servicios nuevos ni prueba de que todas las etapas del proyecto estén terminada
 Las evidencias previas están en `identity.md`, `clients-and-cases.md`,
 `documents.md`, `recovery-rehearsal.md` y `staging-deployment.md`.
 
-## Pausa de cargas sin desactivar la verificación
+## Beta documental
 
-- `DOCUMENT_UPLOAD_MODE=paused` es el valor predeterminado. Se valida estrictamente;
-  valores vacíos, desconocidos o booleanos no habilitan cargas.
-- La API comunica disponibilidad solo a sesiones con permiso de carga. Rechaza
-  creación y recepción con 503, también ante una petición manual, antes de consumir
-  bytes o escribir en Storage. Identidad, permiso y CSRF siguen aplicándose.
-- La pantalla documental conserva su diseño y muestra la pausa. No presenta un
-  archivo pendiente como disponible. Los originales previamente verificados siguen
-  sujetos a los permisos, alcance y hash al consultar/descargar.
-- El trabajador pausado sale sin conectarse a Supabase ni reclamar trabajos; no
-  agota reintentos por ausencia deliberada de antivirus. No modifica cargas previas.
-- La integración ClamAV se conserva para después. `verified` requiere activación
-  explícita en API y trabajador y análisis real; no incorpora un resultado ficticio
-  ni permite publicación estructural sin antimalware. Compose reserva trabajador y
-  ClamAV al perfil `document-verification`.
-
-El control de pausa está en la aplicación; no altera ni revoca las funciones de
-la baseline. Los permisos SQL, cuarentena y requisitos de publicación permanecen.
-Detener procesos anteriores/reiniciar API y web para cargar esta versión; no hay
-recarga de política a mitad de una petición. No se ejecutaron migraciones,
-restauraciones, creación de cuentas ni cambios remotos en este ajuste.
+El usuario pidió habilitar cargas y descargas ficticias aun con antivirus
+pospuesto. La beta exige un ajuste explícito en desarrollo y registra cada
+archivo habilitado sin análisis con un resultado distinto de `SEGURO`.
+[Controles, operación y reactivación futura](document-beta.md).
 
 ## Plan y verificación
 
 Se continúa con consulta/actualización de clientes, expediente y seguimiento sin
-exigir infraestructura nueva. Las ampliaciones documentales que publiquen nuevas
-versiones dependen de retomar el análisis. RUP RN10/16.6, staging separado,
+exigir infraestructura nueva. El análisis real se retomará antes de operar con archivos del despacho. RUP RN10/16.6, staging separado,
 recuperación integral y lanzamiento permanecen abiertos. El preflight futuro sigue
 impidiendo confundir desarrollo con un entorno separado; no hay que ejecutarlo
 para trabajar localmente ahora.

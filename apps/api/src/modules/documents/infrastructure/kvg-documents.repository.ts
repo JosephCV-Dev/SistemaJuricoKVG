@@ -123,6 +123,7 @@ export class KvgDocumentsRepository extends DocumentsRepository {
             format: text(v.formato),
             status: text(v.estado_documento_codigo),
             publishedAt: date(v.publicado_en),
+            ...(v.sin_antimalware === true ? { beta: true as const } : {}),
           }
         : null,
     };

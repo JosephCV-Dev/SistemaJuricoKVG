@@ -227,6 +227,23 @@ try {
     ),
   );
   await sql(baseline);
+  if (
+    restored.rows.carga_archivo.some(
+      (row) => row.resultado_tecnico_codigo === 'BETA_SIN_ANTIMALWARE',
+    )
+  ) {
+    // Solo dentro del contenedor: restituye el contrato de los datos sin habilitar la beta.
+    for (const name of [
+      '202610280001_server_sessions.sql',
+      '202611040005_document_upload_workflow.sql',
+      '202611040006_document_detail_and_failed_jobs.sql',
+      '202611170008_document_beta.sql',
+    ]) {
+      await sql(
+        await readFile(new URL(`database/migrations/${name}`, root), 'utf8'),
+      );
+    }
+  }
   // Restauración exclusiva del PostgreSQL efímero. Nunca DML en el origen remoto.
   // Triggers se omiten durante importación histórica y todas las FK se recrean y validan después.
   let restoreSql = 'BEGIN; SET LOCAL session_replication_role=replica;\n';

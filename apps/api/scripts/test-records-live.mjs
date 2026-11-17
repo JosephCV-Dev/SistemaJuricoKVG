@@ -25,6 +25,16 @@ try {
   const config = await developmentConfig();
   const fixture = await readDevelopmentFixture(config);
   owner = await ownerConnection(config);
+  const known = await owner.query('SELECT correo_operativo FROM kvg.usuario');
+  check(
+    known.rows.length > 0 &&
+      known.rows.every((user) =>
+        fixture.accounts.some(
+          (account) => account.email === user.correo_operativo,
+        ),
+      ),
+    'entorno_solo_identidades_ficticias_conocidas',
+  );
   const { AppModule } = await import('../dist/app.module.js');
   const { configureApp } = await import('../dist/configure-app.js');
   const { ServerSessions } =
@@ -178,6 +188,154 @@ try {
     'paginacion_clientes_sin_repetir_filas',
   );
 
+  stage = 'CONSULTA_Y_EDICION_CLIENTE';
+  const clientPath = `clients/${client.id}`;
+  const filter = new URLSearchParams({
+    text: tag,
+    identification: `DEV ${tag.toUpperCase()}`,
+    limit: '1',
+  });
+  const found = await secretary.browser.request(`clients?${filter}`);
+  check(
+    found.status === 200 &&
+      found.data.items[0]?.id === client.id &&
+      !found.data.hasMore,
+    'filtro_nombre_e_identificacion_normalizada',
+  );
+  const hidden = await legal.browser.request(`clients?${filter}`);
+  check(
+    hidden.status === 200 && hidden.data.items.length === 0,
+    'identificacion_no_revela_cliente_ajeno',
+  );
+  const literal = await secretary.browser.request(
+    `clients?text=${encodeURIComponent(tag + '%')}`,
+  );
+  check(
+    literal.status === 200 && literal.data.items.length === 0,
+    'nombre_busca_texto_literal',
+  );
+  check(
+    readClient.data.canEdit === true,
+    'detalle_indica_edicion_recurso_propio',
+  );
+  const editCatalog = await secretary.browser.request(
+    `${clientPath}/edit-identification-types`,
+  );
+  check(
+    editCatalog.status === 200 &&
+      editCatalog.data.some((item) => item.code === 'PRUEBA_KVG'),
+    'catalogo_de_edicion_autorizado',
+  );
+  const edit = (browser, data, path = clientPath) =>
+    browser.mutate(path, data, 'PATCH');
+  const expected = {
+    revision: client.revision,
+    name: `Nombre corregido ${tag}`,
+  };
+  check(
+    (await edit(admin.browser, expected)).status === 403,
+    'administrador_no_edita_cliente',
+  );
+  check(
+    (await edit(legal.browser, expected)).status === 403,
+    'abogado_sin_permiso_no_edita_cliente',
+  );
+  check(
+    (await secretary.browser.request(clientPath, 'PATCH', expected)).status ===
+      403,
+    'edicion_sin_csrf_denegada',
+  );
+  check(
+    (
+      await edit(secretary.browser, {
+        ...expected,
+        contacts: [{ type: 'CORREO', value: 'incorrecto' }],
+      })
+    ).status === 400,
+    'edicion_contacto_invalido_rechazado',
+  );
+  check(
+    (await edit(secretary.browser, { ...expected, type: 'OTRO' })).status ===
+      400,
+    'edicion_campo_protegido_rechazado',
+  );
+  check(
+    (
+      await edit(
+        secretary.browser,
+        {
+          revision: equalName.data.revision,
+          name: 'No debe persistir',
+          identifications: [
+            { type: 'PRUEBA_KVG', value: `DEV ${tag.toUpperCase()}` },
+          ],
+        },
+        `clients/${equalName.data.id}`,
+      )
+    ).status === 409,
+    'edicion_identificacion_normalizada_duplicada',
+  );
+  const unchanged = await secretary.browser.request(
+    `clients/${equalName.data.id}`,
+  );
+  check(
+    unchanged.data?.name === input.name &&
+      unchanged.data?.revision === equalName.data.revision &&
+      unchanged.data?.identifications.length === 0,
+    'duplicado_revierte_edicion_completa',
+  );
+  const revisions = await Promise.all([
+    edit(secretary.browser, expected),
+    edit(secretary.browser, { ...expected, name: `Otra corrección ${tag}` }),
+  ]);
+  check(
+    revisions
+      .map((r) => r.status)
+      .sort()
+      .join(',') === '200,409',
+    'edicion_concurrente_solo_una_revision_gana',
+  );
+  const latest = await secretary.browser.request(clientPath);
+  check(
+    latest.data?.revision === client.revision + 1 &&
+      latest.data?.name === revisions.find((r) => r.status === 200).data.name &&
+      latest.data?.contacts.length === 1 &&
+      latest.data?.identifications.length === 1,
+    'revision_vigente_conserva_colecciones_omitidas',
+  );
+  const media = await edit(secretary.browser, {
+    revision: latest.data.revision,
+    identifications: [{ type: 'PRUEBA_KVG', value: `nuevo-${tag}` }],
+    contacts: [
+      {
+        type: 'TELEFONO',
+        value: '+52 555 010 1234',
+        label: 'Oficina',
+        preferred: true,
+      },
+    ],
+  });
+  const persisted = await secretary.browser.request(clientPath);
+  check(
+    media.status === 200 &&
+      persisted.data?.identifications[0]?.value === `nuevo-${tag}` &&
+      persisted.data?.contacts[0]?.label === 'Oficina' &&
+      persisted.data?.contacts.length === 1,
+    'actualizacion_persiste_identificacion_y_contacto',
+  );
+  const retired = await secretary.browser.request(`clients?${filter}`);
+  check(
+    retired.status === 200 && retired.data.items.length === 0,
+    'identificacion_retirada_no_aparece',
+  );
+  const newMatch = await secretary.browser.request(
+    `clients?identification=nuevo-${tag}`,
+  );
+  check(
+    newMatch.status === 200 && newMatch.data.items[0]?.id === client.id,
+    'identificacion_nueva_es_localizable',
+  );
+
   stage = 'EXPEDIENTE';
   const caseInput = {
     requestId: randomUUID(),
@@ -273,9 +431,10 @@ try {
       ),
     'principal_consulta_expediente_y_nombre',
   );
+  const legalClient = await legal.browser.request(clientPath);
   check(
-    (await legal.browser.request(`clients/${client.id}`)).status === 200,
-    'principal_consulta_cliente_del_expediente',
+    legalClient.status === 200 && legalClient.data.canEdit === false,
+    'principal_consulta_cliente_del_expediente_sin_edicion',
   );
   await rpc.execute(admin.token, 'seguridad.revocar_concesion', {
     concesion_id: grants.rows[0].concesion_id,
@@ -292,6 +451,15 @@ try {
   check(
     (await secretary.browser.mutate('cases', caseInput)).status === 403,
     'reintento_idempotente_revalida_alcance',
+  );
+  check(
+    (
+      await edit(secretary.browser, {
+        revision: persisted.data.revision,
+        name: 'Cambio sin alcance',
+      })
+    ).status === 403,
+    'edicion_denegada_tras_revocar_alcance_con_cookie_vigente',
   );
   const audit = await owner.query(
     'SELECT accion,usuario_id FROM kvg.evento_auditoria WHERE recurso_id IN ($1::uuid,$2::uuid)',
@@ -315,6 +483,14 @@ try {
       audit.rows.some((item) => item.accion === 'EXPEDIENTE_CONSULTAR'),
     'auditoria_de_consultas_reales',
   );
+  check(
+    audit.rows.filter(
+      (item) =>
+        item.accion === 'cliente.update' &&
+        item.usuario_id === secretary.user.id,
+    ).length === 2,
+    'auditoria_registra_solo_ediciones_confirmadas_con_actor_real',
+  );
   const requests = await owner.query(
     'SELECT count(*)::integer AS count FROM kvg_privado.solicitud_creacion WHERE usuario_id=$1 AND solicitud_id IN ($2::uuid,$3::uuid)',
     [secretary.user.id, input.requestId, caseInput.requestId],
@@ -324,7 +500,7 @@ try {
     'solicitudes_confirmadas_una_vez_por_alta',
   );
   const report = {
-    date: '2026-10-28',
+    date: new Date().toISOString(),
     result: 'passed',
     checks,
     realDataUsed: false,

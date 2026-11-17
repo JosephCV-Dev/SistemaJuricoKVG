@@ -17,19 +17,17 @@ actual y datos ficticios**, sin nuevas cuentas, APIs externas ni contratación.
 Se posponen la operación de antivirus y el despliegue separado 3C. No se presenta
 este entorno como pruebas independientes o producción, ni se reinstala la base.
 
-La integración ClamAV ya escrita se conserva para retomarla, pero las cargas
-nuevas quedan pausadas por defecto en API e interfaz. El trabajador pausado no
-reclama trabajos; no se habilitan archivos sin análisis ni se sustituye antimalware
-por extensión, MIME o hash. Consulta/descarga de originales ya verificados conserva
-identidad, permiso, alcance e integridad. RN10 y RUP 16.6 siguen pendientes en el
-alcance operativo actual; la evidencia anterior se conserva como histórica.
+El usuario autorizó después una excepción para la beta local. Las cargas ficticias
+recibidas y las nuevas admitidas pueden publicarse sin antimalware, con una marca
+explícita y solo mientras esté activo el modo beta. Se conserva ClamAV para cuando
+se indique reactivarlo. RUP RN10 y 16.6 siguen pendientes para la entrega completa.
+[Modo beta y controles](document-beta.md).
 
-**El siguiente avance es 4A: CU002/CU003, SCRUM-14/SCRUM-15**, completar consulta,
-búsqueda/paginación y actualización de clientes sobre lo existente, con alcance,
-DTO, revisiones para concurrencia y auditoría. Después continuar el resto del paso
-4 y los módulos que no dependan de publicar archivos. No hace falta abrir cuentas
-para esos avances. Los criterios del prototipo completo y producción permanecen
-pendientes, pero ya no bloquean ese trabajo funcional.
+**4A implementado y verificado localmente.** CU002/CU003 (SCRUM-14/SCRUM-15)
+incluyen búsqueda por nombre e identificación, paginación y edición con revisión.
+Faltan aplicar la migración y repetir la prueba de integración en el Supabase actual.
+El siguiente avance funcional es **4B: consulta y actualización de expedientes**
+(CU005/CU031, SCRUM-42/SCRUM-48). No requiere cuentas nuevas.
 
 Los controles que permanecen activos y los límites están en
 [security-current-scope.md](security-current-scope.md).
@@ -163,9 +161,12 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 > Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz con el estilo mínimo existente.
 
-**Siguiente petición recomendada: clientes 4A, sin servicios nuevos:**
+**Siguiente petición recomendada para el paso 4B**
 
-> Implementa CU002/CU003 — SCRUM-14/SCRUM-15: completa consulta, búsqueda/paginación y actualización de clientes sobre lo existente. Conserva identidad, permisos y alcance, validación del servidor, normalización, control de revisión y auditoría; prueba éxito, datos inválidos, duplicados, cambios concurrentes y acceso denegado. Mantén el diseño KVG y el Supabase actual con datos ficticios. Las cargas documentales y 3C siguen pospuestos; no crees cuentas ni servicios externos.
+> Amplía CU005/CU031 (SCRUM-42/SCRUM-48). Completa la consulta de expedientes y
+> permite actualizar los campos admitidos con revisión, alcance y auditoría.
+> Conserva el folio interno y el cliente principal. Mantén el diseño KVG y los
+> datos ficticios en el Supabase actual.
 
 **Petición para retomar el prototipo y despliegue cuando haya recursos:**
 

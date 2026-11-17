@@ -4,6 +4,7 @@ import type {
   CaseSummary,
   ClientDetail,
   ClientInput,
+  ClientUpdateInput,
   ClientSummary,
   IdentificationType,
   RecordPage,
@@ -105,31 +106,33 @@ export async function getCapabilities(
 }
 export async function getIdentificationTypes(
   signal: AbortSignal,
+  clientId?: string,
 ): Promise<IdentificationType[]> {
-  return array(
-    await getJson('/api/v1/clients/identification-types', signal),
-    (value) => {
-      const item = record(value);
-      return {
-        code: text(item.code),
-        name: text(item.name),
-        unique: bool(item.unique),
-      };
-    },
-  );
+  const path = clientId
+    ? `/api/v1/clients/${encodeURIComponent(clientId)}/edit-identification-types`
+    : '/api/v1/clients/identification-types';
+  return array(await getJson(path, signal), (value) => {
+    const item = record(value);
+    return {
+      code: text(item.code),
+      name: text(item.name),
+      unique: bool(item.unique),
+    };
+  });
 }
 export async function searchClients(
   search: string,
   offset: number,
   signal: AbortSignal,
+  identification = '',
 ): Promise<RecordPage<ClientSummary>> {
-  return page(
-    await getJson(
-      `/api/v1/clients?${new URLSearchParams({ text: search, offset: String(offset), limit: '20' })}`,
-      signal,
-    ),
-    readClient,
-  );
+  const query = new URLSearchParams({
+    text: search,
+    offset: String(offset),
+    limit: '20',
+  });
+  if (identification) query.set('identification', identification);
+  return page(await getJson(`/api/v1/clients?${query}`, signal), readClient);
 }
 export async function searchCases(
   search: string,
@@ -154,6 +157,7 @@ export async function getClient(
   );
   return {
     ...readClient(row),
+    canEdit: bool(row.canEdit),
     identifications: array(row.identifications, (value) => {
       const item = record(value);
       return { type: text(item.type), value: text(item.value) };
@@ -206,6 +210,22 @@ export async function getCase(
 export async function createClient(input: ClientInput, signal: AbortSignal) {
   return readClient(
     await readJson(await mutate('/api/v1/clients', input, signal)),
+  );
+}
+export async function updateClient(
+  id: string,
+  input: ClientUpdateInput,
+  signal: AbortSignal,
+) {
+  return readClient(
+    await readJson(
+      await mutate(
+        `/api/v1/clients/${encodeURIComponent(id)}`,
+        input,
+        signal,
+        'PATCH',
+      ),
+    ),
   );
 }
 export async function createCase(input: CaseInput, signal: AbortSignal) {

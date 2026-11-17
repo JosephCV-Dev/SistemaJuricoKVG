@@ -13,7 +13,7 @@ export class DevelopmentBrowser {
       signal: AbortSignal.timeout(30000),
       headers: {
         ...(this.cookie ? { Cookie: this.cookie } : {}),
-        ...(method === 'POST'
+        ...(['POST', 'PATCH'].includes(method)
           ? {
               Origin: process.env.APP_ORIGIN,
               'Content-Type': 'application/json',
@@ -29,11 +29,11 @@ export class DevelopmentBrowser {
     if (response.status !== 204) data = await response.json();
     return { status: response.status, data, headers: response.headers };
   }
-  async mutate(path, data) {
+  async mutate(path, data, method = 'POST') {
     const csrf = await this.request('auth/csrf');
     if (csrf.status !== 200)
       throw new DevelopmentSetupError('No se pudo preparar CSRF de prueba.');
-    return this.request(path, 'POST', data, {
+    return this.request(path, method, data, {
       'X-CSRF-Token': csrf.data.csrfToken,
     });
   }

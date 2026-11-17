@@ -8,7 +8,7 @@ El diseño KVG, los CU y los contratos de negocio permanecen iguales.
 **Actualización de alcance:** el usuario pospone antivirus operativo y otro
 Supabase. Este paquete se conserva como preparación futura; no es el siguiente
 paso obligatorio ni exige crear cuentas ahora. El trabajo continúa localmente con
-el Supabase actual, cargas pausadas y clientes 4A. No se ha convertido desarrollo
+el Supabase actual y clientes 4A. La demo de archivos usa el [modo beta local](document-beta.md). No se ha convertido desarrollo
 en staging ni producción. Véase [security-current-scope.md](security-current-scope.md).
 
 Las instrucciones siguientes solo aplican **al retomar el despliegue separado**;
@@ -65,7 +65,7 @@ en variables `VITE_*`, imágenes, argumentos de build o respuestas del frontend.
    sistema operativo. Los límites de Compose son provisionales para pruebas;
    medir memoria/CPU antes de declarar capacidad de producción.
 2. Preparar un **nuevo** Supabase de pruebas: Auth, PostgreSQL y Storage separados.
-   Aprovisionar explícitamente la baseline y las seis migraciones, conservar
+   Aprovisionar explícitamente la baseline y las migraciones versionadas, conservar
    checksums/ledger y verificar SQL antes del arranque de la aplicación. El proyecto
    de desarrollo existente no se reinstala ni se modifica por estos comandos.
 3. Crear las identidades ficticias y perfiles KVG de ese proyecto con el contrato

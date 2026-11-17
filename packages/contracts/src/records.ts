@@ -16,6 +16,12 @@ export interface ClientInput {
   }>;
 }
 
+export interface ClientUpdateInput extends Partial<
+  Omit<ClientInput, 'requestId'>
+> {
+  revision: number;
+}
+
 export interface ClientSummary {
   id: string;
   name: string;
@@ -25,6 +31,7 @@ export interface ClientSummary {
 }
 
 export interface ClientDetail extends ClientSummary {
+  canEdit: boolean;
   identifications: Array<{ type: string; value: string }>;
   contacts: ClientInput['contacts'];
 }

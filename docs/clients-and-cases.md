@@ -40,8 +40,8 @@ técnico no puede registrar clientes ni leer expedientes por su rol.
 - Un expediente nuevo puede estar sin abogado asignado. La interfaz lo informa.
   La pantalla completa de asignaciones pertenece a CU007; no se finge una asignación.
 
-No se implementan edición, eliminación de clientes, cambios de estado, captura de
-avances, pantallas completas de usuarios/permisos ni gestión documental. Las
+El recorrido 3A excluye actualización de clientes, cambios de estado y captura de
+avances, pantallas completas de usuarios/permisos y gestión documental. La edición se incorpora en 4A. Las
 relaciones que el SQL ya devuelve se muestran; no se consideran implementados los
 casos de uso que las modifican. La interfaz adopta la maqueta KVG autorizada; listas, formularios y detalles
 están separados, con resumen/historial/avances en el expediente.
@@ -190,12 +190,68 @@ y `records-browser-verification.json`; la captura ficticia móvil también es lo
 Los scripts cierran sus sesiones y no envían correos. Conservan los registros
 ficticios y su auditoría; no borran expedientes ni el historial para limpiar pruebas.
 
-Pendientes: despliegue HTTPS, otras combinaciones de navegador/dispositivo, filtros
-ampliados, asignaciones desde UI, concurrencia de edición, recorrido documental y
-restauración. No hay datos reales ni evidencia de producción.
+Pendientes del alcance general: despliegue HTTPS, otras combinaciones de
+navegador/dispositivo, asignaciones desde UI y restauración integral. No hay datos reales ni evidencia de producción.
 
 Commit sugerido:
 
 ```text
 feat(records): implementar clientes y expedientes con alcance e idempotencia
 ```
+
+## Paso 4A: consulta y edición de clientes
+
+CU002/CU003 se trazan a SCRUM-14/SCRUM-15 y sus subtareas SCRUM-24–40.
+La búsqueda combina nombre parcial e identificación exacta tras aplicar la regla
+del tipo. Usa identificaciones vigentes, incluido el historial de tipos desactivados
+si la identificación sigue vigente. El listado devuelve resúmenes autorizados y
+mantiene los filtros al paginar. El nombre se trata como texto literal.
+
+El detalle muestra contactos e identificaciones y ofrece **Editar cliente** cuando
+hay permiso y alcance. La edición precarga los datos y la revisión. Se envían solo
+los campos modificados. Omitir una colección la conserva y enviar una lista vacía
+retira sus elementos vigentes. Al editar identificaciones se conservan las
+entradas idénticas, incluidas las de tipos desactivados. La fecha de alta, autor,
+tipo e identificador interno quedan protegidos.
+
+| Ruta                                                          | Comportamiento                                                                                         |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `GET /api/v1/clients?text=&identification=&limit=20&offset=0` | Combina filtros, con límite 1–50, desplazamiento 0–10000 y orden por nombre e ID.                      |
+| `GET /api/v1/clients/:id`                                     | Revalida consulta y devuelve `canEdit` derivado del alcance SQL.                                       |
+| `GET /api/v1/clients/:id/edit-identification-types`           | Catálogo activo para quien puede consultar y editar el cliente.                                        |
+| `PATCH /api/v1/clients/:id`                                   | Requiere CSRF, revisión entera positiva y uno o más campos entre nombre, identificaciones y contactos. |
+
+SQL comprueba consulta y edición antes y después de tomar el bloqueo del cliente,
+compara la revisión y realiza el cambio con auditoría en la misma transacción.
+Una revisión obsoleta o una identificación única duplicada producen 409. La
+interfaz conserva el borrador y permite descartarlo para consultar los datos
+vigentes. La búsqueda, el catálogo y el guardado conservan el JWT ordinario.
+La migración versionada `202611170007_client_search_and_update.sql` mantiene la
+baseline, el despachador, las capacidades y los triggers de auditoría.
+
+**Verificación del 17 de noviembre de 2026.** `npm run check` pasó 80 pruebas
+(63 de API y 17 web). Un PostgreSQL 16 efímero, sin red, ejecutó la baseline,
+las migraciones y [la prueba SQL de 4A](../database/tests/client-edit-local.sql).
+Se comprobaron permisos del helper, filtros, denegación entre cuentas con la
+misma capacidad, revisión obsoleta, duplicado con reversión, identificaciones
+retiradas, conservación de tipos desactivados y auditoría. Con dos sesiones SQL
+concurrentes, una confirmó la edición y la otra recibió un conflicto de revisión.
+Chromium a 390 px
+comprobó el flujo de consulta, paginación, edición, conflicto y recuperación con
+respuestas HTTP simuladas.
+
+El Supabase actual respondió por HTTPS, pero el puerto de su pooler SQL agotó
+el tiempo de conexión. La migración no se aplicó allí y el ensayo ampliado de
+Auth/MFA sigue pendiente. Cuando el pooler sea accesible, los comandos de
+desarrollo son:
+
+```sh
+npm run setup:clients:dev
+npm run test:records:schema
+npm run test:records:live
+```
+
+El primer comando compara el proyecto y el fixture local, registra el checksum
+y aplica solo la migración de 4A. El último usa cuentas y datos ficticios para
+comprobar también dos peticiones concurrentes y la revocación con una cookie
+vigente. Para cargas ficticias, consulta el [modo beta documental](document-beta.md).

@@ -13,6 +13,7 @@ import type {
   Client,
   ClientInformation,
   ClientSearch,
+  ClientUpdate,
   NewClient,
 } from '../domain/client.types';
 
@@ -36,17 +37,16 @@ export class KvgClientsRepository extends ClientsRepository {
     return readClient(
       await this.rpc.execute(token, 'cliente.registrar', {
         solicitud_id: input.requestId,
-        nombre: input.name,
-        identificaciones: input.identifications.map((item) => ({
-          tipo: item.type,
-          valor: item.value,
-        })),
-        contactos: input.contacts.map((item) => ({
-          tipo: item.type,
-          valor: item.value,
-          preferente: item.preferred,
-          ...(item.label ? { etiqueta: item.label } : {}),
-        })),
+        ...clientFields(input),
+      }),
+    );
+  }
+  async update(token: string, id: string, input: ClientUpdate) {
+    return readClient(
+      await this.rpc.execute(token, 'cliente.actualizar', {
+        cliente_id: id,
+        revision: input.revision,
+        ...clientFields(input),
       }),
     );
   }
@@ -56,6 +56,7 @@ export class KvgClientsRepository extends ClientsRepository {
     );
     return {
       ...readClient(row),
+      canEdit: row.puede_editar === true,
       identifications: rpcArray(row.identificaciones, (value) => {
         const item = rpcRecord(value);
         return {
@@ -83,6 +84,9 @@ export class KvgClientsRepository extends ClientsRepository {
     return rpcArray(
       await this.rpc.execute(token, 'cliente.buscar', {
         texto: input.text || null,
+        ...(input.identification
+          ? { identificacion: input.identification }
+          : {}),
         limite: input.limit,
         desplazamiento: input.offset,
       }),
@@ -103,4 +107,28 @@ export class KvgClientsRepository extends ClientsRepository {
       };
     });
   }
+}
+
+function clientFields(input: Omit<ClientUpdate, 'revision'>) {
+  return {
+    ...(input.name === undefined ? {} : { nombre: input.name }),
+    ...(input.identifications === undefined
+      ? {}
+      : {
+          identificaciones: input.identifications.map((item) => ({
+            tipo: item.type,
+            valor: item.value,
+          })),
+        }),
+    ...(input.contacts === undefined
+      ? {}
+      : {
+          contactos: input.contacts.map((item) => ({
+            tipo: item.type,
+            valor: item.value,
+            preferente: item.preferred,
+            ...(item.label ? { etiqueta: item.label } : {}),
+          })),
+        }),
+  };
 }

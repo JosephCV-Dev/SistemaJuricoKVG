@@ -20,7 +20,9 @@ identidades ficticias conocidas; no usa datos reales.
 4. Descifra la copia guardada y reconstruye la baseline en PostgreSQL 16 efímero
    dentro de Docker, sin red ni puertos publicados, usando memoria temporal.
    `database/tests/recovery-platform-fixture.sql` crea referencias mínimas Auth y
-   Storage para verificar el modelo. **No representa el servicio Supabase real.**
+   Storage para verificar el modelo. Si el snapshot incluye originales beta,
+   aplica la migración documental compatible en el contenedor y conserva la
+   beta desactivada. **El fixture representa solo las referencias de datos.**
 5. Importa el snapshot histórico exclusivamente en ese contenedor. Desactiva
    triggers durante la importación histórica para no inventar autoría/auditoría;
    después los reactiva y recrea/valida todas las claves foráneas. Compara el

@@ -68,3 +68,25 @@ test('trabajador pausado sale sin leer secretos montados ni reclamar trabajos in
   assert.match(stdout, /Cargas pausadas/);
   assert.equal(stderr, '');
 });
+
+test('beta es explícita y se rechaza fuera de desarrollo y pruebas', () => {
+  assert.equal(
+    validateEnvironment({ DOCUMENT_UPLOAD_MODE: 'beta' }).DOCUMENT_UPLOAD_MODE,
+    'beta',
+  );
+  const key = Buffer.alloc(32).toString('base64');
+  assert.throws(
+    () =>
+      validateEnvironment({
+        NODE_ENV: 'production',
+        DOCUMENT_UPLOAD_MODE: 'beta',
+        APP_ORIGIN: 'https://fixture.test',
+        SUPABASE_URL: 'https://fixture.supabase.co',
+        SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_fixture',
+        SESSION_DATABASE_URL: 'postgresql://fixture',
+        SESSION_SECRET: key,
+        SESSION_ENCRYPTION_KEY: key,
+      }),
+    /solo se admite en desarrollo/,
+  );
+});

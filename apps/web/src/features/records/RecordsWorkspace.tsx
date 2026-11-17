@@ -1,6 +1,7 @@
 import { CaseDetailView } from './CaseDetailView';
 import { showDate } from './record-format';
 import type { WorkspaceView } from '../../shared/navigation';
+import { ClientEditor } from './ClientEditor';
 import { ClientRegistration } from './ClientRegistration';
 import { CaseCreation } from './CaseCreation';
 import { useEffect, useRef, useState } from 'react';
@@ -9,6 +10,7 @@ import type {
   CaseSummary,
   ClientDetail,
   ClientSummary,
+  ClientUpdateInput,
   IdentificationType,
   RecordPage,
   SessionCapabilities,
@@ -21,6 +23,7 @@ import {
   getIdentificationTypes,
   searchCases,
   searchClients,
+  updateClient,
 } from './records-api';
 
 const emptyPage = <T,>(): RecordPage<T> => ({
@@ -54,7 +57,12 @@ export function RecordsWorkspace({
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [caseDetail, setCaseDetail] = useState<CaseDetail | null>(null);
   const [clientText, setClientText] = useState('');
-  const [clientQuery, setClientQuery] = useState('');
+  const [clientIdentification, setClientIdentification] = useState('');
+  const [clientQuery, setClientQuery] = useState({
+    text: '',
+    identification: '',
+  });
+  const [editTypes, setEditTypes] = useState<IdentificationType[] | null>(null);
   const [caseText, setCaseText] = useState('');
   const [caseStatus, setCaseStatus] = useState('');
   const [caseQuery, setCaseQuery] = useState({ text: '', status: '' });
@@ -77,6 +85,7 @@ export function RecordsWorkspace({
           [401, 403].includes(failure.status)
         ) {
           setClient(null);
+          setEditTypes(null);
           setCaseDetail(null);
           setClients(emptyPage());
           setCases(emptyPage());
@@ -131,7 +140,8 @@ export function RecordsWorkspace({
     setClient(await getClient(created.id, signal));
     setClients(await searchClients('', 0, signal));
     setClientText('');
-    setClientQuery('');
+    setClientIdentification('');
+    setClientQuery({ text: '', identification: '' });
     onNavigate('client');
   }
   async function onCaseCreated(created: CaseSummary, signal: AbortSignal) {
@@ -143,12 +153,14 @@ export function RecordsWorkspace({
     setCaseQuery({ text: '', status: '' });
     onNavigate('case');
   }
-  function loadClients(offset: number, text = clientQuery) {
+  function loadClients(offset: number, query = clientQuery) {
     void run(async (signal) => {
       setClient(null);
       setClients(emptyPage());
-      setClients(await searchClients(text, offset, signal));
-      setClientQuery(text);
+      setClients(
+        await searchClients(query.text, offset, signal, query.identification),
+      );
+      setClientQuery(query);
     });
   }
   function loadCases(offset: number, query = caseQuery) {
@@ -162,8 +174,32 @@ export function RecordsWorkspace({
   function openClient(id: string) {
     void run(async (signal) => {
       setClient(null);
+      setEditTypes(null);
       setClient(await getClient(id, signal));
       onNavigate('client');
+    });
+  }
+  function openClientEditor(current: ClientDetail) {
+    void run(async (signal) => {
+      setEditTypes(await getIdentificationTypes(signal, current.id));
+    });
+  }
+  function saveClient(current: ClientDetail, input: ClientUpdateInput) {
+    void run(async (signal) => {
+      await updateClient(current.id, input, signal);
+      setEditTypes(null);
+      setClient(null);
+      setClients(emptyPage());
+      setNotice('Cliente actualizado.');
+      setClient(await getClient(current.id, signal));
+      setClients(
+        await searchClients(
+          clientQuery.text,
+          0,
+          signal,
+          clientQuery.identification,
+        ),
+      );
     });
   }
   function openCase(id: string) {
@@ -293,31 +329,40 @@ export function RecordsWorkspace({
                   className="button-secondary"
                   type="button"
                   disabled={busy}
-                  onClick={() => onNavigate('clients')}
+                  onClick={() => {
+                    setEditTypes(null);
+                    onNavigate('clients');
+                  }}
                 >
                   Volver a clientes
                 </button>
               )}
-              {view === 'client' && client && can('expediente.crear') && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onNavigate('new-case')}
-                >
-                  Crear expediente
-                </button>
-              )}
+              {view === 'client' &&
+                client &&
+                !editTypes &&
+                can('expediente.crear') && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onNavigate('new-case')}
+                  >
+                    Crear expediente
+                  </button>
+                )}
             </div>
           </div>
           <div hidden={view !== 'clients'}>
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                loadClients(0, clientText);
+                loadClients(0, {
+                  text: clientText.trim(),
+                  identification: clientIdentification.trim(),
+                });
               }}
             >
               <fieldset disabled={busy}>
-                <legend>Buscar por nombre</legend>
+                <legend>Filtros de clientes</legend>
                 <p>
                   <label htmlFor="client-search">Nombre del cliente</label>
                   <input
@@ -325,6 +370,19 @@ export function RecordsWorkspace({
                     value={clientText}
                     onChange={(event) => setClientText(event.target.value)}
                     maxLength={200}
+                  />
+                </p>
+                <p>
+                  <label htmlFor="client-search-identification">
+                    Identificación
+                  </label>
+                  <input
+                    id="client-search-identification"
+                    value={clientIdentification}
+                    onChange={(event) =>
+                      setClientIdentification(event.target.value)
+                    }
+                    maxLength={100}
                   />
                 </p>
                 <button type="submit">Buscar clientes</button>
@@ -393,7 +451,18 @@ export function RecordsWorkspace({
               </button>
             </p>
           </div>
-          {view === 'client' && client && (
+          {view === 'client' && client && editTypes && (
+            <ClientEditor
+              key={`${client.id}:${client.revision}`}
+              client={client}
+              types={editTypes}
+              busy={busy}
+              onCancel={() => setEditTypes(null)}
+              onSave={(input) => saveClient(client, input)}
+              onReload={() => openClient(client.id)}
+            />
+          )}
+          {view === 'client' && client && !editTypes && (
             <div className="record-detail">
               <h4>Cliente: {client.name}</h4>
               <dl>
@@ -402,6 +471,15 @@ export function RecordsWorkspace({
                 <dt>Registrado</dt>
                 <dd>{showDate(client.createdAt)}</dd>
               </dl>
+              {client.canEdit && can('cliente.actualizar') && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => openClientEditor(client)}
+                >
+                  Editar cliente
+                </button>
+              )}
               <h4>Identificaciones</h4>
               {client.identifications.length ? (
                 <ul>
@@ -420,6 +498,7 @@ export function RecordsWorkspace({
                   {client.contacts.map((item, index) => (
                     <li key={index}>
                       {item.type}: {item.value}
+                      {item.label ? ` · ${item.label}` : ''}
                       {item.preferred ? ' · Preferente' : ''}
                     </li>
                   ))}

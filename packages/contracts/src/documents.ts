@@ -29,6 +29,7 @@ export interface DocumentCategory {
 }
 export interface DocumentUploadAvailability {
   enabled: boolean;
+  beta?: true;
 }
 export interface DocumentSummary {
   id: string;
@@ -52,5 +53,6 @@ export interface DocumentDetail extends DocumentSummary {
     format: string;
     status: string;
     publishedAt: string;
+    beta?: true;
   };
 }

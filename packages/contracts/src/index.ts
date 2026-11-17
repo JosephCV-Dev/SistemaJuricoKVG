@@ -25,6 +25,7 @@ export type {
 export type {
   IdentificationType,
   ClientInput,
+  ClientUpdateInput,
   ClientSummary,
   ClientDetail,
   CaseStatus,

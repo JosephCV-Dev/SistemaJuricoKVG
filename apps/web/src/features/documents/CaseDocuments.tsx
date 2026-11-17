@@ -46,6 +46,7 @@ export function CaseDocuments({
   });
   const [catalog, setCatalog] = useState<DocumentCategory[]>([]);
   const [uploadsEnabled, setUploadsEnabled] = useState<boolean | null>(null);
+  const [beta, setBeta] = useState(false);
   const [detail, setDetail] = useState<DocumentDetail | null>(null);
   const [file, setFile] = useState<File | null>(null),
     [name, setName] = useState(''),
@@ -98,6 +99,7 @@ export function CaseDocuments({
       if (canUpload) {
         const availability = await uploadAvailability(signal);
         setUploadsEnabled(availability.enabled);
+        setBeta(availability.beta === true);
         if (availability.enabled) setCatalog(await categories(signal));
       }
     });
@@ -127,7 +129,9 @@ export function CaseDocuments({
       setStatus(await transfer(created.id, file, signal));
       setPage(await listDocuments(caseId, 0, signal));
       setNotice(
-        'Archivo recibido. Permanecerá bloqueado hasta completar el análisis.',
+        beta
+          ? 'Archivo recibido. Actualiza documentos para consultar su disponibilidad en la beta.'
+          : 'Archivo recibido. Permanecerá bloqueado hasta completar el análisis.',
       );
     });
   }
@@ -167,7 +171,15 @@ export function CaseDocuments({
       <div role="status" aria-live="polite">
         {busy && <p>Procesando documento…</p>}
         {notice && <p>{notice}</p>}
-        {status && <p>Estado de la carga: {labels[status.state]}.</p>}
+        {status && (
+          <p>
+            Estado de la carga:{' '}
+            {beta && status.state === 'PENDIENTE_VERIFICACION'
+              ? 'Preparando descarga beta'
+              : labels[status.state]}
+            .
+          </p>
+        )}
       </div>
       {error && <p role="alert">{error}</p>}
       {canUpload && uploadsEnabled === false && (
@@ -181,8 +193,10 @@ export function CaseDocuments({
         <details className="upload-panel">
           <summary>Subir documento</summary>
           <p>
-            PDF, DOCX, JPG o PNG hasta 20 MB. El archivo se analiza antes de
-            quedar disponible.
+            PDF, DOCX, JPG o PNG hasta 20 MB.{' '}
+            {beta
+              ? 'Beta sin análisis antimalware. Usa archivos ficticios.'
+              : 'El archivo se analiza antes de quedar disponible.'}
           </p>
           <form onSubmit={submit}>
             <fieldset disabled={busy || locked}>
@@ -236,7 +250,11 @@ export function CaseDocuments({
                   pattern=".*\S.*"
                 />
               </p>
-              {!locked && <button type="submit">Enviar a análisis</button>}
+              {!locked && (
+                <button type="submit">
+                  {beta ? 'Subir archivo' : 'Enviar a análisis'}
+                </button>
+              )}
             </fieldset>
             {locked && (
               <div className="actions">
@@ -342,6 +360,9 @@ export function CaseDocuments({
       {detail && (
         <div className="record-detail">
           <h4>Documento: {detail.name}</h4>
+          {detail.version?.beta && (
+            <p>Archivo beta sin análisis antimalware.</p>
+          )}
           <dl>
             <dt>Categoría</dt>
             <dd>{detail.categoryName}</dd>

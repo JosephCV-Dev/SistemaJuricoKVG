@@ -133,3 +133,13 @@ del alcance autorizado. RN10 no se acredita mediante hash o extensión solamente
 y el prototipo RUP 16.6 completo sigue abierto. Esta decisión modifica el orden
 de entrega, no declara cumplidos los criterios pendientes ni reescribe el RUP/Jira.
 Véanse [roadmap.md](roadmap.md) y [security-current-scope.md](security-current-scope.md).
+
+El incremento 4A implementa CU002 con filtros por nombre e identificación y
+CU003 con edición por revisión. Se ejercitaron el SQL y el flujo web localmente.
+Para aplicar la migración y probarlo con Auth real queda pendiente restablecer
+la conexión SQL al Supabase de desarrollo. [Contrato y evidencia](clients-and-cases.md#paso-4a-consulta-y-edición-de-clientes).
+
+La demo puede usar documentos ficticios en modo beta sin antimalware por
+instrucción posterior del usuario. Cada versión se marca en la ficha. La
+excepción temporal conserva pendientes RN10, RUP 16.6 y el despliegue
+separado. [Contrato beta](document-beta.md).

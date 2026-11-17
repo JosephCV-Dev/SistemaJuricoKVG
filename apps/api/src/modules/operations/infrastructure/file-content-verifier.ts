@@ -13,11 +13,11 @@ import {
 import { ClamAvScanner } from './clamav-scanner';
 
 export class FileContentVerifier {
-  constructor(private readonly scanner: ClamAvScanner) {}
+  constructor(private readonly scanner: ClamAvScanner | null) {}
   async verify(bytes: Buffer, name: string): Promise<VerifiedFile> {
     if (!bytes.length || bytes.length > MAX_FILE_BYTES)
       throw new RejectedContent('TAMANO_INVALIDO');
-    const engine = await this.scanner.scan(bytes); // Falla cerrada; no usa el resultado del navegador.
+    const engine = await this.scanner?.scan(bytes); // Falla cerrada; no usa el resultado del navegador.
     let format: FileFormat;
     try {
       const header = bytes.subarray(0, 8).toString('hex');
@@ -61,7 +61,7 @@ export class FileContentVerifier {
       mime: FILE_MIMES[format],
       size: bytes.length,
       sha256: createHash('sha256').update(bytes).digest('hex'),
-      engine: `kvg-verifier-v1; ${engine}`,
+      engine: engine === undefined ? null : `kvg-verifier-v1; ${engine}`,
     };
   }
 }

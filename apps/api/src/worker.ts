@@ -13,14 +13,16 @@ async function run() {
     if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT'))
       throw error;
   }
-  if (documentUploadMode(process.env) === 'paused') {
+  const mode = documentUploadMode(process.env);
+  if (mode === 'paused') {
     console.log('Cargas pausadas: no se reclaman ni procesan trabajos.');
     return;
   }
   const env = validateWorkerEnvironment(process.env);
   const worker = new DocumentWorker(
     new PrivateFileGateway(new ConfigService(env)),
-    new IsolatedFileVerifier(env.CLAMAV_HOST, env.CLAMAV_PORT),
+    new IsolatedFileVerifier(env.CLAMAV_HOST, env.CLAMAV_PORT, mode === 'beta'),
+    mode === 'beta',
   );
   let stopping = false;
   process.on('SIGTERM', () => {
@@ -31,7 +33,8 @@ async function run() {
   });
   do {
     const result = await worker.once();
-    console.log(JSON.stringify({ action: 'DOCUMENT_WORKER', result }));
+    if (result !== 'idle' || process.argv.includes('--once'))
+      console.log(JSON.stringify({ action: 'DOCUMENT_WORKER', result }));
     if (process.argv.includes('--once')) break;
     if (result === 'idle' || result === 'retry')
       await new Promise((resolve) => setTimeout(resolve, 5000));

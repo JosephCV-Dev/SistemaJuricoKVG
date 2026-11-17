@@ -4,12 +4,20 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsInt,
+  IsUUID,
+  Min,
+  Max,
   IsString,
   Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
-import { CreationDto, IfProvided, Trim } from '../../../common/dto/record.dto';
+import {
+  IfProvided,
+  SearchRecordsDto,
+  Trim,
+} from '../../../common/dto/record.dto';
 
 export class IdentificationDto {
   @IsString()
@@ -39,21 +47,51 @@ export class ContactDto {
   preferred = false;
 }
 
-// El formato depende del tipo; se comprueba en el servicio de entrada antes del RPC.
-export class RegisterClientDto extends CreationDto {
+class ClientMediaDto {
+  @IfProvided()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => IdentificationDto)
+  identifications?: IdentificationDto[];
+
+  @IfProvided()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => ContactDto)
+  contacts?: ContactDto[];
+}
+
+export class RegisterClientDto extends ClientMediaDto {
+  @IsUUID('4')
+  requestId!: string;
+
   @Trim()
   @IsString()
   @Matches(/\S/)
   @MaxLength(200)
   name!: string;
-  @IsArray()
-  @ArrayMaxSize(20)
-  @ValidateNested({ each: true })
-  @Type(() => IdentificationDto)
-  identifications: IdentificationDto[] = [];
-  @IsArray()
-  @ArrayMaxSize(20)
-  @ValidateNested({ each: true })
-  @Type(() => ContactDto)
-  contacts: ContactDto[] = [];
+}
+
+export class UpdateClientDto extends ClientMediaDto {
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  revision!: number;
+
+  @IfProvided()
+  @Trim()
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(200)
+  name?: string;
+}
+
+export class SearchClientsDto extends SearchRecordsDto {
+  @IfProvided()
+  @Trim()
+  @IsString()
+  @MaxLength(100)
+  identification?: string;
 }

@@ -37,7 +37,11 @@ export class PrivateFileGateway extends PrivateFiles {
       await this.execute('entrega.autorizar', { autorizacion_id: id }),
     );
     if (r.bucket !== 'kvg-originales') throw new BadGatewayException();
-    return { path: rpcText(r.localizador), size: rpcInteger(r.tamano_bytes) };
+    return {
+      path: rpcText(r.localizador),
+      size: rpcInteger(r.tamano_bytes),
+      ...(r.sin_antimalware === true ? { beta: true as const } : {}),
+    };
   }
   private client(): SupabaseClient {
     const url = this.config.get<string>('SUPABASE_URL');

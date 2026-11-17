@@ -10,7 +10,7 @@ export interface Environment {
   SUPABASE_SECRET_KEY?: string;
   CLAMAV_HOST: string;
   CLAMAV_PORT: number;
-  DOCUMENT_UPLOAD_MODE: 'paused' | 'verified';
+  DOCUMENT_UPLOAD_MODE: ReturnType<typeof documentUploadMode>;
   APP_ORIGIN: string;
   TRUST_PROXY: boolean;
   SESSION_DATABASE_URL?: string;

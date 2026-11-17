@@ -10,6 +10,7 @@ export class IsolatedFileVerifier {
   constructor(
     private readonly host: string,
     private readonly port: number,
+    private readonly beta = false,
   ) {}
   verify(bytes: Buffer, name: string): Promise<VerifiedFile> {
     return new Promise((resolve, reject) => {
@@ -22,6 +23,7 @@ export class IsolatedFileVerifier {
             CLAMAV_HOST: this.host,
             CLAMAV_PORT: String(this.port),
             KVG_FILE_NAME: name,
+            KVG_DOCUMENT_BETA: String(this.beta),
           },
           stdio: ['pipe', 'pipe', 'ignore'],
         },
@@ -58,7 +60,9 @@ export class IsolatedFileVerifier {
             v.sha256 !== createHash('sha256').update(bytes).digest('hex') ||
             !Object.hasOwn(FILE_MIMES, v.format) ||
             v.mime !== FILE_MIMES[v.format] ||
-            typeof v.engine !== 'string'
+            (this.beta
+              ? v.engine !== null
+              : typeof v.engine !== 'string' || !v.engine)
           )
             throw new Error();
           resolve(v);

@@ -54,3 +54,10 @@ En cada prueba RPC se deben distinguir un fallo de transporte y un rechazo funci
 directo, buckets y política restrictiva de Storage, en una transacción de solo
 lectura que revierte. `recovery-platform-fixture.sql` es exclusivo del contenedor
 efímero del ensayo; no se debe ejecutar contra Supabase.
+
+`client-edit-local.sql` comprueba CU002/CU003 con identidades de prueba en
+PostgreSQL efímero. Para repetirlo en un contenedor aislado sin puertos, cargar
+en orden `recovery-platform-fixture.sql`, la baseline, las migraciones y finalmente
+`records.sql` y `client-edit-local.sql`. La prueba revierte los datos y las
+funciones del fixture que usa para representar la sesión. La integración real
+con Supabase se comprueba por separado mediante `npm run test:records:live`.

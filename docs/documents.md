@@ -1,37 +1,13 @@
 # Paso 3B: carga privada, consulta y descarga
 
-## Alcance operativo vigente
+## Beta documental de desarrollo
 
-El 10 de noviembre de 2026 el usuario pospuso el antivirus y los servicios nuevos.
-Se conserva la implementación y evidencia histórica de 3B, pero **las cargas
-nuevas están pausadas por defecto** (`DOCUMENT_UPLOAD_MODE=paused`). No hace falta
-ClamAV para trabajar con acceso, clientes, expedientes y documentos ya verificados.
-
-`GET /api/v1/documents/upload-availability` devuelve `{ enabled: false }` a una
-sesión con permiso de carga. La interfaz muestra la pausa en el diseño existente.
-POST de carga y PUT de bytes responden 503 después de los guards de identidad,
-permiso y CSRF, sin crear cargas ni escribir objetos. La aplicación también exige
-esa política; ocultar el formulario no es el control de seguridad.
-
-El trabajador pausado termina antes de leer secretos montados o reclamar trabajos, de
-modo que no consume reintentos pendientes. Reiniciar API/web y detener cualquier
-trabajador anterior al cambiar configuración; los procesos ya iniciados no recargan
-variables automáticamente. Los objetos existentes y sus estados se conservan.
-La pausa es de la aplicación y trabajador, no revoca RPC del SQL: cualquier carga
-pendiente sigue sin poder publicarse sin la verificación técnica exigida.
-Consulta y descarga autorizadas de originales ya habilitados conservan sus controles.
-No hay modo de publicar con solo validación estructural o SHA-256.
-
-Para **retomar** CU008 con análisis real se debe configurar
-`DOCUMENT_UPLOAD_MODE=verified` en la API y el trabajador, arrancar ClamAV y probar
-el recorrido completo. Ese valor permite recepción, pero no afirma que el
-analizador esté sano ni omite su comprobación al procesar. ClamAV local no requiere
-cuenta/API comercial; su operación se pospone por tiempo. Los comandos y evidencia
-siguientes describen la implementación disponible para ese momento.
-
-Implementa el recorrido mínimo CU008/CU012/CU013 — SCRUM-127/131/132, siguiendo
-RN01–03, RN08–12, RN17–20 y RUP 16.6. El diseño sigue la base KVG; no se incorporan
-los datos ni acciones simuladas de la maqueta.
+Por petición del usuario, las cargas ficticias pueden habilitarse sin antivirus
+en el mismo Supabase de desarrollo. El trabajador sigue validando formato y
+tamaño y comprobando SHA-256. La ficha indica que el original beta carece de
+análisis antimalware. Consulta y descarga exigen sesión, permiso, alcance e
+integridad del objeto. La entrega se mantiene como adjunto.
+Véase [modo beta y comandos](document-beta.md).
 
 ## Recorrido y límites de capas
 

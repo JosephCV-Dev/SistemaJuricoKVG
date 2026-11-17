@@ -9,6 +9,9 @@ export interface NewClient {
     label?: string;
   }>;
 }
+export interface ClientUpdate extends Partial<Omit<NewClient, 'requestId'>> {
+  revision: number;
+}
 export interface Client {
   id: string;
   name: string;
@@ -17,6 +20,7 @@ export interface Client {
   revision: number;
 }
 export interface ClientInformation extends Client {
+  canEdit: boolean;
   identifications: NewClient['identifications'];
   contacts: NewClient['contacts'];
 }
@@ -27,6 +31,7 @@ export interface IdentificationDefinition {
 }
 export interface ClientSearch {
   text?: string;
+  identification?: string;
   limit: number;
   offset: number;
 }

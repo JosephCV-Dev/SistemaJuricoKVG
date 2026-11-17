@@ -37,7 +37,10 @@
     "build:staging": "node infrastructure/staging/build.mjs",
     "preflight:staging": "node infrastructure/staging/preflight.mjs",
     "test:staging:https": "node infrastructure/staging/test-https-local.mjs",
-    "verify:staging:remote": "node infrastructure/staging/verify-remote.mjs"
+    "verify:staging:remote": "node infrastructure/staging/verify-remote.mjs",
+    "setup:clients:dev": "node apps/api/scripts/setup-clients-dev.mjs",
+    "setup:documents:beta": "node apps/api/scripts/setup-document-beta-dev.mjs",
+    "dev:beta": "npm run build --workspace @kvg/api && concurrently --kill-others --names api,web,documents \"npm run start:api\" \"npm run dev:web\" \"npm run worker:documents --workspace @kvg/api\""
   },
   "devDependencies": {
     "concurrently": "10.0.6",

@@ -2,10 +2,15 @@ import { ServiceUnavailableException } from '@nestjs/common';
 import type { DocumentUploadAvailability } from '@kvg/contracts';
 
 export class DocumentUploadPolicy {
-  constructor(private readonly mode: 'paused' | 'verified' = 'paused') {}
+  constructor(
+    private readonly mode: 'paused' | 'verified' | 'beta' = 'paused',
+  ) {}
 
   availability(): DocumentUploadAvailability {
-    return { enabled: this.mode === 'verified' };
+    return {
+      enabled: this.mode !== 'paused',
+      ...(this.mode === 'beta' ? { beta: true } : {}),
+    };
   }
 
   assertEnabled() {

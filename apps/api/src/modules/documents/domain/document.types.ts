@@ -11,6 +11,6 @@ export interface VerifiedFile {
   mime: string;
   size: number;
   sha256: string;
-  engine: string;
+  engine: string | null;
 }
 export class RejectedContent extends Error {}

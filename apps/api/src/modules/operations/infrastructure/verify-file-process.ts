@@ -13,10 +13,12 @@ async function run() {
     chunks.push(c as Buffer);
   }
   const verifier = new FileContentVerifier(
-    new ClamAvScanner(
-      process.env.CLAMAV_HOST ?? '127.0.0.1',
-      Number(process.env.CLAMAV_PORT ?? 3310),
-    ),
+    process.env.KVG_DOCUMENT_BETA === 'true'
+      ? null
+      : new ClamAvScanner(
+          process.env.CLAMAV_HOST ?? '127.0.0.1',
+          Number(process.env.CLAMAV_PORT ?? 3310),
+        ),
   );
   const verified = await verifier.verify(
     Buffer.concat(chunks),

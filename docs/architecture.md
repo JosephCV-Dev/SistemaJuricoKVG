@@ -256,5 +256,7 @@ cuando `DOCUMENT_UPLOAD_MODE=paused` (valor predeterminado). El controlador la
 consulta antes de consumir el flujo, y el cliente presenta la disponibilidad sin
 sustituir guards ni permisos. El trabajador sale sin reclamar trabajos en ese modo.
 El modo `verified` conserva ClamAV, comprobación estructural y hash obligatorios.
+Para la demo, `beta` omite solo ClamAV, con activación explícita en SQL y marca
+`BETA_SIN_ANTIMALWARE` por original. [Modo beta](document-beta.md).
 No se incorpora otro proveedor, API comercial o clave nueva. Se conserva la
 preparación de staging para uso futuro. Véase [security-current-scope.md](security-current-scope.md).

@@ -73,6 +73,7 @@ export async function mutate(
   path: string,
   body: object,
   signal: AbortSignal,
+  method: 'POST' | 'PATCH' = 'POST',
 ): Promise<Response> {
   // El servidor puede rotar el token tras login o MFA; no se conserva entre cambios.
   const csrf = await getJson('/api/v1/auth/csrf', signal);
@@ -82,7 +83,7 @@ export async function mutate(
   }
 
   return fetch(path, {
-    method: 'POST',
+    method,
     credentials: 'same-origin',
     headers: {
       Accept: 'application/json',

@@ -322,3 +322,58 @@ test('DOCX valida estructura OOXML y rechaza macros, referencias externas y XML 
       RejectedContent,
     );
 });
+
+test('beta publica con operación separada y no afirma resultado antimalware', async () => {
+  const p = workerPorts();
+  const execute = p.files.execute;
+  let publication;
+  p.files.execute = async (operation, input) => {
+    if (operation === 'trabajo.tomar_carga_beta')
+      return execute('trabajo.tomar_carga', input);
+    if (operation === 'carga.publicar_beta') publication = input;
+    return execute(operation, input);
+  };
+  const worker = new DocumentWorker(
+    p.files,
+    {
+      verify: async () => ({
+        size: bytes.length,
+        sha256: sha,
+        format: 'PDF',
+        mime: 'application/pdf',
+        engine: null,
+      }),
+    },
+    true,
+  );
+  assert.equal(await worker.once(), 'published');
+  assert.equal(publication.sha256, sha);
+  assert(!Object.hasOwn(publication, 'antimalware_apto'));
+  assert(!Object.hasOwn(publication, 'motor_version'));
+  assert(!p.calls.includes('carga.publicar'));
+});
+
+test('el modo normal no entrega originales beta aunque el broker devuelva la autorización', async () => {
+  const p = ports();
+  p.files.authorizeDelivery = async () => ({
+    beta: true,
+    path: 'versiones/id/original',
+    size: bytes.length,
+  });
+  await assert.rejects(
+    new DocumentsService(p.repository, p.files, verifiedUploads).download(
+      'user',
+      'version',
+    ),
+    ForbiddenException,
+  );
+  assert(!p.calls.includes('read'));
+  assert.deepEqual(
+    await new DocumentsService(
+      p.repository,
+      p.files,
+      new DocumentUploadPolicy('beta'),
+    ).download('user', 'version'),
+    bytes,
+  );
+});
