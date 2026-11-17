@@ -6,9 +6,72 @@ import {
   APP_ORIGIN,
 } from './helpers/identity-application.mjs';
 const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+test('pausa documental bloquea POST y PUT sin RPC ni Storage y protege su disponibilidad con identidad y permiso', async (t) => {
+  const calls = [];
+  const { browser, state, origin } = await application(t, {
+    rpc: {
+      execute: async (_token, op) => {
+        calls.push(op);
+        throw new Error('No debe llamarse');
+      },
+    },
+    files: {
+      putImmutable: async () => {
+        calls.push('Storage');
+        throw new Error('No debe llamarse');
+      },
+    },
+  });
+  assert.equal(
+    (await browser.request('documents/upload-availability')).status,
+    401,
+  );
+  await authenticated(browser);
+  assert.equal(
+    (await browser.request('documents/upload-availability')).status,
+    403,
+  );
+  state.capabilities = [
+    {
+      permission: 'documento.cargar',
+      context: 'EXPLICITO',
+      requiresMfa: true,
+      requiresDecision: false,
+    },
+  ];
+  const availability = await browser.request('documents/upload-availability');
+  assert.equal(availability.status, 200);
+  assert.deepEqual(await availability.json(), { enabled: false });
+  const response = await browser.post('documents/uploads', {
+    requestId: id,
+    caseId: id,
+    categoryId: id,
+    name: 'Ficticio',
+    originalName: 'ficticio.png',
+    reason: 'Prueba',
+  });
+  assert.equal(response.status, 503);
+  // Los errores 5xx conservan el filtro genérico; la UI consulta disponibilidad.
+  assert.equal((await response.json()).message, 'Ocurrió un error interno.');
+  const put = await fetch(`${origin}/api/v1/documents/uploads/${id}/content`, {
+    method: 'PUT',
+    headers: {
+      Cookie: browser.cookie,
+      Origin: APP_ORIGIN,
+      'X-CSRF-Token': browser.csrfToken,
+      'Content-Type': 'application/octet-stream',
+    },
+    body: 'archivo ficticio',
+  });
+  assert.equal(put.status, 503);
+  assert.deepEqual(calls, []);
+  state.capabilities = [];
+  assert.equal((await browser.post('documents/uploads', {})).status, 403);
+});
 test('documentos aplican guard, DTO, alcance y CSRF incluso al recibir bytes', async (t) => {
   const calls = [];
   const { browser, state, origin } = await application(t, {
+    uploadMode: 'verified',
     rpc: {
       execute: async (token, op, input) => {
         calls.push({ token, op, input });
@@ -42,6 +105,10 @@ test('documentos aplican guard, DTO, alcance y CSRF incluso al recibir bytes', a
       requiresDecision: false,
     },
   ];
+  assert.deepEqual(
+    await (await browser.request('documents/upload-availability')).json(),
+    { enabled: true },
+  );
   const input = {
     requestId: id,
     caseId: id,

@@ -1,0 +1,35 @@
+{
+	admin off
+}
+
+{$STAGING_HOST} {
+	header {
+		-Server
+		Strict-Transport-Security "max-age=86400"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		X-Frame-Options DENY
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+	}
+	request_body {
+		max_size 20MB
+	}
+	@api path /api /api/*
+	handle @api {
+		reverse_proxy api:3000 {
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+	handle {
+		root * /srv
+		@private path /.env* /.git* /.local* /node_modules/*
+		route {
+			respond @private 404
+			try_files {path} /index.html
+			header Cache-Control no-cache
+			file_server
+		}
+	}
+}

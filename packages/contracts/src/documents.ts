@@ -27,6 +27,9 @@ export interface DocumentCategory {
   id: string;
   name: string;
 }
+export interface DocumentUploadAvailability {
+  enabled: boolean;
+}
 export interface DocumentSummary {
   id: string;
   caseId: string;

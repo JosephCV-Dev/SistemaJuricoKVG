@@ -40,6 +40,11 @@ export class DocumentsController {
   categories(@Req() req: Request) {
     return this.documents.repository.categories(userAccessToken(req));
   }
+  @Get('upload-availability')
+  @RequirePermission('documento.cargar', scope)
+  uploadAvailability() {
+    return this.documents.uploads.availability();
+  }
   @Get('uploads/:id')
   @RequirePermission('documento.cargar', scope)
   status(@Param() p: RecordIdDto, @Req() req: Request) {
@@ -50,6 +55,7 @@ export class DocumentsController {
   @UseGuards(CsrfGuard)
   @RequirePermission('documento.cargar', scope)
   async receive(@Param() p: RecordIdDto, @Req() req: Request) {
+    this.documents.uploads.assertEnabled(); // Antes de leer el flujo o tocar Storage.
     const token = userAccessToken(req);
     await this.documents.repository.upload(token, p.id); // Antes de consumir bytes.
     if (req.headers['content-type'] !== 'application/octet-stream')

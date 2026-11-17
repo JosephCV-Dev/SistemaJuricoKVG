@@ -7,6 +7,7 @@ import {
 import type { DocumentUploadInput } from '@kvg/contracts';
 import { DocumentsRepository } from './documents.repository';
 import { PrivateFiles } from './private-files.port';
+import { DocumentUploadPolicy } from './document-upload-policy';
 import { createHash } from 'node:crypto';
 const digest = (bytes: Buffer) =>
   createHash('sha256').update(bytes).digest('hex');
@@ -17,11 +18,14 @@ export class DocumentsService {
   constructor(
     readonly repository: DocumentsRepository,
     private readonly files: PrivateFiles,
+    readonly uploads: DocumentUploadPolicy,
   ) {}
   create(token: string, input: DocumentUploadInput) {
+    this.uploads.assertEnabled();
     return this.repository.create(token, input);
   }
   async receive(token: string, id: string, bytes: Buffer) {
+    this.uploads.assertEnabled();
     const status = await this.repository.upload(token, id); // Identidad y alcance ANTES del objeto técnico.
     const path = `cargas/${id}/original`;
     if (status.state !== 'RECIBIENDO') {

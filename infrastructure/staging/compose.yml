@@ -1,0 +1,118 @@
+services:
+  web:
+    image: ${WEB_IMAGE:?Indica la imagen web verificada}
+    environment:
+      STAGING_HOST: ${STAGING_HOST:?Indica el dominio de pruebas}
+    ports:
+      - '${STAGING_BIND_IP:-127.0.0.1}:80:80'
+      - '${STAGING_BIND_IP:-127.0.0.1}:443:443'
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 256m
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+  api:
+    image: ${API_IMAGE:?Indica la imagen API verificada}
+    environment:
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: '3000'
+      APP_ORIGIN: https://${STAGING_HOST}
+      TRUST_PROXY: 'true'
+      DOCUMENT_UPLOAD_MODE: ${DOCUMENT_UPLOAD_MODE:-paused}
+      SUPABASE_URL: ${SUPABASE_URL:?Proyecto de pruebas separado}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?Clave publishable de pruebas}
+      SUPABASE_SECRET_KEY_FILE: /run/secrets/supabase_secret
+      SESSION_DATABASE_URL_FILE: /run/secrets/session_database_url
+      SESSION_SECRET_FILE: /run/secrets/session_secret
+      SESSION_ENCRYPTION_KEY_FILE: /run/secrets/session_encryption_key
+    secrets:
+      [
+        supabase_secret,
+        session_database_url,
+        session_secret,
+        session_encryption_key,
+        session_database_ca,
+      ]
+    networks: [edge, backend]
+    read_only: true
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=32m']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    init: true
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+    mem_limit: 512m
+    restart: unless-stopped
+    logging: *logging
+  worker:
+    profiles: [document-verification]
+    image: ${API_IMAGE}
+    command: ['node', 'dist/worker.js']
+    environment:
+      NODE_ENV: production
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SECRET_KEY_FILE: /run/secrets/supabase_secret
+      DOCUMENT_UPLOAD_MODE: ${DOCUMENT_UPLOAD_MODE:-paused}
+      CLAMAV_HOST: antivirus
+      CLAMAV_PORT: '3310'
+    secrets: [supabase_secret]
+    networks: [backend, analysis]
+    read_only: true
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=32m']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    init: true
+    depends_on:
+      antivirus:
+        condition: service_healthy
+    mem_limit: 768m
+    stop_grace_period: 120s
+    restart: unless-stopped
+    logging: *logging
+  antivirus:
+    profiles: [document-verification]
+    image: clamav/clamav@sha256:6d87c712e3391e13c1ba6e05dfb074d4b1ddb5a6834b23bb9da990d2a4ef042a
+    volumes:
+      - signatures:/var/lib/clamav
+    networks: [analysis]
+    mem_limit: 2g
+    restart: unless-stopped
+    logging: *logging
+networks:
+  edge:
+  backend:
+  analysis:
+volumes:
+  caddy_data:
+  caddy_config:
+  signatures:
+secrets:
+  supabase_secret:
+    file: ${STAGING_SECRET_DIRECTORY:?Directorio privado fuera del repositorio}/supabase_secret
+  session_database_url:
+    file: ${STAGING_SECRET_DIRECTORY}/session_database_url
+  session_secret:
+    file: ${STAGING_SECRET_DIRECTORY}/session_secret
+  session_encryption_key:
+    file: ${STAGING_SECRET_DIRECTORY}/session_encryption_key
+  session_database_ca:
+    file: ${STAGING_SECRET_DIRECTORY}/session_database_ca

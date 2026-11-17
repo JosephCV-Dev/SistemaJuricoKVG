@@ -10,6 +10,7 @@ import type {
 import { AuthRequestError } from '../../shared/api/session-http';
 import {
   categories,
+  uploadAvailability,
   createUpload,
   transfer,
   uploadStatus,
@@ -44,6 +45,7 @@ export function CaseDocuments({
     hasMore: false,
   });
   const [catalog, setCatalog] = useState<DocumentCategory[]>([]);
+  const [uploadsEnabled, setUploadsEnabled] = useState<boolean | null>(null);
   const [detail, setDetail] = useState<DocumentDetail | null>(null);
   const [file, setFile] = useState<File | null>(null),
     [name, setName] = useState(''),
@@ -90,18 +92,23 @@ export function CaseDocuments({
     }
   }
   useEffect(() => {
+    setUploadsEnabled(null);
     void run(async (signal) => {
       setPage(await listDocuments(caseId, 0, signal));
-      if (canUpload) setCatalog(await categories(signal));
+      if (canUpload) {
+        const availability = await uploadAvailability(signal);
+        setUploadsEnabled(availability.enabled);
+        if (availability.enabled) setCatalog(await categories(signal));
+      }
     });
     return () => {
       active.current?.abort();
       active.current = null;
     };
-  }, [caseId]);
+  }, [caseId, canUpload]);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!file) return;
+    if (!file || uploadsEnabled !== true) return;
     void run(async (signal) => {
       if (!file.size || file.size > 20_000_000)
         throw new Error('El archivo debe tener entre 1 byte y 20 MB.');
@@ -163,7 +170,14 @@ export function CaseDocuments({
         {status && <p>Estado de la carga: {labels[status.state]}.</p>}
       </div>
       {error && <p role="alert">{error}</p>}
-      {canUpload && (
+      {canUpload && uploadsEnabled === false && (
+        <p role="status">
+          Las cargas nuevas están pausadas hasta habilitar la verificación de
+          archivos. Puedes consultar los documentos ya disponibles según tus
+          permisos.
+        </p>
+      )}
+      {canUpload && uploadsEnabled === true && (
         <details className="upload-panel">
           <summary>Subir documento</summary>
           <p>

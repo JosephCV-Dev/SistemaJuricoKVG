@@ -153,8 +153,9 @@ contrato y sus límites están en [clients-and-cases.md](clients-and-cases.md).
 
 El proxy Vite permite consumir `/api` desde el mismo origen durante desarrollo.
 En producción habrá que configurar el servicio o proxy que entregue los archivos
-estáticos de la web y reenvíe `/api` a Nest bajo HTTPS. Esta preparación no despliega
-servicios ni el proxy de producción. La configuración de cookies y persistencia
+estáticos de la web y reenvíe `/api` a Nest bajo HTTPS. La preparación de 3C incorpora imágenes y Compose con Caddy, secretos
+montados y un ensayo HTTPS local. No publica servicios en un alojamiento remoto.
+Véase [staging-deployment.md](staging-deployment.md). La configuración de cookies y persistencia
 del servidor está implementada; su validación bajo HTTPS y el endurecimiento del
 entorno desplegado siguen pendientes. El frontend no necesita CORS entre orígenes.
 
@@ -232,3 +233,28 @@ La preparación ficticia de Secretaría usa la identidad MFA del administrador p
 los RPC de usuarios/roles y una credencial técnica únicamente para Auth Admin y la
 conciliación de identidad por `kvg_trabajar`. No sustituye la identidad ordinaria en
 operaciones de clientes/expedientes. No hay un trabajador general ejecutándose.
+
+## Paquete de despliegue preparado (3C)
+
+Las imágenes mantienen React compilado y NestJS sin cambiar módulos ni contratos.
+API y trabajador usan el mismo artefacto Node con entradas distintas y usuario sin
+root. `validateWorkerEnvironment` valida solo sus dependencias técnicas: no recibe
+claves de sesión ni acceso SQL de propietario. `runtime-secrets` admite archivos
+montados para la API y el trabajador y rechaza valores simultáneos en entorno/archivo.
+Caddy es el único punto de entrada y conserva el mismo origen HTTPS; los secretos
+no se suministran durante el build. La prueba TLS local usa infraestructura efímera,
+sin autenticación Supabase ni datos de desarrollo. El despliegue remoto y la
+recuperación de un Supabase separado permanecen abiertos.
+
+## Ajuste operativo sin servicios nuevos
+
+Por decisión del usuario del 10 de noviembre de 2026 se utiliza solo el Supabase
+actual de desarrollo con datos ficticios. El despliegue separado y la operación
+del antivirus se posponen; el monolito y los límites de confianza se conservan.
+`DocumentUploadPolicy`, inyectada en la aplicación, impide crear/recibir cargas
+cuando `DOCUMENT_UPLOAD_MODE=paused` (valor predeterminado). El controlador la
+consulta antes de consumir el flujo, y el cliente presenta la disponibilidad sin
+sustituir guards ni permisos. El trabajador sale sin reclamar trabajos en ese modo.
+El modo `verified` conserva ClamAV, comprobación estructural y hash obligatorios.
+No se incorpora otro proveedor, API comercial o clave nueva. Se conserva la
+preparación de staging para uso futuro. Véase [security-current-scope.md](security-current-scope.md).

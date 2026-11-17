@@ -243,7 +243,13 @@ export async function application(t, options = {}) {
   })
     .overrideProvider(ConfigService)
     .useValue(
-      new ConfigService(validateEnvironment({ NODE_ENV: 'test', APP_ORIGIN })),
+      new ConfigService(
+        validateEnvironment({
+          NODE_ENV: 'test',
+          APP_ORIGIN,
+          DOCUMENT_UPLOAD_MODE: options.uploadMode ?? 'paused',
+        }),
+      ),
     )
     .overrideProvider(IdentityProvider)
     .useValue(ports.provider)

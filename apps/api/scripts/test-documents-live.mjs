@@ -1,3 +1,4 @@
+import { documentUploadMode } from '../dist/config/document-upload-mode.js';
 import { ServerSessions } from '../dist/modules/identity/presentation/server-sessions.service.js';
 import { KvgRpcService } from '../dist/infrastructure/supabase/kvg-rpc.service.js';
 import 'reflect-metadata';
@@ -30,6 +31,10 @@ const check = (ok, name) => {
 };
 try {
   const config = await developmentConfig();
+  if (documentUploadMode(process.env) !== 'verified')
+    throw new DevelopmentSetupError(
+      'Prueba documental pospuesta: las cargas están pausadas.',
+    );
   const fixture = await readDevelopmentFixture(config);
   owner = await ownerConnection(config);
   const users = await owner.query('SELECT correo_operativo FROM kvg.usuario');

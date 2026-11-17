@@ -10,6 +10,8 @@ import { PDFDocument } from 'pdf-lib';
 import sharp from 'sharp';
 import { crc32 } from 'node:zlib';
 
+import { DocumentUploadPolicy } from '../dist/modules/documents/application/document-upload-policy.js';
+const verifiedUploads = new DocumentUploadPolicy('verified');
 const bytes = Buffer.from('contenido ficticio');
 const sha = createHash('sha256').update(bytes).digest('hex');
 const status = {
@@ -63,14 +65,18 @@ test('no transfiere ni inspecciona Storage si falla el alcance ordinario', async
     throw new ForbiddenException();
   };
   await assert.rejects(
-    new DocumentsService(p.repository, p.files).receive('user', 'id', bytes),
+    new DocumentsService(p.repository, p.files, verifiedUploads).receive(
+      'user',
+      'id',
+      bytes,
+    ),
     ForbiddenException,
   );
   assert.deepEqual(p.calls, []);
 });
 test('recepción autoriza antes del objeto y revalida antes de confirmar', async () => {
   const p = ports();
-  await new DocumentsService(p.repository, p.files).receive(
+  await new DocumentsService(p.repository, p.files, verifiedUploads).receive(
     'user',
     'id',
     bytes,
@@ -92,7 +98,11 @@ test('una revocación durante la transferencia impide confirmar recepción', asy
     return status;
   };
   await assert.rejects(
-    new DocumentsService(p.repository, p.files).receive('user', 'id', bytes),
+    new DocumentsService(p.repository, p.files, verifiedUploads).receive(
+      'user',
+      'id',
+      bytes,
+    ),
     ForbiddenException,
   );
   assert(!p.calls.includes('received'));
@@ -101,7 +111,7 @@ test('reintentar no sobrescribe una carga ya recibida con bytes distintos', asyn
   const p = ports();
   p.setStatus({ ...status, state: 'PENDIENTE_VERIFICACION' });
   await assert.rejects(
-    new DocumentsService(p.repository, p.files).receive(
+    new DocumentsService(p.repository, p.files, verifiedUploads).receive(
       'user',
       'id',
       Buffer.from('diferente'),
@@ -110,13 +120,14 @@ test('reintentar no sobrescribe una carga ya recibida con bytes distintos', asyn
   );
   assert(!p.calls.includes('put'));
 });
-test('la descarga valida hash y reautoriza después de leer el original', async () => {
+test('con cargas pausadas la descarga valida hash y reautoriza el original', async () => {
   const p = ports();
   assert.deepEqual(
-    await new DocumentsService(p.repository, p.files).download(
-      'user',
-      'version',
-    ),
+    await new DocumentsService(
+      p.repository,
+      p.files,
+      new DocumentUploadPolicy(),
+    ).download('user', 'version'),
     bytes,
   );
   assert.deepEqual(p.calls, ['user', 'delivery', 'read', 'delivery']);
@@ -125,7 +136,10 @@ test('no devuelve un objeto cuyo hash cambió', async () => {
   const p = ports();
   p.files.read = async () => Buffer.from('alterado');
   await assert.rejects(
-    new DocumentsService(p.repository, p.files).download('user', 'version'),
+    new DocumentsService(p.repository, p.files, verifiedUploads).download(
+      'user',
+      'version',
+    ),
     (e) => e.status === 503,
   );
 });
@@ -137,7 +151,10 @@ test('revocar durante la descarga impide entregar los bytes al controlador', asy
     return { path: 'path', size: bytes.length };
   };
   await assert.rejects(
-    new DocumentsService(p.repository, p.files).download('user', 'version'),
+    new DocumentsService(p.repository, p.files, verifiedUploads).download(
+      'user',
+      'version',
+    ),
     ForbiddenException,
   );
 });

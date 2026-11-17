@@ -1,3 +1,6 @@
+import { API_SECRET_NAMES, readRuntimeSecrets } from './runtime-secrets';
+import { documentUploadMode } from './document-upload-mode';
+
 export interface Environment {
   NODE_ENV: 'development' | 'test' | 'production';
   API_HOST: string;
@@ -7,6 +10,7 @@ export interface Environment {
   SUPABASE_SECRET_KEY?: string;
   CLAMAV_HOST: string;
   CLAMAV_PORT: number;
+  DOCUMENT_UPLOAD_MODE: 'paused' | 'verified';
   APP_ORIGIN: string;
   TRUST_PROXY: boolean;
   SESSION_DATABASE_URL?: string;
@@ -17,6 +21,7 @@ export interface Environment {
 export function validateEnvironment(
   input: Record<string, unknown>,
 ): Environment {
+  input = readRuntimeSecrets(input, API_SECRET_NAMES);
   const nodeEnv = input.NODE_ENV ?? 'development';
   if (
     nodeEnv !== 'development' &&
@@ -126,6 +131,7 @@ export function validateEnvironment(
   if (!Number.isInteger(clamPort) || clamPort < 1 || clamPort > 65535)
     throw new Error('CLAMAV_PORT inválido.');
   const base: Environment = {
+    DOCUMENT_UPLOAD_MODE: documentUploadMode(input),
     ...(technicalKey ? { SUPABASE_SECRET_KEY: technicalKey } : {}),
     CLAMAV_HOST: clamHost,
     CLAMAV_PORT: clamPort,

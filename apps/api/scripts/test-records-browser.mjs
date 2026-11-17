@@ -1,3 +1,4 @@
+import { documentUploadMode } from '../dist/config/document-upload-mode.js';
 import sharp from 'sharp';
 import { ConfigService } from '@nestjs/config';
 import { PrivateFileGateway } from '../dist/modules/documents/infrastructure/private-file-gateway.js';
@@ -29,6 +30,10 @@ function check(condition, description) {
 }
 try {
   const config = await developmentConfig();
+  if (documentUploadMode(process.env) !== 'verified')
+    throw new DevelopmentSetupError(
+      'Prueba documental pospuesta: las cargas están pausadas.',
+    );
   const fixture = await readDevelopmentFixture(config);
   if (!process.env.PLAYWRIGHT_MODULE_PATH)
     throw new DevelopmentSetupError(

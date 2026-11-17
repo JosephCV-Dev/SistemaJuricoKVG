@@ -8,6 +8,12 @@ en desarrollo y un recorrido de Chromium local, incluidos formularios y vista m�
 El prototipo completo y su despliegue de prueba siguen pendientes. La interfaz adopta el diseño entregado por el usuario: menú lateral, logo KVG,
 formularios y vistas separadas, con acciones según las capacidades de la sesión.
 
+**Alcance actual:** seguimos en desarrollo local con el Supabase existente y datos
+ficticios, sin nuevas cuentas ni servicios. Antivirus y despliegue separado se
+posponen; las cargas nuevas están pausadas por defecto. Los documentos previamente
+verificados conservan consulta/descarga autorizada. Seguimos con clientes en el
+paso 4A. Consulta [seguridad y alcance vigente](docs/security-current-scope.md).
+
 ## Arquitectura elegida
 
 Monolito modular por capas con **React + TypeScript + Vite**, **Node + NestJS** y
@@ -112,7 +118,9 @@ explícitamente en desarrollo; no forman parte del arranque ni de CI.
 
 Después de compilar, `npm run start:api` inicia la API compilada. El resultado de
 la web queda en `apps/web/dist`. El alojamiento final deberá servir web y `/api`
-bajo el mismo origen HTTPS; el despliegue todavía no está configurado.
+bajo el mismo origen HTTPS. El paquete de contenedores y proxy HTTPS está
+preparado y verificado localmente; el alojamiento y la publicación remota
+permanecen pendientes. Consulta [staging-deployment.md](docs/staging-deployment.md).
 
 ## Base de datos
 
@@ -148,19 +156,24 @@ porque el modelo suministrado restringe ese acceso. Consulta el
 
 Los pasos **3A** y el recorrido documental local de **3B** están implementados.
 3B incorpora también un ensayo acotado de datos/objetos cifrados en PostgreSQL
-Docker aislado, con los límites documentados. Sigue **3C: despliegue de prueba
-separado con HTTPS** y ampliación de la recuperación en ese entorno. El paso 3
-completo y la administración integral siguen abiertos.
+Docker aislado, con los límites documentados. **3C queda pospuesto** por acuerdo
+del usuario. Sigue **4A: consulta y actualización de clientes**, sin nuevos
+servicios. El paso 3 completo y la administración integral siguen abiertos.
 
 - [Documentos privados, trabajador y verificación](docs/documents.md).
 - [Ensayo acotado de copia y recuperación](docs/recovery-rehearsal.md).
 
-Para cargar archivos, iniciar ClamAV con el Compose documentado y ejecutar
-`npm run worker:documents` en otra terminal junto a `npm run dev`.
-Sin el trabajador/análisis disponible la carga permanece bloqueada.
+Las cargas están pausadas (`DOCUMENT_UPLOAD_MODE=paused`, también por defecto).
+Para trabajar ahora basta `npm run dev`; no inicies el trabajador ni ClamAV.
+No se publican archivos pendientes. Para retomar posteriormente el análisis real,
+consulta [documents.md](docs/documents.md); no existe un modo de omitirlo.
+
+Se conserva el paquete de imágenes/proxy y las pruebas HTTPS locales como trabajo
+preparado para el futuro, sin exigir ahora servidor, dominio ni segundo Supabase.
+[Preparación pospuesta de 3C](docs/staging-deployment.md).
 
 Commit sugerido:
 
 ```text
-feat(documents): implementar carga privada verificada y ensayo de recuperación
+feat(security): pausar cargas sin analizador y ajustar el roadmap local
 ```

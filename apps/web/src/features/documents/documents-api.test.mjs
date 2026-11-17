@@ -6,8 +6,20 @@ import {
   listDocuments,
   getDocument,
   downloadVersion,
+  uploadAvailability,
 } from './documents-api.ts';
 const upload = { id: 'upload', documentId: 'doc', state: 'RECIBIENDO' };
+test('disponibilidad de cargas exige booleano y no interpreta texto como autorización', async (t) => {
+  let enabled = false;
+  t.mock.method(globalThis, 'fetch', async (path) => {
+    assert.equal(path, '/api/v1/documents/upload-availability');
+    return new Response(JSON.stringify({ enabled }));
+  });
+  const signal = new AbortController().signal;
+  assert.deepEqual(await uploadAvailability(signal), { enabled: false });
+  enabled = 'true';
+  await assert.rejects(uploadAvailability(signal));
+});
 test('documentos conservan solicitud y transfieren archivo con cookie/CSRF sin JWT', async (t) => {
   const calls = [];
   t.mock.method(globalThis, 'fetch', async (path, init) => {

@@ -33,7 +33,11 @@
     "setup:documents:dev": "npm run build --workspace @kvg/api && npm run setup:documents:dev --workspace @kvg/api",
     "test:documents:live": "npm run build --workspace @kvg/api && npm run test:documents:live --workspace @kvg/api",
     "test:documents:schema": "npm run test:documents:schema --workspace @kvg/api",
-    "rehearse:recovery:dev": "npm run build --workspace @kvg/api && npm run rehearse:recovery:dev --workspace @kvg/api"
+    "rehearse:recovery:dev": "npm run build --workspace @kvg/api && npm run rehearse:recovery:dev --workspace @kvg/api",
+    "build:staging": "node infrastructure/staging/build.mjs",
+    "preflight:staging": "node infrastructure/staging/preflight.mjs",
+    "test:staging:https": "node infrastructure/staging/test-https-local.mjs",
+    "verify:staging:remote": "node infrastructure/staging/verify-remote.mjs"
   },
   "devDependencies": {
     "concurrently": "10.0.6",

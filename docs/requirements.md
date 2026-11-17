@@ -121,3 +121,15 @@ Estos puntos se registran para no fijar políticas de negocio por accidente. No 
 | PT08 | Operación y presupuesto       | Definir planes, titularidad de cuentas, soporte y responsables posteriores a la entrega.                                                                                     |
 
 Cada decisión futura debe registrar el responsable que la autorizó, fecha, valor acordado y requisitos afectados. Los ambientes de desarrollo usarán datos ficticios y credenciales propias.
+
+## Ajuste de planificación solicitado por el usuario
+
+El 10 de noviembre de 2026 se posponen antivirus operativo y despliegue en un
+segundo Supabase, sin contratar servicios nuevos. Se mantiene desarrollo local
+con datos ficticios y se continúa con CU002/CU003 (SCRUM-14/SCRUM-15).
+CU008/SCRUM-127 conserva su implementación, pero las cargas nuevas se pausan;
+CU012/CU013 siguen disponibles para versiones anteriormente verificadas y dentro
+del alcance autorizado. RN10 no se acredita mediante hash o extensión solamente,
+y el prototipo RUP 16.6 completo sigue abierto. Esta decisión modifica el orden
+de entrega, no declara cumplidos los criterios pendientes ni reescribe el RUP/Jira.
+Véanse [roadmap.md](roadmap.md) y [security-current-scope.md](security-current-scope.md).

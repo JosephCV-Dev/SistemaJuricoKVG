@@ -10,6 +10,30 @@ El proyecto es un monorepo de npm workspaces: `apps/web` para React/TypeScript/V
 
 La trazabilidad y los requisitos están en [requirements.md](requirements.md). La estructura permite avanzar mediante casos de uso completos: entrada funcional, validación del servidor, reglas, persistencia, autorización, resultado verificable y pruebas relevantes. El usuario autorizó estilos mínimos para que los formularios sean legibles y ordenados: fondo neutro, secciones, espaciado y botones sencillos, sin animaciones. Cada interfaz conserva controles HTML semánticos y mensajes comprensibles. El 4 de noviembre de 2026 el usuario adelantó la adaptación del diseño HTML y logo KVG; véase [interface.md](interface.md). La usabilidad se verifica en cada entrega.
 
+## Ajuste de alcance acordado el 10 de noviembre de 2026
+
+Por decisión del usuario se continúa **localmente con el único proyecto Supabase
+actual y datos ficticios**, sin nuevas cuentas, APIs externas ni contratación.
+Se posponen la operación de antivirus y el despliegue separado 3C. No se presenta
+este entorno como pruebas independientes o producción, ni se reinstala la base.
+
+La integración ClamAV ya escrita se conserva para retomarla, pero las cargas
+nuevas quedan pausadas por defecto en API e interfaz. El trabajador pausado no
+reclama trabajos; no se habilitan archivos sin análisis ni se sustituye antimalware
+por extensión, MIME o hash. Consulta/descarga de originales ya verificados conserva
+identidad, permiso, alcance e integridad. RN10 y RUP 16.6 siguen pendientes en el
+alcance operativo actual; la evidencia anterior se conserva como histórica.
+
+**El siguiente avance es 4A: CU002/CU003, SCRUM-14/SCRUM-15**, completar consulta,
+búsqueda/paginación y actualización de clientes sobre lo existente, con alcance,
+DTO, revisiones para concurrencia y auditoría. Después continuar el resto del paso
+4 y los módulos que no dependan de publicar archivos. No hace falta abrir cuentas
+para esos avances. Los criterios del prototipo completo y producción permanecen
+pendientes, pero ya no bloquean ese trabajo funcional.
+
+Los controles que permanecen activos y los límites están en
+[security-current-scope.md](security-current-scope.md).
+
 ## Orden recomendado
 
 ### 1. Conectar y verificar la instalación existente
@@ -52,7 +76,15 @@ publicación por trabajo persistente y consulta/descarga con alcance real. El en
 cifrado reconstruye datos de negocio y originales en PostgreSQL aislado; no
 restaura el proveedor Supabase Auth ni un segundo Storage real ni reabre servicio.
 Véanse [documents.md](documents.md) y [recovery-rehearsal.md](recovery-rehearsal.md).
-Lo que sigue conserva los criterios de cierre del paso completo.
+**3C preparado parcialmente y pospuesto por acuerdo del usuario.** Se conservan
+las imágenes Node/Caddy, secretos montados y preflight del futuro entorno separado.
+El ensayo local verificó HTTPS, proxy, cookie segura y persistencia SQL restringida.
+No hay despliegue remoto ni restauración de un proveedor separado. Los comandos de
+staging quedan como preparación futura; no se solicita otro Supabase para continuar.
+El Compose deja trabajador/ClamAV en un perfil opcional y las cargas pausadas.
+Véase [staging-deployment.md](staging-deployment.md). El ensayo local no cierra 3C.
+
+Lo que sigue conserva los criterios de cierre del paso completo **para retomarlo más adelante**, sin bloquear 4A.
 
 Después del acceso, implementar un recorrido mínimo de CU001/CU002 — SCRUM-13/SCRUM-14 y CU004/CU005 — SCRUM-41/SCRUM-42: registrar y consultar un cliente ficticio, crear su expediente y consultarlo con alcance autorizado. Incorporar la asignación o concesión explícita mínima que exija el contrato, sin abrir acceso global para simplificar la demostración.
 
@@ -105,7 +137,7 @@ Terminado cuando la revisión y las pruebas del alojamiento final tengan evidenc
 
 ## Cómo solicitar el siguiente avance
 
-Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultado y preparar un commit con un propósito concreto. Conviene indicar comportamiento esperado, criterios de aceptación y que el diseño sigue pospuesto. Si un prerrequisito todavía no existe, el avance debe incluirlo o dividirse en entregas ejecutables.
+Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultado y preparar un commit con un propósito concreto. Conviene indicar comportamiento esperado, criterios de aceptación y que se conserva el diseño KVG existente. Si un prerrequisito todavía no existe, el avance debe incluirlo o dividirse en entregas ejecutables.
 
 **Conexión inicial (completada; referencia):**
 
@@ -131,7 +163,11 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 > Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz con el estilo mínimo existente.
 
-**Siguiente petición recomendada: prototipo 3B y despliegue temprano 3C:**
+**Siguiente petición recomendada: clientes 4A, sin servicios nuevos:**
+
+> Implementa CU002/CU003 — SCRUM-14/SCRUM-15: completa consulta, búsqueda/paginación y actualización de clientes sobre lo existente. Conserva identidad, permisos y alcance, validación del servidor, normalización, control de revisión y auditoría; prueba éxito, datos inválidos, duplicados, cambios concurrentes y acceso denegado. Mantén el diseño KVG y el Supabase actual con datos ficticios. Las cargas documentales y 3C siguen pospuestos; no crees cuentas ni servicios externos.
+
+**Petición para retomar el prototipo y despliegue cuando haya recursos:**
 
 > Con acceso y cliente/expediente mínimos funcionando, completa el prototipo de RUP 16.6 con datos ficticios: identidad real, carga privada segura, consulta autorizada, denegación para otra identidad y copia/recuperación verificable de datos y objetos. Despliégalo en un entorno de prueba con HTTPS y registra la evidencia. Mantén la usabilidad funcional con el estilo mínimo existente y distingue este ensayo de la gestión completa de respaldos de la etapa 6.
 

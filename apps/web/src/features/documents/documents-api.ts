@@ -3,6 +3,7 @@ import type {
   DocumentDetail,
   DocumentSummary,
   DocumentUploadInput,
+  DocumentUploadAvailability,
   RecordPage,
   UploadStatus,
   UploadState,
@@ -53,6 +54,13 @@ function upload(v: unknown) {
   };
 }
 const base = '/api/v1/documents';
+export async function uploadAvailability(
+  signal: AbortSignal,
+): Promise<DocumentUploadAvailability> {
+  const result = obj(await getJson(base + '/upload-availability', signal));
+  if (typeof result.enabled !== 'boolean') return invalid();
+  return { enabled: result.enabled };
+}
 export async function categories(
   signal: AbortSignal,
 ): Promise<DocumentCategory[]> {

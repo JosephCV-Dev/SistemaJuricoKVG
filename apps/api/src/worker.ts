@@ -1,14 +1,23 @@
 import 'reflect-metadata';
 import { ConfigService } from '@nestjs/config';
-import { validateEnvironment } from './config/environment';
+import { validateWorkerEnvironment } from './config/worker-environment';
+import { documentUploadMode } from './config/document-upload-mode';
 import { PrivateFileGateway } from './modules/documents/infrastructure/private-file-gateway';
 import { DocumentWorker } from './modules/operations/application/document-worker';
 import { IsolatedFileVerifier } from './modules/operations/infrastructure/isolated-file-verifier';
 
 async function run() {
-  process.loadEnvFile('.env');
-  const env = validateEnvironment(process.env);
-  if (!env.SUPABASE_SECRET_KEY) throw new Error();
+  try {
+    process.loadEnvFile('.env');
+  } catch (error) {
+    if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT'))
+      throw error;
+  }
+  if (documentUploadMode(process.env) === 'paused') {
+    console.log('Cargas pausadas: no se reclaman ni procesan trabajos.');
+    return;
+  }
+  const env = validateWorkerEnvironment(process.env);
   const worker = new DocumentWorker(
     new PrivateFileGateway(new ConfigService(env)),
     new IsolatedFileVerifier(env.CLAMAV_HOST, env.CLAMAV_PORT),
