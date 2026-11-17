@@ -260,3 +260,9 @@ Para la demo, `beta` omite solo ClamAV, con activación explícita en SQL y marc
 `BETA_SIN_ANTIMALWARE` por original. [Modo beta](document-beta.md).
 No se incorpora otro proveedor, API comercial o clave nueva. Se conserva la
 preparación de staging para uso futuro. Véase [security-current-scope.md](security-current-scope.md).
+
+La asignación y reasignación usan operaciones RPC fijas bajo identidad de usuario.
+El administrador recibe solo folio, estado y equipo vigente para un relevo. El
+listado del abogado filtra por asignaciones y concesiones vigentes antes de
+paginar. El cambio de principal, cierre de accesos, posible continuidad como
+colaborador y auditoría se ejecutan en una misma transacción de PostgreSQL.

@@ -10,6 +10,13 @@ import type {
   IdentificationType,
   RecordPage,
   SessionCapabilities,
+  AssignedCase,
+  CaseAssignmentInput,
+  CaseAssignmentRole,
+  CaseAssignmentSummary,
+  CaseParticipation,
+  CaseReassignmentInput,
+  CaseTeam,
 } from '@kvg/contracts';
 import { getJson, mutate, readJson } from '../../shared/api/session-http.ts';
 
@@ -190,6 +197,7 @@ export async function getCase(
   );
   return {
     ...readCase(row),
+    canAssign: bool(row.canAssign),
     canEdit: bool(row.canEdit),
     clientName: nullable(row.clientName),
     assignments: array(row.assignments, (value) => {
@@ -199,6 +207,8 @@ export async function getCase(
         name: text(item.name),
         function: text(item.function),
         active: bool(item.active),
+        startsAt: date(item.startsAt),
+        endsAt: item.endsAt === null ? null : date(item.endsAt),
       };
     }),
     history: array(row.history, (value) => {
@@ -256,4 +266,125 @@ export async function updateCase(
       ),
     ),
   );
+}
+
+function readRole(value: unknown): CaseAssignmentRole {
+  if (value === 'PRINCIPAL' || value === 'COLABORADOR') return value;
+  return invalid();
+}
+function readAssignmentSummary(value: unknown): CaseAssignmentSummary {
+  const row = record(value);
+  const status = row.status;
+  if (
+    status !== 'NUEVO' &&
+    status !== 'EN_PROCESO' &&
+    status !== 'PENDIENTE' &&
+    status !== 'CONCLUIDO' &&
+    status !== 'ARCHIVADO'
+  )
+    return invalid();
+  return { id: text(row.id), folio: text(row.folio), status };
+}
+function paging(textValue: string, offset: number) {
+  return new URLSearchParams({
+    text: textValue,
+    offset: String(offset),
+    limit: '20',
+  });
+}
+export interface AssignedFilters {
+  text: string;
+  status: string;
+  participation: string;
+  from: string;
+  to: string;
+}
+export async function searchAssigned(
+  filters: AssignedFilters,
+  offset: number,
+  signal: AbortSignal,
+): Promise<RecordPage<AssignedCase>> {
+  const query = paging(filters.text, offset);
+  for (const key of ['status', 'participation', 'from', 'to'] as const)
+    if (filters[key]) query.set(key, filters[key]);
+  return page(
+    await getJson(`/api/v1/cases/assigned?${query}`, signal),
+    (value) => {
+      const row = record(value);
+      return {
+        ...readCase(row),
+        participation: array(row.participation, (item): CaseParticipation =>
+          item === 'EXPLICITO' ? item : readRole(item),
+        ),
+      };
+    },
+  );
+}
+export async function searchReassignable(
+  folio: string,
+  offset: number,
+  signal: AbortSignal,
+) {
+  return page(
+    await getJson(
+      `/api/v1/cases/reassignable?${paging(folio, offset)}`,
+      signal,
+    ),
+    readAssignmentSummary,
+  );
+}
+export async function getCaseTeam(
+  id: string,
+  reassign: boolean,
+  search: string,
+  offset: number,
+  signal: AbortSignal,
+): Promise<CaseTeam> {
+  const path = reassign ? 'reassignment-team' : 'assignment-team';
+  const row = record(
+    await getJson(
+      `/api/v1/cases/${encodeURIComponent(id)}/${path}?${paging(search, offset)}`,
+      signal,
+    ),
+  );
+  return {
+    ...readAssignmentSummary(row),
+    revision: number(row.revision),
+    assignments: array(row.assignments, (value) => {
+      const item = record(value);
+      return {
+        id: text(item.id),
+        userId: text(item.userId),
+        name: text(item.name),
+        role: readRole(item.role),
+        startsAt: date(item.startsAt),
+        endsAt: item.endsAt === null ? null : date(item.endsAt),
+      };
+    }),
+    lawyers: page(row.lawyers, (value) => {
+      const item = record(value);
+      return { id: text(item.id), name: text(item.name) };
+    }),
+  };
+}
+export async function saveCaseAssignment(
+  id: string,
+  input: CaseAssignmentInput | CaseReassignmentInput,
+  signal: AbortSignal,
+) {
+  const path = 'approvalReference' in input ? 'reassignments' : 'assignments';
+  const result = record(
+    await readJson(
+      await mutate(
+        `/api/v1/cases/${encodeURIComponent(id)}/${path}`,
+        input,
+        signal,
+      ),
+    ),
+  );
+  return {
+    assignmentId: text(result.assignmentId),
+    caseId: text(result.caseId),
+    revision: number(result.revision),
+  };
 }

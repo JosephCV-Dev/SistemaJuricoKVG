@@ -1,5 +1,7 @@
 import {
   IsIn,
+  IsBoolean,
+  IsDateString,
   IsInt,
   IsString,
   IsUUID,
@@ -89,4 +91,54 @@ export class SearchCasesDto extends SearchRecordsDto {
   @IsString()
   @MaxLength(200)
   responsible?: string;
+}
+
+class AssignmentFieldsDto {
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  revision!: number;
+
+  @IsUUID('4')
+  lawyerId!: string;
+
+  @Trim()
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(2000)
+  reason!: string;
+}
+
+export class AssignCaseDto extends AssignmentFieldsDto {
+  @IsIn(['PRINCIPAL', 'COLABORADOR'])
+  role!: 'PRINCIPAL' | 'COLABORADOR';
+}
+export class ReassignCaseDto extends AssignmentFieldsDto {
+  @Trim()
+  @IsString()
+  @Matches(/^[A-Za-z0-9._:/-]{1,128}$/)
+  approvalReference!: string;
+
+  @IsBoolean()
+  keepCollaborator!: boolean;
+}
+
+export class SearchAssignedCasesDto extends SearchRecordsDto {
+  @IfProvided()
+  @IsIn(['NUEVO', 'EN_PROCESO', 'PENDIENTE', 'CONCLUIDO', 'ARCHIVADO'])
+  status?: CaseState;
+
+  @IfProvided()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsDateString({ strict: true })
+  from?: string;
+
+  @IfProvided()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsDateString({ strict: true })
+  to?: string;
+
+  @IfProvided()
+  @IsIn(['PRINCIPAL', 'COLABORADOR', 'EXPLICITO'])
+  participation?: 'PRINCIPAL' | 'COLABORADOR' | 'EXPLICITO';
 }

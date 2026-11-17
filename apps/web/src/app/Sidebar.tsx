@@ -53,6 +53,11 @@ export function Sidebar({
           )}
         {can('expediente.consultar') &&
           link('cases', 'Expedientes', ['cases', 'case'].includes(view))}
+        {roles.includes('ABOGADO') &&
+          can('expediente.consultar') &&
+          link('assigned', 'Mis expedientes', view === 'assigned')}
+        {can('expediente.reasignar') &&
+          link('reassign', 'Reasignar expedientes', view === 'reassign')}
         <p className="nav-group">Cuenta</p>
         {link('session', 'Mi sesión', view === 'session')}
       </nav>

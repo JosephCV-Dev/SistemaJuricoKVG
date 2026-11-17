@@ -12,7 +12,7 @@ La instalación Supabase existente está verificada sin reinstalar la baseline. 
 
 CU023/CU024 están implementados y verificados en desarrollo: contraseña, MFA del proveedor, sesión KVG, cookie protegida, CSRF, renovación, cierre, permisos por defecto denegados y auditoría base. Se aplicaron explícitamente ambas migraciones de sesión y el bootstrap con dos identidades Auth ficticias distintas. Las pruebas reales comprobaron el proveedor y RPC permitida/denegada, revocación y expiración. Las pruebas HTTP con puertos simulados cubren también cuenta inactiva y comprobación de capacidades/contextos. El paso 3A añade verificación de acceso en Chromium local; la evidencia de identidad y sus límites están en [identity.md](identity.md).
 
-El paso 3A implementa el recorrido mínimo CU001/CU002 y CU004/CU005, verificado con identidades reales y datos ficticios: captura y consulta, duplicados normalizados, reintentos sin duplicación, folio/estado de servidor, alcance y auditoría. El contrato, las pruebas locales/remotas y Chromium están en [clients-and-cases.md](clients-and-cases.md). La administración completa CU018/CU019 y las asignaciones desde la interfaz siguen pendientes. El recorrido mínimo CU008/CU012/CU013 ya incorpora carga
+El paso 3A implementa el recorrido mínimo CU001/CU002 y CU004/CU005, verificado con identidades reales y datos ficticios: captura y consulta, duplicados normalizados, reintentos sin duplicación, folio/estado de servidor, alcance y auditoría. El contrato, las pruebas locales/remotas y Chromium están en [clients-and-cases.md](clients-and-cases.md). La administración completa CU018/CU019 sigue pendiente. El recorrido mínimo CU008/CU012/CU013 ya incorpora carga
 privada, análisis real y descarga autorizada; existe un ensayo acotado de
 recuperación local con los límites de [documents.md](documents.md) y
 [recovery-rehearsal.md](recovery-rehearsal.md). Se continuará el prototipo RUP 16.6 y su despliegue temprano antes de ampliar todos los módulos. El usuario autorizó estilos mínimos para legibilidad y orden de los formularios; la base visual ahora sigue la maqueta y logo entregados por el usuario y la usabilidad funcional se comprueba en cada avance.
@@ -143,3 +143,7 @@ La demo puede usar documentos ficticios en modo beta sin antimalware por
 instrucción posterior del usuario. Cada versión se marca en la ficha. La
 excepción temporal conserva pendientes RN10, RUP 16.6 y el despliegue
 separado. [Contrato beta](document-beta.md).
+
+CU007, CU015 y CU025 se implementaron en 4C. La gestión administrativa usa
+metadatos mínimos y la lista jurídica calcula participación con la identidad de
+la sesión. [Contrato de asignaciones](clients-and-cases.md#paso-4c-asignaciones-y-acceso).

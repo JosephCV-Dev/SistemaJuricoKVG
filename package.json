@@ -41,7 +41,8 @@
     "setup:clients:dev": "node apps/api/scripts/setup-record-updates-dev.mjs clients",
     "setup:documents:beta": "node apps/api/scripts/setup-document-beta-dev.mjs",
     "dev:beta": "npm run build --workspace @kvg/api && concurrently --kill-others --names api,web,documents \"npm run start:api\" \"npm run dev:web\" \"npm run worker:documents --workspace @kvg/api\"",
-    "setup:cases:dev": "node apps/api/scripts/setup-record-updates-dev.mjs cases"
+    "setup:cases:dev": "node apps/api/scripts/setup-record-updates-dev.mjs cases",
+    "setup:assignments:dev": "node apps/api/scripts/setup-record-updates-dev.mjs assignments"
   },
   "devDependencies": {
     "concurrently": "10.0.6",

@@ -30,6 +30,7 @@ export interface CaseRecord {
   revision: number;
 }
 export interface CaseInformation extends CaseRecord {
+  canAssign: boolean;
   canEdit: boolean;
   clientName: string | null;
   assignments: Array<{
@@ -37,6 +38,8 @@ export interface CaseInformation extends CaseRecord {
     name: string;
     function: string;
     active: boolean;
+    startsAt: string;
+    endsAt: string | null;
   }>;
   history: Array<{
     from: string | null;
@@ -53,4 +56,24 @@ export interface CaseSearch {
   status?: CaseState;
   limit: number;
   offset: number;
+}
+
+export type Participation = 'PRINCIPAL' | 'COLABORADOR' | 'EXPLICITO';
+export interface AssignedSearch extends CaseSearch {
+  from?: string;
+  to?: string;
+  participation?: Participation;
+}
+export interface AssignmentChange {
+  revision: number;
+  lawyerId: string;
+  reason: string;
+  role: Exclude<Participation, 'EXPLICITO'>;
+}
+export interface ReassignmentChange {
+  revision: number;
+  lawyerId: string;
+  reason: string;
+  approvalReference: string;
+  keepCollaborator: boolean;
 }

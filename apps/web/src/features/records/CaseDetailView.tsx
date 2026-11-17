@@ -8,6 +8,8 @@ export function CaseDetailView({
   caseDetail,
   busy,
   canEdit,
+  canAssign,
+  onAssign,
   onSave,
   onReload,
   canConsultClient,
@@ -24,6 +26,8 @@ export function CaseDetailView({
   caseDetail: CaseDetail;
   busy: boolean;
   canEdit: boolean;
+  canAssign: boolean;
+  onAssign: () => void;
   onSave: (input: CaseUpdateInput) => void;
   onReload: () => void;
   canConsultClient: boolean;
@@ -114,6 +118,11 @@ export function CaseDetailView({
             Editar expediente
           </button>
         )}
+        {canAssign && (
+          <button type="button" disabled={busy} onClick={onAssign}>
+            Asignar abogado
+          </button>
+        )}
         <h4>Responsables vigentes</h4>
         {caseDetail.assignments.filter((item) => item.active).length ? (
           <ul>
@@ -127,6 +136,21 @@ export function CaseDetailView({
           </ul>
         ) : (
           <p>Sin abogado asignado.</p>
+        )}
+        {caseDetail.assignments.some((item) => !item.active) && (
+          <details>
+            <summary>Historial de asignaciones</summary>
+            <ul>
+              {caseDetail.assignments
+                .filter((item) => !item.active)
+                .map((item, index) => (
+                  <li key={index}>
+                    {item.name} · {item.function} · {showDate(item.startsAt)}
+                    {item.endsAt ? ` a ${showDate(item.endsAt)}` : ''}
+                  </li>
+                ))}
+            </ul>
+          </details>
         )}
       </div>
       {section === 'documents' && canConsultDocuments && (

@@ -58,6 +58,19 @@ async function recordsApp(t) {
             contactos: [],
             identificaciones: [],
           };
+        case 'expediente.asignar':
+        case 'expediente.reasignar':
+          return { asignacion_id: REQUEST, expediente_id: CASE, revision: 2 };
+        case 'expediente.asignados':
+          return [{ ...caseRow, participaciones: ['PRINCIPAL', 'EXPLICITO'] }];
+        case 'expediente.reasignables':
+          return [caseRow];
+        case 'expediente.equipo_reasignacion':
+          return {
+            ...caseRow,
+            equipo: [],
+            abogados: [{ usuario_id: REQUEST, nombre: 'Abogado ficticio' }],
+          };
         case 'expediente.crear':
           return caseRow;
         case 'expediente.buscar':
@@ -449,5 +462,121 @@ test('editar expediente valida campos protegidos, permiso, contexto y referencia
     responsable: 'Abogado',
     limite: 21,
     desplazamiento: 0,
+  });
+});
+
+test('asignaciones usan sesión, CSRF y permiso específico; la gestión administrativa devuelve solo metadatos', async (t) => {
+  const { browser, calls, state } = await recordsApp(t);
+  await authenticated(browser);
+  const path = `cases/${CASE}`;
+  const assign = {
+    revision: 1,
+    lawyerId: REQUEST,
+    role: 'PRINCIPAL',
+    reason: 'Asignación ficticia',
+  };
+  assert.equal((await browser.post(path + '/assignments', assign)).status, 403);
+  const capacity = (permission, context) => ({
+    permission,
+    context,
+    requiresMfa: true,
+    requiresDecision: false,
+  });
+  state.capabilities.push(capacity('expediente.asignar', 'EXPLICITO'));
+  assert.equal(
+    (await browser.post(path + '/assignments', assign, { 'X-CSRF-Token': '' }))
+      .status,
+    403,
+  );
+  assert.equal(
+    (
+      await browser.post(path + '/assignments', {
+        ...assign,
+        role: 'ADMINISTRADOR',
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (await browser.post(path + '/assignments', { ...assign, reason: '  ' }))
+      .status,
+    400,
+  );
+  assert.equal((await browser.post(path + '/assignments', assign)).status, 201);
+  assert.deepEqual(calls.at(-1), {
+    operation: 'expediente.asignar',
+    input: {
+      expediente_id: CASE,
+      abogado_id: REQUEST,
+      revision: 1,
+      funcion: 'PRINCIPAL',
+      motivo: 'Asignación ficticia',
+    },
+  });
+  assert.equal(
+    (await browser.request('cases/assigned?lawyerId=' + REQUEST)).status,
+    400,
+  );
+  assert.equal(
+    (await browser.request('cases/assigned?from=2026-03-01&to=2026-02-01'))
+      .status,
+    400,
+  );
+  const assigned = await browser.request(
+    'cases/assigned?participation=PRINCIPAL&from=2026-01-01',
+  );
+  assert.equal(assigned.status, 200);
+  assert.deepEqual((await assigned.json()).items[0].participation, [
+    'PRINCIPAL',
+    'EXPLICITO',
+  ]);
+  assert.equal(calls.at(-1).input.desde, '2026-01-01');
+
+  state.capabilities = [capacity('expediente.reasignar', 'GLOBAL_OPERATIVO')];
+  assert.equal((await browser.request(path)).status, 403);
+  assert.equal((await browser.request('cases/assigned')).status, 403);
+  const list = await browser.request('cases/reassignable?text=KVG');
+  assert.equal(list.status, 200);
+  assert.deepEqual(Object.keys((await list.json()).items[0]), [
+    'id',
+    'folio',
+    'status',
+  ]);
+  const team = await browser.request(path + '/reassignment-team');
+  assert.equal(team.status, 200);
+  const body = await team.json();
+  assert(!Object.hasOwn(body, 'description'));
+  assert.deepEqual(body.lawyers.items, [
+    { id: REQUEST, name: 'Abogado ficticio' },
+  ]);
+  const reassign = {
+    revision: 1,
+    lawyerId: REQUEST,
+    reason: 'Relevo ficticio',
+    keepCollaborator: true,
+  };
+  assert.equal(
+    (await browser.post(path + '/reassignments', reassign)).status,
+    400,
+  );
+  assert.equal(
+    (
+      await browser.post(path + '/reassignments', {
+        ...reassign,
+        approvalReference: 'APR-01',
+      })
+    ).status,
+    200,
+  );
+  assert.deepEqual(calls.at(-1), {
+    operation: 'expediente.reasignar',
+    input: {
+      expediente_id: CASE,
+      abogado_id: REQUEST,
+      revision: 1,
+      motivo: 'Relevo ficticio',
+      referencia_autorizacion: 'APR-01',
+      conservar_colaboracion: true,
+    },
   });
 });

@@ -1,3 +1,9 @@
+import type {
+  CaseAssignment,
+  CaseAssignmentResult,
+  CaseAssignmentSummary,
+  CaseParticipation,
+} from '@kvg/contracts';
 import { Injectable } from '@nestjs/common';
 import { KvgRpcService } from '../../../infrastructure/supabase/kvg-rpc.service';
 import {
@@ -16,6 +22,9 @@ import type {
   CaseSearch,
   CaseState,
   CaseUpdate,
+  AssignedSearch,
+  AssignmentChange,
+  ReassignmentChange,
   NewCase,
 } from '../domain/case.types';
 
@@ -85,6 +94,7 @@ export class KvgCasesRepository extends CasesRepository {
     );
     return {
       ...readCase(row),
+      canAssign: row.puede_asignar === true,
       clientName: rpcNullableText(row.nombre_cliente ?? null),
       canEdit: row.puede_editar === true,
       assignments: rpcArray(row.asignaciones, (value) => {
@@ -94,6 +104,8 @@ export class KvgCasesRepository extends CasesRepository {
           userId: rpcText(item.abogado_id),
           name: rpcText(item.nombre_abogado),
           function: rpcText(item.funcion),
+          startsAt: rpcDate(item.inicia_en),
+          endsAt: item.finaliza_en === null ? null : rpcDate(item.finaliza_en),
           active:
             Date.parse(rpcDate(item.inicia_en)) <= now &&
             (item.finaliza_en === null ||
@@ -118,6 +130,88 @@ export class KvgCasesRepository extends CasesRepository {
       }),
     };
   }
+  async assigned(token: string, input: AssignedSearch) {
+    const rows = await this.rpc.execute(token, 'expediente.asignados', {
+      ...searchPage(input),
+      estado: input.status || null,
+      desde: input.from || null,
+      hasta: input.to || null,
+      participacion: input.participation || null,
+    });
+    return rpcArray(rows, (value) => {
+      const row = rpcRecord(value);
+      const participation = rpcArray(
+        row.participaciones,
+        (item): CaseParticipation => {
+          if (item === 'EXPLICITO') return item;
+          return assignmentRole(item);
+        },
+      );
+      if (!participation.length) return invalidRpcResult();
+      return { ...readCase(row), participation };
+    });
+  }
+  async reassignable(token: string, input: CaseSearch) {
+    return rpcArray(
+      await this.rpc.execute(
+        token,
+        'expediente.reasignables',
+        searchPage(input),
+      ),
+      readAssignmentSummary,
+    );
+  }
+  async team(
+    token: string,
+    id: string,
+    input: CaseSearch,
+    forReassignment: boolean,
+  ) {
+    const row = rpcRecord(
+      await this.rpc.execute(
+        token,
+        forReassignment
+          ? 'expediente.equipo_reasignacion'
+          : 'expediente.equipo',
+        {
+          expediente_id: id,
+          ...searchPage(input),
+        },
+      ),
+    );
+    return {
+      ...readAssignmentSummary(row),
+      revision: rpcInteger(row.revision),
+      assignments: rpcArray(row.equipo, readAssignment),
+      lawyers: rpcArray(row.abogados, (value) => {
+        const lawyer = rpcRecord(value);
+        return { id: rpcText(lawyer.usuario_id), name: rpcText(lawyer.nombre) };
+      }),
+    };
+  }
+  async assign(token: string, id: string, input: AssignmentChange) {
+    return readAssignmentResult(
+      await this.rpc.execute(token, 'expediente.asignar', {
+        expediente_id: id,
+        abogado_id: input.lawyerId,
+        revision: input.revision,
+        motivo: input.reason,
+        funcion: input.role,
+      }),
+    );
+  }
+  async reassign(token: string, id: string, input: ReassignmentChange) {
+    return readAssignmentResult(
+      await this.rpc.execute(token, 'expediente.reasignar', {
+        expediente_id: id,
+        abogado_id: input.lawyerId,
+        revision: input.revision,
+        motivo: input.reason,
+        referencia_autorizacion: input.approvalReference,
+        conservar_colaboracion: input.keepCollaborator,
+      }),
+    );
+  }
   async search(token: string, input: CaseSearch) {
     return rpcArray(
       await this.rpc.execute(token, 'expediente.buscar', {
@@ -131,4 +225,52 @@ export class KvgCasesRepository extends CasesRepository {
       readCase,
     );
   }
+}
+
+function searchPage(input: CaseSearch) {
+  return {
+    texto: input.text || null,
+    limite: input.limit,
+    desplazamiento: input.offset,
+  };
+}
+function assignmentRole(value: unknown): CaseAssignment['role'] {
+  if (value === 'PRINCIPAL' || value === 'COLABORADOR') return value;
+  return invalidRpcResult();
+}
+function readAssignment(value: unknown): CaseAssignment {
+  const row = rpcRecord(value);
+  return {
+    id: rpcText(row.asignacion_id),
+    userId: rpcText(row.abogado_id),
+    name: rpcText(row.nombre_abogado),
+    role: assignmentRole(row.funcion),
+    startsAt: rpcDate(row.inicia_en),
+    endsAt: row.finaliza_en === null ? null : rpcDate(row.finaliza_en),
+  };
+}
+function readAssignmentSummary(value: unknown): CaseAssignmentSummary {
+  const row = rpcRecord(value);
+  const status = row.estado_expediente_codigo;
+  if (
+    status !== 'NUEVO' &&
+    status !== 'EN_PROCESO' &&
+    status !== 'PENDIENTE' &&
+    status !== 'CONCLUIDO' &&
+    status !== 'ARCHIVADO'
+  )
+    return invalidRpcResult();
+  return {
+    id: rpcText(row.expediente_id),
+    folio: rpcText(row.folio_interno),
+    status,
+  };
+}
+function readAssignmentResult(value: unknown): CaseAssignmentResult {
+  const row = rpcRecord(value);
+  return {
+    assignmentId: rpcText(row.asignacion_id),
+    caseId: rpcText(row.expediente_id),
+    revision: rpcInteger(row.revision),
+  };
 }

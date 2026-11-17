@@ -191,7 +191,7 @@ Los scripts cierran sus sesiones y no envían correos. Conservan los registros
 ficticios y su auditoría; no borran expedientes ni el historial para limpiar pruebas.
 
 Pendientes del alcance general: despliegue HTTPS, otras combinaciones de
-navegador/dispositivo, asignaciones desde UI y restauración integral. No hay datos reales ni evidencia de producción.
+navegador/dispositivo y restauración integral. No hay datos reales ni evidencia de producción.
 
 Commit sugerido:
 
@@ -300,3 +300,52 @@ el filtro, la ficha, la conservación del borrador ante un 409, la recarga,
 el guardado y la pestaña Documentos. El guion global de integración
 `test:records:live` tuvo respuestas intermitentes 500 en la obtención de CSRF y
 quedó pendiente de completar de extremo a extremo.
+
+## Paso 4C: asignaciones y acceso
+
+CU007/CU015/CU025 se trazan a SCRUM-44/45/47. Secretaría accede a **Asignar abogado**
+desde la ficha de un expediente editable dentro de su alcance. Puede incorporar
+un principal o colaborador vigente, con motivo. El historial conserva los
+periodos cerrados.
+
+En **Mis expedientes**, el abogado ve su participación vigente como principal,
+colaborador o por concesión explícita. Puede filtrar por participación, estado,
+rangos de alta en UTC y texto. SQL deriva su identidad de la sesión y conserva
+las restricciones de consulta de cada expediente.
+
+El administrador busca por folio en **Reasignar expedientes**. Su respuesta
+contiene folio, estado y equipo vigente para el relevo. El formulario exige
+motivo, referencia de autorización y una decisión sobre continuidad del
+saliente. SQL cierra la asignación y las concesiones del saliente, promueve al
+colaborador elegido si corresponde y registra una nueva colaboración para el
+saliente solo si se solicitó expresamente y conserva su rol activo. Se preservan
+las autorizaciones de terceros. Se auditan la referencia y la nueva revisión.
+
+| Ruta                                      | Control                                                                                                                |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/cases/assigned`              | Abogado con permiso de consulta. Filtros `text`, `status`, `participation`, `from`, `to`, `limit` y `offset`.          |
+| `GET /api/v1/cases/:id/assignment-team`   | Consulta y asignación en ese expediente. Candidatos paginados por nombre.                                              |
+| `POST /api/v1/cases/:id/assignments`      | Revisiones vigentes, CSRF, motivo, abogado activo y función.                                                           |
+| `GET /api/v1/cases/reassignable?text=...` | Metadatos mínimos de expedientes editables que coinciden con folio y tienen un principal.                              |
+| `GET /api/v1/cases/:id/reassignment-team` | Metadatos del equipo y candidatos para el permiso administrativo de reasignación.                                      |
+| `POST /api/v1/cases/:id/reassignments`    | CSRF y permiso global específico. Revisión, abogado distinto, motivo, referencia y decisión explícita de colaboración. |
+
+La migración `202611170010_case_assignments.sql` se aplicó al Supabase ficticio
+actual con `npm run setup:assignments:dev`. La comprobación de privilegios pasó.
+La baseline y la matriz de permisos conservan sus definiciones. `npm run check`
+pasó 85 pruebas (68 de API y 17 web).
+La prueba [SQL aislada](../database/tests/case-assignments-local.sql) cubre principal
+único, colaborador, concesión explícita, promoción, dos relevos, pérdida de
+alcance con la misma sesión y continuidad autorizada. El registro de referencia
+se comprueba en bitácora. Se ejecuta sobre PostgreSQL efímero con el fixture,
+baseline y migraciones y revierte sus datos.
+
+Dos sesiones de PostgreSQL intentaron asignar un principal a la vez. Una
+confirmó, la otra recibió un conflicto de revisión y quedó un solo principal.
+En Chromium a 390 px con MFA real, Secretaría asignó un expediente ficticio,
+el abogado lo consultó en **Mis expedientes** y el administrador accedió al
+equipo de reasignación. La ficha jurídica respondió 403 para este último.
+
+El Supabase de desarrollo tiene un solo abogado activo. El relevo entre dos
+abogados, incluida la promoción del colaborador y la revocación del saliente,
+se probó en PostgreSQL aislado con identidades ficticias.

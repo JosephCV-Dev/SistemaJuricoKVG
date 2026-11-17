@@ -1,3 +1,6 @@
+import { AssignedCases } from './AssignedCases';
+import { CaseAssignmentPanel } from './CaseAssignmentPanel';
+import { CaseReassignmentWorkspace } from './CaseReassignmentWorkspace';
 import { CaseDetailView } from './CaseDetailView';
 import { showDate } from './record-format';
 import type { WorkspaceView } from '../../shared/navigation';
@@ -42,8 +45,10 @@ export function RecordsWorkspace({
   view,
   onNavigate,
   onCapabilities,
+  isLawyer,
 }: {
   view: WorkspaceView;
+  isLawyer: boolean;
   onNavigate: (view: WorkspaceView) => void;
   onCapabilities: (capabilities: SessionCapabilities['capabilities']) => void;
   onSessionExpired: () => void;
@@ -60,6 +65,9 @@ export function RecordsWorkspace({
   const [cases, setCases] = useState(emptyPage<CaseSummary>);
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [caseDetail, setCaseDetail] = useState<CaseDetail | null>(null);
+  const [showAssignment, setShowAssignment] = useState(false);
+  const [caseReturn, setCaseReturn] = useState<'cases' | 'assigned'>('cases');
+  const [accessRevision, setAccessRevision] = useState(0);
   const [clientText, setClientText] = useState('');
   const [clientIdentification, setClientIdentification] = useState('');
   const [clientQuery, setClientQuery] = useState({
@@ -93,6 +101,9 @@ export function RecordsWorkspace({
           setClient(null);
           setEditTypes(null);
           setCaseDetail(null);
+          setShowAssignment(false);
+          if (view === 'assigned' || view === 'reassign')
+            setAccessRevision((previous) => previous + 1);
           setClients(emptyPage());
           setCases(emptyPage());
           if (failure.status === 401) onSessionExpired();
@@ -153,6 +164,8 @@ export function RecordsWorkspace({
   async function onCaseCreated(created: CaseSummary, signal: AbortSignal) {
     setNotice(`Expediente creado con folio ${created.folio}, en estado NUEVO.`);
     setCaseDetail(await getCase(created.id, signal));
+    setCaseReturn('cases');
+    setShowAssignment(false);
     setCases(await searchCases(emptyCaseQuery, 0, signal));
     setCaseText('');
     setCaseStatus('');
@@ -221,10 +234,12 @@ export function RecordsWorkspace({
     });
   }
 
-  function openCase(id: string) {
+  function openCase(id: string, back = caseReturn) {
     void run(async (signal) => {
       setCaseDetail(null);
       setCaseDetail(await getCase(id, signal));
+      setCaseReturn(back);
+      setShowAssignment(false);
       onNavigate('case');
     });
   }
@@ -298,6 +313,7 @@ export function RecordsWorkspace({
             'cliente.consultar',
             'cliente.registrar',
             'expediente.consultar',
+            'expediente.reasignar',
           ].includes(item.permission),
         ) && (
           <p>
@@ -551,6 +567,23 @@ export function RecordsWorkspace({
         </>
       )}
 
+      {view === 'assigned' && isLawyer && can('expediente.consultar') && (
+        <AssignedCases
+          accessRevision={accessRevision}
+          busy={busy}
+          run={run}
+          onOpen={(id) => openCase(id, 'assigned')}
+        />
+      )}
+      {view === 'reassign' && can('expediente.reasignar') && (
+        <CaseReassignmentWorkspace
+          key={accessRevision}
+          busy={busy}
+          run={run}
+          onSaved={() => setNotice('Expediente reasignado.')}
+        />
+      )}
+
       {['cases', 'case'].includes(view) && can('expediente.consultar') && (
         <section className="panel" aria-labelledby="cases-heading">
           <div className="section-header">
@@ -565,9 +598,14 @@ export function RecordsWorkspace({
                   className="button-secondary"
                   type="button"
                   disabled={busy}
-                  onClick={() => onNavigate('cases')}
+                  onClick={() => {
+                    setShowAssignment(false);
+                    onNavigate(caseReturn);
+                  }}
                 >
-                  Volver a expedientes
+                  {caseReturn === 'assigned'
+                    ? 'Volver a mis expedientes'
+                    : 'Volver a expedientes'}
                 </button>
               )}
               {view === 'cases' && can('expediente.crear') && (
@@ -675,7 +713,7 @@ export function RecordsWorkspace({
                             className="table-link"
                             type="button"
                             disabled={busy}
-                            onClick={() => openCase(item.id)}
+                            onClick={() => openCase(item.id, 'cases')}
                             aria-label={`Consultar expediente ${item.folio}`}
                           >
                             {item.folio}
@@ -714,11 +752,31 @@ export function RecordsWorkspace({
               </button>
             </p>
           </div>
-          {view === 'case' && caseDetail && (
+          {view === 'case' &&
+            caseDetail &&
+            showAssignment &&
+            caseDetail.canAssign &&
+            can('expediente.asignar') && (
+              <CaseAssignmentPanel
+                key={caseDetail.id}
+                id={caseDetail.id}
+                busy={busy}
+                run={run}
+                onBack={() => setShowAssignment(false)}
+                onSaved={async (signal) => {
+                  setShowAssignment(false);
+                  setNotice('Asignación registrada.');
+                  setCaseDetail(await getCase(caseDetail.id, signal));
+                }}
+              />
+            )}
+          {view === 'case' && caseDetail && !showAssignment && (
             <CaseDetailView
               key={`${caseDetail.id}:${caseDetail.revision}`}
               caseDetail={caseDetail}
               busy={busy}
+              canAssign={caseDetail.canAssign && can('expediente.asignar')}
+              onAssign={() => setShowAssignment(true)}
               canEdit={can('expediente.actualizar') && caseDetail.canEdit}
               onSave={(input) => saveCase(caseDetail, input)}
               onReload={() => openCase(caseDetail.id)}

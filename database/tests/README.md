@@ -61,3 +61,8 @@ en orden `recovery-platform-fixture.sql`, la baseline, las migraciones y finalme
 `records.sql` y `client-edit-local.sql`. La prueba revierte los datos y las
 funciones del fixture que usa para representar la sesión. La integración real
 con Supabase se comprueba por separado mediante `npm run test:records:live`.
+
+`case-assignments-local.sql` verifica CU007/CU015/CU025 con cinco identidades
+ficticias. Requiere PostgreSQL efímero sin red, el fixture de plataforma, baseline
+y migraciones. Ejecuta el RPC con roles y contexto de la prueba, comprueba
+separación administrativa, revocación, motivo e historial y revierte los datos.

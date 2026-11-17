@@ -3,6 +3,8 @@ export type WorkspaceView =
   | 'clients'
   | 'new-client'
   | 'client'
+  | 'assigned'
+  | 'reassign'
   | 'cases'
   | 'case'
   | 'new-case'
@@ -14,6 +16,8 @@ export const viewTitles: Record<WorkspaceView, string> = {
   'new-client': 'Nuevo cliente',
   client: 'Detalle del cliente',
   cases: 'Expedientes',
+  assigned: 'Mis expedientes',
+  reassign: 'Reasignación',
   case: 'Detalle del expediente',
   'new-case': 'Nuevo expediente',
   session: 'Mi sesión',

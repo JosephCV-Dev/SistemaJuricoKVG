@@ -36,6 +36,16 @@ export type {
   CaseDetail,
   RecordPage,
   SessionCapabilities,
+  CaseAssignmentRole,
+  CaseParticipation,
+  CaseAssignment,
+  CaseLawyer,
+  CaseAssignmentInput,
+  CaseReassignmentInput,
+  CaseAssignmentResult,
+  CaseAssignmentSummary,
+  CaseTeam,
+  AssignedCase,
 } from './records';
 
 export type * from './documents';

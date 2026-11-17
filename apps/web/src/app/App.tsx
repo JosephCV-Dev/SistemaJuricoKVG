@@ -79,6 +79,7 @@ export function App() {
           <RecordsWorkspace
             key={auth.user.id}
             view={view}
+            isLawyer={auth.user.roles.includes('ABOGADO')}
             onNavigate={navigate}
             onCapabilities={setCapabilities}
             onSessionExpired={() => changeAuth({ status: 'anonymous' })}

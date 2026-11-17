@@ -28,9 +28,13 @@ cubren búsqueda y edición de clientes. CU005/CU031 (SCRUM-42/48) añaden filtr
 por cliente y abogado principal y edición de expediente por revisión con motivo.
 Véase [contrato y pruebas](clients-and-cases.md#paso-4b-consulta-y-edición-de-expedientes).
 
-El siguiente avance es **4C, asignaciones y consulta de expedientes asignados**
-(CU007/CU025/CU015). Incluye asignar o reasignar con autorización, historial y
-revisión de acceso. Puede realizarse con el proyecto actual.
+**4C implementado.** CU007/CU025/CU015 incluyen asignación, relevo, selección
+de abogados activos, historial y la lista de expedientes asignados o concedidos.
+[Contrato y pruebas de 4C](clients-and-cases.md#paso-4c-asignaciones-y-acceso).
+
+El siguiente avance es **4D, estados y avances de expedientes** (CU006/CU017,
+SCRUM-43/46). Aplica la matriz de estados y las facultades de conclusión y
+reapertura. Cada avance incorpora una entrada de historial.
 
 Los controles que permanecen activos y los límites están en
 [security-current-scope.md](security-current-scope.md).
@@ -164,12 +168,12 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 > Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz con el estilo mínimo existente.
 
-**Siguiente petición recomendada para el paso 4C**
+**Siguiente petición recomendada para el paso 4D**
 
-> Implementa CU007/CU025/CU015 (SCRUM-44/47/45). Permite asignar, reasignar y
-> consultar los expedientes asignados dentro del alcance autorizado. Conserva
-> un único principal vigente, historial, motivo y protección contra cambios
-> concurrentes. Revisa el acceso anterior al reasignar y conserva el diseño KVG.
+> Implementa CU006/CU017 (SCRUM-43/46). Permite cambiar estados y registrar
+> avances con sesión, permiso, alcance y auditoría. Valida la revisión, exige el
+> principal vigente cuando corresponda y comprueba las facultades jurídicas de
+> conclusión y reapertura. Conserva el historial y el diseño KVG.
 
 **Petición para retomar el prototipo y despliegue cuando haya recursos:**
 

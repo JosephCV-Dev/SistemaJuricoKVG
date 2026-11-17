@@ -74,6 +74,7 @@ export interface CaseSummary {
 }
 
 export interface CaseDetail extends CaseSummary {
+  canAssign: boolean;
   canEdit: boolean;
   clientName: string | null;
   assignments: Array<{
@@ -81,6 +82,8 @@ export interface CaseDetail extends CaseSummary {
     name: string;
     function: string;
     active: boolean;
+    startsAt: string;
+    endsAt: string | null;
   }>;
   history: Array<{
     from: string | null;
@@ -100,4 +103,50 @@ export interface RecordPage<T> {
 
 export interface SessionCapabilities {
   capabilities: Array<{ permission: string; context: string }>;
+}
+
+export type CaseAssignmentRole = 'PRINCIPAL' | 'COLABORADOR';
+export type CaseParticipation = CaseAssignmentRole | 'EXPLICITO';
+export interface CaseAssignment {
+  id: string;
+  userId: string;
+  name: string;
+  role: CaseAssignmentRole;
+  startsAt: string;
+  endsAt: string | null;
+}
+export interface CaseLawyer {
+  id: string;
+  name: string;
+}
+export interface CaseAssignmentInput {
+  revision: number;
+  lawyerId: string;
+  reason: string;
+  role: CaseAssignmentRole;
+}
+export interface CaseReassignmentInput {
+  revision: number;
+  lawyerId: string;
+  reason: string;
+  approvalReference: string;
+  keepCollaborator: boolean;
+}
+export interface CaseAssignmentResult {
+  assignmentId: string;
+  caseId: string;
+  revision: number;
+}
+export interface CaseAssignmentSummary {
+  id: string;
+  folio: string;
+  status: CaseStatus;
+}
+export interface CaseTeam extends CaseAssignmentSummary {
+  revision: number;
+  assignments: CaseAssignment[];
+  lawyers: RecordPage<CaseLawyer>;
+}
+export interface AssignedCase extends CaseSummary {
+  participation: CaseParticipation[];
 }

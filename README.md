@@ -11,8 +11,8 @@ formularios y vistas separadas, con acciones según las capacidades de la sesió
 **Alcance actual:** seguimos en desarrollo local con el Supabase existente y datos
 ficticios, sin nuevas cuentas ni servicios. Antivirus y despliegue separado se
 posponen. La demostración local puede habilitar cargas ficticias en modo beta
-sin antivirus. Los pasos 4A y 4B añaden consulta y edición de clientes y
-expedientes sobre el Supabase de desarrollo. Consulta [seguridad y alcance vigente](docs/security-current-scope.md).
+sin antivirus. Los pasos 4A a 4C añaden consulta, edición y asignaciones
+sobre el Supabase de desarrollo. Consulta [seguridad y alcance vigente](docs/security-current-scope.md).
 
 ## Arquitectura elegida
 
@@ -157,8 +157,8 @@ porque el modelo suministrado restringe ese acceso. Consulta el
 Los pasos **3A** y el recorrido documental local de **3B** están implementados.
 3B incorpora también un ensayo acotado de datos/objetos cifrados en PostgreSQL
 Docker aislado, con los límites documentados. **3C queda pospuesto** por acuerdo
-del usuario. **4A y 4B** están implementados con sus migraciones en desarrollo.
-El siguiente avance es **4C, asignaciones y expedientes asignados**.
+del usuario. **4A a 4C** están implementados con sus migraciones en desarrollo.
+El siguiente avance es **4D, estados y avances de expedientes**.
 
 - [Documentos privados, trabajador y verificación](docs/documents.md).
 - [Ensayo acotado de copia y recuperación](docs/recovery-rehearsal.md).
