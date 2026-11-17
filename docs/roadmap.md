@@ -23,11 +23,14 @@ explícita y solo mientras esté activo el modo beta. Se conserva ClamAV para cu
 se indique reactivarlo. RUP RN10 y 16.6 siguen pendientes para la entrega completa.
 [Modo beta y controles](document-beta.md).
 
-**4A implementado y verificado localmente.** CU002/CU003 (SCRUM-14/SCRUM-15)
-incluyen búsqueda por nombre e identificación, paginación y edición con revisión.
-Faltan aplicar la migración y repetir la prueba de integración en el Supabase actual.
-El siguiente avance funcional es **4B: consulta y actualización de expedientes**
-(CU005/CU031, SCRUM-42/SCRUM-48). No requiere cuentas nuevas.
+**4A y 4B implementados en el Supabase de desarrollo.** CU002/CU003 (SCRUM-14/15)
+cubren búsqueda y edición de clientes. CU005/CU031 (SCRUM-42/48) añaden filtros
+por cliente y abogado principal y edición de expediente por revisión con motivo.
+Véase [contrato y pruebas](clients-and-cases.md#paso-4b-consulta-y-edición-de-expedientes).
+
+El siguiente avance es **4C, asignaciones y consulta de expedientes asignados**
+(CU007/CU025/CU015). Incluye asignar o reasignar con autorización, historial y
+revisión de acceso. Puede realizarse con el proyecto actual.
 
 Los controles que permanecen activos y los límites están en
 [security-current-scope.md](security-current-scope.md).
@@ -82,7 +85,7 @@ staging quedan como preparación futura; no se solicita otro Supabase para conti
 El Compose deja trabajador/ClamAV en un perfil opcional y las cargas pausadas.
 Véase [staging-deployment.md](staging-deployment.md). El ensayo local no cierra 3C.
 
-Lo que sigue conserva los criterios de cierre del paso completo **para retomarlo más adelante**, sin bloquear 4A.
+Lo que sigue conserva los criterios de cierre del paso completo **para retomarlo más adelante**, sin bloquear el paso 4.
 
 Después del acceso, implementar un recorrido mínimo de CU001/CU002 — SCRUM-13/SCRUM-14 y CU004/CU005 — SCRUM-41/SCRUM-42: registrar y consultar un cliente ficticio, crear su expediente y consultarlo con alcance autorizado. Incorporar la asignación o concesión explícita mínima que exija el contrato, sin abrir acceso global para simplificar la demostración.
 
@@ -161,12 +164,12 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 > Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz con el estilo mínimo existente.
 
-**Siguiente petición recomendada para el paso 4B**
+**Siguiente petición recomendada para el paso 4C**
 
-> Amplía CU005/CU031 (SCRUM-42/SCRUM-48). Completa la consulta de expedientes y
-> permite actualizar los campos admitidos con revisión, alcance y auditoría.
-> Conserva el folio interno y el cliente principal. Mantén el diseño KVG y los
-> datos ficticios en el Supabase actual.
+> Implementa CU007/CU025/CU015 (SCRUM-44/47/45). Permite asignar, reasignar y
+> consultar los expedientes asignados dentro del alcance autorizado. Conserva
+> un único principal vigente, historial, motivo y protección contra cambios
+> concurrentes. Revisa el acceso anterior al reasignar y conserva el diseño KVG.
 
 **Petición para retomar el prototipo y despliegue cuando haya recursos:**
 

@@ -15,6 +15,7 @@ import type {
   CaseRecord,
   CaseSearch,
   CaseState,
+  CaseUpdate,
   NewCase,
 } from '../domain/case.types';
 
@@ -58,6 +59,24 @@ export class KvgCasesRepository extends CasesRepository {
       }),
     );
   }
+  async update(token: string, id: string, input: CaseUpdate) {
+    return readCase(
+      await this.rpc.execute(token, 'expediente.actualizar', {
+        expediente_id: id,
+        revision: input.revision,
+        motivo: input.reason,
+        ...(input.description === undefined
+          ? {}
+          : { descripcion: input.description }),
+        ...(input.externalNumber === undefined
+          ? {}
+          : { numero_externo: input.externalNumber }),
+        ...(input.externalAuthority === undefined
+          ? {}
+          : { autoridad_externa: input.externalAuthority }),
+      }),
+    );
+  }
   async get(token: string, id: string): Promise<CaseInformation> {
     const row = rpcRecord(
       await this.rpc.execute(token, 'expediente.consultar', {
@@ -66,6 +85,8 @@ export class KvgCasesRepository extends CasesRepository {
     );
     return {
       ...readCase(row),
+      clientName: rpcNullableText(row.nombre_cliente ?? null),
+      canEdit: row.puede_editar === true,
       assignments: rpcArray(row.asignaciones, (value) => {
         const item = rpcRecord(value);
         const now = Date.now();
@@ -102,6 +123,8 @@ export class KvgCasesRepository extends CasesRepository {
       await this.rpc.execute(token, 'expediente.buscar', {
         texto: input.text || null,
         estado: input.status || null,
+        ...(input.client ? { cliente: input.client } : {}),
+        ...(input.responsible ? { responsable: input.responsible } : {}),
         limite: input.limit,
         desplazamiento: input.offset,
       }),

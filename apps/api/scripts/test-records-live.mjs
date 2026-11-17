@@ -411,10 +411,124 @@ try {
     'administrador_no_obtiene_lectura_juridica',
   );
 
+  stage = 'EDICION_EXPEDIENTE';
+  const casePath = `cases/${caseRecord.id}`;
+  const caseEdit = (browser, data) => browser.mutate(casePath, data, 'PATCH');
+  const caseInputFilter = new URLSearchParams({
+    client: tag,
+    text: caseRecord.externalNumber,
+    status: 'NUEVO',
+    limit: '1',
+  });
+  const ownFiltered = await secretary.browser.request(
+    `cases?${caseInputFilter}`,
+  );
+  const foreignFiltered = await legal.browser.request(
+    `cases?${caseInputFilter}`,
+  );
+  check(
+    ownFiltered.status === 200 &&
+      ownFiltered.data.items[0]?.id === caseRecord.id &&
+      foreignFiltered.status === 200 &&
+      !foreignFiltered.data.items.length,
+    'filtros_combinados_de_expediente_con_alcance',
+  );
+  check(
+    detail.data.canEdit && detail.data.clientName === persisted.data.name,
+    'ficha_muestra_nombre_cliente_y_edicion_autorizada',
+  );
+  const editData = {
+    revision: caseRecord.revision,
+    reason: 'CORREGIR_CAPTURA',
+    description: `Expediente actualizado ${tag}`,
+  };
+  check(
+    (await secretary.browser.request(casePath, 'PATCH', editData)).status ===
+      403,
+    'expediente_edicion_sin_csrf',
+  );
+  check(
+    (await caseEdit(legal.browser, editData)).status === 403,
+    'abogado_con_capacidad_sin_alcance_no_edita',
+  );
+  check(
+    (await caseEdit(admin.browser, editData)).status === 403,
+    'administrador_no_edita_expediente',
+  );
+  check(
+    (await caseEdit(secretary.browser, { ...editData, status: 'ARCHIVADO' }))
+      .status === 400,
+    'expediente_rechaza_estado_protegido',
+  );
+  check(
+    (
+      await caseEdit(secretary.browser, {
+        ...editData,
+        externalNumber: 'FALTA-AUTORIDAD',
+      })
+    ).status === 400,
+    'expediente_rechaza_referencia_incompleta',
+  );
+  let protectedCode;
+  try {
+    await rpc.execute(secretary.token, 'expediente.actualizar', {
+      expediente_id: caseRecord.id,
+      revision: caseRecord.revision,
+      motivo: editData.reason,
+      cliente_id: equalName.data.id,
+    });
+  } catch (failure) {
+    protectedCode = failure.getStatus?.();
+  }
+  check(protectedCode === 400, 'rpc_directa_protege_cliente_principal');
+  const caseCsrf = await secretary.browser.request('auth/csrf');
+  check(
+    caseCsrf.status === 200,
+    'expediente_csrf_disponible_antes_de_concurrencia',
+  );
+  const concurrentCaseEdit = (data) =>
+    secretary.browser.request(casePath, 'PATCH', data, {
+      'X-CSRF-Token': caseCsrf.data.csrfToken,
+    });
+  const race = await Promise.all([
+    concurrentCaseEdit(editData),
+    concurrentCaseEdit({ ...editData, description: `Otra corrección ${tag}` }),
+  ]);
+  check(
+    race
+      .map((r) => r.status)
+      .sort()
+      .join(',') === '200,409',
+    'expediente_ediciones_concurrentes',
+  );
+  const winning = race.find((r) => r.status === 200).data;
+  check(
+    winning.revision === caseRecord.revision + 1 &&
+      winning.folio === caseRecord.folio &&
+      winning.clientId === caseRecord.clientId &&
+      winning.status === caseRecord.status,
+    'edicion_conserva_folio_cliente_y_estado',
+  );
+  const clearedReference = await caseEdit(secretary.browser, {
+    revision: winning.revision,
+    reason: 'ACTUALIZAR_REFERENCIA',
+    externalNumber: null,
+    externalAuthority: null,
+  });
+  const updatedCase = await secretary.browser.request(casePath);
+  check(
+    clearedReference.status === 200 &&
+      updatedCase.data.externalNumber === null &&
+      updatedCase.data.externalAuthority === null &&
+      updatedCase.data.history.length === detail.data.history.length &&
+      updatedCase.data.progress.length === detail.data.progress.length,
+    'edicion_retira_referencia_y_conserva_historial_y_avances',
+  );
+
   stage = 'ASIGNACION_Y_REVOCACION';
   await rpc.execute(secretary.token, 'expediente.asignar', {
     expediente_id: caseRecord.id,
-    revision: caseRecord.revision,
+    revision: updatedCase.data.revision,
     abogado_id: legal.user.id,
     funcion: 'PRINCIPAL',
     motivo:
@@ -431,6 +545,20 @@ try {
       ),
     'principal_consulta_expediente_y_nombre',
   );
+  const byPrincipal = await legal.browser.request(
+    `cases?${new URLSearchParams({ client: tag, responsible: legal.user.name, status: 'NUEVO' })}`,
+  );
+  const wrongPrincipal = await legal.browser.request(
+    `cases?${new URLSearchParams({ client: tag, responsible: 'sin coincidencias ' + tag })}`,
+  );
+  check(
+    byPrincipal.status === 200 &&
+      byPrincipal.data.items.some((item) => item.id === caseRecord.id) &&
+      wrongPrincipal.status === 200 &&
+      !wrongPrincipal.data.items.length,
+    'filtro_abogado_principal_vigente',
+  );
+  check(assigned.data.canEdit, 'abogado_principal_puede_editar');
   const legalClient = await legal.browser.request(clientPath);
   check(
     legalClient.status === 200 && legalClient.data.canEdit === false,
@@ -460,6 +588,34 @@ try {
       })
     ).status === 403,
     'edicion_denegada_tras_revocar_alcance_con_cookie_vigente',
+  );
+  check(
+    (
+      await caseEdit(secretary.browser, {
+        revision: assigned.data.revision,
+        reason: 'CORREGIR_CAPTURA',
+        description: 'Cambio revocado',
+      })
+    ).status === 403,
+    'edicion_expediente_denegada_tras_revocacion',
+  );
+  const caseAudit = await owner.query(
+    `SELECT usuario_id, detalle_controlado FROM kvg.evento_auditoria
+    WHERE recurso_id=$1 AND accion='EXPEDIENTE_DATOS_ACTUALIZADOS'`,
+    [caseRecord.id],
+  );
+  check(
+    caseAudit.rows.length === 2 &&
+      caseAudit.rows.every((entry) => entry.usuario_id === secretary.user.id) &&
+      caseAudit.rows.some(
+        (entry) =>
+          entry.detalle_controlado.codigo === 'CORREGIR_CAPTURA' &&
+          entry.detalle_controlado.campos.includes('descripcion'),
+      ) &&
+      caseAudit.rows.some(
+        (entry) => entry.detalle_controlado.codigo === 'ACTUALIZAR_REFERENCIA',
+      ),
+    'auditoria_edicion_expediente_con_actor_motivo_y_campos',
   );
   const audit = await owner.query(
     'SELECT accion,usuario_id FROM kvg.evento_auditoria WHERE recurso_id IN ($1::uuid,$2::uuid)',

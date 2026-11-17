@@ -240,10 +240,9 @@ Chromium a 390 px
 comprobó el flujo de consulta, paginación, edición, conflicto y recuperación con
 respuestas HTTP simuladas.
 
-El Supabase actual respondió por HTTPS, pero el puerto de su pooler SQL agotó
-el tiempo de conexión. La migración no se aplicó allí y el ensayo ampliado de
-Auth/MFA sigue pendiente. Cuando el pooler sea accesible, los comandos de
-desarrollo son:
+Durante la primera revisión el pooler SQL agotó el tiempo de conexión. Al
+implementar 4B se recuperó la conexión y se aplicó la migración de 4A en el
+Supabase actual. Los comandos de desarrollo son:
 
 ```sh
 npm run setup:clients:dev
@@ -255,3 +254,49 @@ El primer comando compara el proyecto y el fixture local, registra el checksum
 y aplica solo la migración de 4A. El último usa cuentas y datos ficticios para
 comprobar también dos peticiones concurrentes y la revocación con una cookie
 vigente. Para cargas ficticias, consulta el [modo beta documental](document-beta.md).
+
+## Paso 4B: consulta y edición de expedientes
+
+CU005/CU031 corresponden a SCRUM-42 y SCRUM-48. La búsqueda paginada combina texto
+(folio, referencia externa o descripción), estado, nombre del cliente y nombre
+del abogado principal vigente. El filtro y el nombre del cliente en la ficha
+requieren permiso sobre ese cliente. Los filtros solo producen coincidencias de
+expedientes con alcance autorizado. La ficha conserva el historial, los avances,
+las asignaciones y los documentos.
+
+| Ruta                                                                     | Comportamiento                                                                                                                               |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/cases?text=&status=&client=&responsible=&limit=20&offset=0` | Consulta combinada con límite 1–50 y desplazamiento 0–10000. El responsable corresponde a una asignación principal vigente.                  |
+| `GET /api/v1/cases/:id`                                                  | Devuelve el detalle y la disponibilidad de edición calculada por SQL. El nombre del cliente se incluye únicamente con acceso.                |
+| `PATCH /api/v1/cases/:id`                                                | Requiere CSRF, revisión y motivo. Admite descripción y referencia externa. Para retirar la referencia, enviar número y autoridad como nulos. |
+
+El formulario ofrece cuatro motivos predefinidos. La bitácora registra actor,
+motivo, campos cambiados y nueva revisión. SQL valida consulta y edición,
+recomprueba el alcance al tomar el bloqueo y exige un expediente en estado
+editable. Una revisión obsoleta produce 409. La interfaz mantiene el borrador y
+permite recargar los datos vigentes. El folio, el cliente principal, el estado
+y las asignaciones no son campos de edición general.
+
+Se aplicaron `202611170007_client_search_and_update.sql` y
+`202611170009_case_search_and_update.sql` al Supabase de desarrollo, sin modificar
+la baseline. Para repetir la preparación o la prueba ampliada:
+
+```sh
+npm run setup:clients:dev
+npm run setup:cases:dev
+npm run test:records:schema
+npm run test:records:live
+```
+
+`npm run check` pasó 84 pruebas (67 de API y 17 web). La reconstrucción aislada
+cargó la baseline y todas las migraciones. También pasó la comprobación de
+privilegios en el Supabase actual.
+
+PostgreSQL 16 aislado confirmó filtros, denegación entre dos cuentas con la
+misma capacidad, campos protegidos, retiro de referencia y registro del motivo.
+Dos sesiones SQL que intentaron guardar la misma revisión produjeron una
+confirmación y un conflicto. Chromium a 390 px con Auth y MFA reales comprobó
+el filtro, la ficha, la conservación del borrador ante un 409, la recarga,
+el guardado y la pestaña Documentos. El guion global de integración
+`test:records:live` tuvo respuestas intermitentes 500 en la obtención de CSRF y
+quedó pendiente de completar de extremo a extremo.

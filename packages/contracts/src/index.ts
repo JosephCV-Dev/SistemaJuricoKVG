@@ -30,6 +30,8 @@ export type {
   ClientDetail,
   CaseStatus,
   CaseInput,
+  CaseUpdateInput,
+  CaseUpdateReason,
   CaseSummary,
   CaseDetail,
   RecordPage,

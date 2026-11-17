@@ -3,7 +3,7 @@
 Decisión del usuario del 10 de noviembre de 2026: continuar con el proyecto
 Supabase existente, desarrollo local y datos ficticios. No crear cuentas, contratar
 servicios ni integrar APIs externas adicionales. Se posponen antivirus operativo y
-despliegue separado. El paso 4A ya está implementado localmente y conserva este alcance.
+despliegue separado. Los pasos 4A y 4B ya están implementados en desarrollo y conservan este alcance.
 
 ## Controles disponibles sin servicios nuevos
 

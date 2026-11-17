@@ -62,9 +62,17 @@ async function recordsApp(t) {
           return caseRow;
         case 'expediente.buscar':
           return [caseRow];
+        case 'expediente.actualizar':
+          return {
+            ...caseRow,
+            descripcion: input.descripcion ?? caseRow.descripcion,
+            revision: 2,
+          };
         case 'expediente.consultar':
           return {
             ...caseRow,
+            nombre_cliente: 'Cliente ficticio',
+            puede_editar: true,
             asignaciones: [],
             historial_estados: [],
             avances: [],
@@ -92,6 +100,7 @@ async function recordsApp(t) {
     ['cliente.actualizar', 'REGISTRO_PROPIO'],
     ['expediente.crear', 'GLOBAL_OPERATIVO'],
     ['expediente.consultar', 'EXPLICITO'],
+    ['expediente.actualizar', 'EXPLICITO'],
   ].map(([permission, context]) => ({
     permission,
     context,
@@ -364,4 +373,81 @@ test('edición exige revisión, CSRF y alcance y envía solo campos editables', 
     (await browser.request('clients?identification=' + 'x'.repeat(101))).status,
     400,
   );
+});
+
+test('editar expediente valida campos protegidos, permiso, contexto y referencia externa', async (t) => {
+  const { browser, calls, state } = await recordsApp(t);
+  await authenticated(browser);
+  const patch = (id, body, csrf = browser.csrfToken) =>
+    browser.request(`cases/${id}`, {
+      method: 'PATCH',
+      body,
+      headers: { Origin: APP_ORIGIN, 'X-CSRF-Token': csrf },
+    });
+  const metadata = { revision: 1, reason: 'CORREGIR_CAPTURA' };
+  const initial = calls.length;
+  assert.equal(
+    (await patch(CASE, { ...metadata, description: 'Revisión' }, '')).status,
+    403,
+  );
+  for (const changes of [
+    { folio: 'KVG-FORZADO', description: 'Revisión' },
+    { clientId: FOREIGN, description: 'Revisión' },
+    { status: 'ARCHIVADO', description: 'Revisión' },
+    { responsibleId: FOREIGN, description: 'Revisión' },
+    { description: null },
+    { reason: 'otro', description: 'Revisión' },
+    { revision: '1', description: 'Revisión' },
+    { externalNumber: 'EXT' },
+    { externalNumber: null, externalAuthority: 'Autoridad' },
+    {},
+  ])
+    assert.equal((await patch(CASE, { ...metadata, ...changes })).status, 400);
+  assert.equal(calls.length, initial);
+  assert.equal(
+    (await patch(FOREIGN, { ...metadata, description: 'Revisión' })).status,
+    403,
+  );
+  const updated = await patch(CASE, {
+    ...metadata,
+    description: '  Refinada  ',
+    externalNumber: null,
+    externalAuthority: null,
+  });
+  assert.equal(updated.status, 200);
+  assert.equal((await updated.json()).revision, 2);
+  assert.deepEqual(calls.at(-1), {
+    operation: 'expediente.actualizar',
+    input: {
+      expediente_id: CASE,
+      revision: 1,
+      motivo: 'CORREGIR_CAPTURA',
+      descripcion: 'Refinada',
+      numero_externo: null,
+      autoridad_externa: null,
+    },
+  });
+  state.capabilities = state.capabilities.filter(
+    ({ permission }) => permission !== 'expediente.actualizar',
+  );
+  assert.equal(
+    (await patch(CASE, { ...metadata, description: 'Revisión' })).status,
+    403,
+  );
+  assert.equal(
+    (
+      await browser.request(
+        'cases?client=Ficticio&responsible=Abogado&status=NUEVO',
+      )
+    ).status,
+    200,
+  );
+  assert.deepEqual(calls.at(-1).input, {
+    texto: null,
+    estado: 'NUEVO',
+    cliente: 'Ficticio',
+    responsable: 'Abogado',
+    limite: 21,
+    desplazamiento: 0,
+  });
 });

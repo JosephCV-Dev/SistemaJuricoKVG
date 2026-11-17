@@ -1,11 +1,15 @@
 import { CaseDocuments } from '../documents/CaseDocuments';
 import { useState } from 'react';
-import type { CaseDetail } from '@kvg/contracts';
+import type { CaseDetail, CaseUpdateInput } from '@kvg/contracts';
+import { CaseEditor } from './CaseEditor';
 import { showDate } from './record-format';
 
 export function CaseDetailView({
   caseDetail,
   busy,
+  canEdit,
+  onSave,
+  onReload,
   canConsultClient,
   onOpenClient,
   canConsultDocuments,
@@ -19,12 +23,27 @@ export function CaseDetailView({
   onAccessFailure: (status: number) => void;
   caseDetail: CaseDetail;
   busy: boolean;
+  canEdit: boolean;
+  onSave: (input: CaseUpdateInput) => void;
+  onReload: () => void;
   canConsultClient: boolean;
   onOpenClient: (id: string) => void;
 }) {
+  const [editing, setEditing] = useState(false);
   const [section, setSection] = useState<
     'summary' | 'history' | 'progress' | 'documents'
   >('summary');
+  if (editing && canEdit) {
+    return (
+      <CaseEditor
+        caseDetail={caseDetail}
+        busy={busy}
+        onSave={onSave}
+        onCancel={() => setEditing(false)}
+        onReload={onReload}
+      />
+    );
+  }
   return (
     <div className="record-detail">
       <h4>Expediente {caseDetail.folio}</h4>
@@ -59,6 +78,12 @@ export function CaseDetailView({
         <dl>
           <dt>Estado</dt>
           <dd>{caseDetail.status}</dd>
+          {caseDetail.clientName && (
+            <>
+              <dt>Cliente principal</dt>
+              <dd>{caseDetail.clientName}</dd>
+            </>
+          )}
           <dt>Descripción</dt>
           <dd>{caseDetail.description}</dd>
           <dt>Creado</dt>
@@ -80,7 +105,16 @@ export function CaseDetailView({
             </button>
           </p>
         )}
-        <h4>Responsables</h4>
+        {canEdit && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setEditing(true)}
+          >
+            Editar expediente
+          </button>
+        )}
+        <h4>Responsables vigentes</h4>
         {caseDetail.assignments.filter((item) => item.active).length ? (
           <ul>
             {caseDetail.assignments

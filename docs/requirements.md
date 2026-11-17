@@ -12,7 +12,7 @@ La instalación Supabase existente está verificada sin reinstalar la baseline. 
 
 CU023/CU024 están implementados y verificados en desarrollo: contraseña, MFA del proveedor, sesión KVG, cookie protegida, CSRF, renovación, cierre, permisos por defecto denegados y auditoría base. Se aplicaron explícitamente ambas migraciones de sesión y el bootstrap con dos identidades Auth ficticias distintas. Las pruebas reales comprobaron el proveedor y RPC permitida/denegada, revocación y expiración. Las pruebas HTTP con puertos simulados cubren también cuenta inactiva y comprobación de capacidades/contextos. El paso 3A añade verificación de acceso en Chromium local; la evidencia de identidad y sus límites están en [identity.md](identity.md).
 
-El paso 3A implementa el recorrido mínimo CU001/CU002 y CU004/CU005, verificado con identidades reales y datos ficticios: captura y consulta, duplicados normalizados, reintentos sin duplicación, folio/estado de servidor, alcance y auditoría. El contrato, las pruebas locales/remotas y Chromium están en [clients-and-cases.md](clients-and-cases.md). La administración completa CU018/CU019 y las ampliaciones de clientes/expedientes siguen pendientes. El recorrido mínimo CU008/CU012/CU013 ya incorpora carga
+El paso 3A implementa el recorrido mínimo CU001/CU002 y CU004/CU005, verificado con identidades reales y datos ficticios: captura y consulta, duplicados normalizados, reintentos sin duplicación, folio/estado de servidor, alcance y auditoría. El contrato, las pruebas locales/remotas y Chromium están en [clients-and-cases.md](clients-and-cases.md). La administración completa CU018/CU019 y las asignaciones desde la interfaz siguen pendientes. El recorrido mínimo CU008/CU012/CU013 ya incorpora carga
 privada, análisis real y descarga autorizada; existe un ensayo acotado de
 recuperación local con los límites de [documents.md](documents.md) y
 [recovery-rehearsal.md](recovery-rehearsal.md). Se continuará el prototipo RUP 16.6 y su despliegue temprano antes de ampliar todos los módulos. El usuario autorizó estilos mínimos para legibilidad y orden de los formularios; la base visual ahora sigue la maqueta y logo entregados por el usuario y la usabilidad funcional se comprueba en cada avance.
@@ -134,10 +134,10 @@ y el prototipo RUP 16.6 completo sigue abierto. Esta decisión modifica el orden
 de entrega, no declara cumplidos los criterios pendientes ni reescribe el RUP/Jira.
 Véanse [roadmap.md](roadmap.md) y [security-current-scope.md](security-current-scope.md).
 
-El incremento 4A implementa CU002 con filtros por nombre e identificación y
-CU003 con edición por revisión. Se ejercitaron el SQL y el flujo web localmente.
-Para aplicar la migración y probarlo con Auth real queda pendiente restablecer
-la conexión SQL al Supabase de desarrollo. [Contrato y evidencia](clients-and-cases.md#paso-4a-consulta-y-edición-de-clientes).
+Los incrementos 4A y 4B amplían CU002/CU003 y CU005/CU031. Las migraciones se
+aplicaron al Supabase de desarrollo. CU031 registra revisión, motivo y campos
+modificados sin copiar datos jurídicos a la bitácora. Los cambios de cliente
+principal, estado y responsable conservan sus flujos específicos. [Contrato y evidencia](clients-and-cases.md#paso-4b-consulta-y-edición-de-expedientes).
 
 La demo puede usar documentos ficticios en modo beta sin antimalware por
 instrucción posterior del usuario. Cada versión se marca en la ficha. La

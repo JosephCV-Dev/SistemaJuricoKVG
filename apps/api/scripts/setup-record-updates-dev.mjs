@@ -8,7 +8,16 @@ import { readDevelopmentFixture } from './lib/development-identities.mjs';
 import { applyDevelopmentMigrations } from './lib/development-migrations.mjs';
 
 let owner;
+const scope = process.argv[2];
+const migrations = {
+  clients: ['202611170007_client_search_and_update.sql'],
+  cases: ['202611170009_case_search_and_update.sql'],
+};
 try {
+  if (!Object.hasOwn(migrations, scope))
+    throw new DevelopmentSetupError(
+      'Indica la preparación de clientes o expedientes.',
+    );
   const config = await developmentConfig();
   const fixture = await readDevelopmentFixture(config);
   owner = await ownerConnection(config);
@@ -28,11 +37,9 @@ try {
       'Usa el entorno de desarrollo con sus identidades ficticias conocidas.',
     );
   }
-  await applyDevelopmentMigrations(owner, [
-    '202611170007_client_search_and_update.sql',
-  ]);
+  await applyDevelopmentMigrations(owner, migrations[scope]);
 } catch (error) {
-  reportSetupFailure('CLIENTES_MIGRACION', error);
+  reportSetupFailure('REGISTROS_MIGRACION', error);
   process.exitCode = 1;
 } finally {
   await owner?.end();

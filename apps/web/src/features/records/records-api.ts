@@ -1,6 +1,7 @@
 import type {
   CaseDetail,
   CaseInput,
+  CaseUpdateInput,
   CaseSummary,
   ClientDetail,
   ClientInput,
@@ -135,17 +136,23 @@ export async function searchClients(
   return page(await getJson(`/api/v1/clients?${query}`, signal), readClient);
 }
 export async function searchCases(
-  search: string,
-  status: string,
+  filters: {
+    text: string;
+    status: string;
+    client?: string;
+    responsible?: string;
+  },
   offset: number,
   signal: AbortSignal,
 ): Promise<RecordPage<CaseSummary>> {
   const query = new URLSearchParams({
-    text: search,
+    text: filters.text,
     offset: String(offset),
     limit: '20',
   });
-  if (status) query.set('status', status);
+  if (filters.status) query.set('status', filters.status);
+  if (filters.client) query.set('client', filters.client);
+  if (filters.responsible) query.set('responsible', filters.responsible);
   return page(await getJson(`/api/v1/cases?${query}`, signal), readCase);
 }
 export async function getClient(
@@ -183,6 +190,8 @@ export async function getCase(
   );
   return {
     ...readCase(row),
+    canEdit: bool(row.canEdit),
+    clientName: nullable(row.clientName),
     assignments: array(row.assignments, (value) => {
       const item = record(value);
       return {
@@ -230,4 +239,21 @@ export async function updateClient(
 }
 export async function createCase(input: CaseInput, signal: AbortSignal) {
   return readCase(await readJson(await mutate('/api/v1/cases', input, signal)));
+}
+
+export async function updateCase(
+  id: string,
+  input: CaseUpdateInput,
+  signal: AbortSignal,
+) {
+  return readCase(
+    await readJson(
+      await mutate(
+        `/api/v1/cases/${encodeURIComponent(id)}`,
+        input,
+        signal,
+        'PATCH',
+      ),
+    ),
+  );
 }

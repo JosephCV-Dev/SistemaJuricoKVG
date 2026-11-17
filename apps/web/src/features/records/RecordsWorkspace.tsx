@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import type {
   CaseDetail,
   CaseSummary,
+  CaseUpdateInput,
   ClientDetail,
   ClientSummary,
   ClientUpdateInput,
@@ -24,6 +25,7 @@ import {
   searchCases,
   searchClients,
   updateClient,
+  updateCase,
 } from './records-api';
 
 const emptyPage = <T,>(): RecordPage<T> => ({
@@ -32,6 +34,8 @@ const emptyPage = <T,>(): RecordPage<T> => ({
   offset: 0,
   hasMore: false,
 });
+
+const emptyCaseQuery = { text: '', status: '', client: '', responsible: '' };
 
 export function RecordsWorkspace({
   onSessionExpired,
@@ -65,7 +69,9 @@ export function RecordsWorkspace({
   const [editTypes, setEditTypes] = useState<IdentificationType[] | null>(null);
   const [caseText, setCaseText] = useState('');
   const [caseStatus, setCaseStatus] = useState('');
-  const [caseQuery, setCaseQuery] = useState({ text: '', status: '' });
+  const [caseClient, setCaseClient] = useState('');
+  const [caseResponsible, setCaseResponsible] = useState('');
+  const [caseQuery, setCaseQuery] = useState(emptyCaseQuery);
   const can = (permission: string) =>
     capabilities.some((item) => item.permission === permission);
 
@@ -127,7 +133,7 @@ export function RecordsWorkspace({
           (item) => item.permission === 'expediente.consultar',
         )
       )
-        setCases(await searchCases('', '', 0, signal));
+        setCases(await searchCases(emptyCaseQuery, 0, signal));
     });
     return () => {
       activeRequest.current?.abort();
@@ -147,10 +153,12 @@ export function RecordsWorkspace({
   async function onCaseCreated(created: CaseSummary, signal: AbortSignal) {
     setNotice(`Expediente creado con folio ${created.folio}, en estado NUEVO.`);
     setCaseDetail(await getCase(created.id, signal));
-    setCases(await searchCases('', '', 0, signal));
+    setCases(await searchCases(emptyCaseQuery, 0, signal));
     setCaseText('');
     setCaseStatus('');
-    setCaseQuery({ text: '', status: '' });
+    setCaseClient('');
+    setCaseResponsible('');
+    setCaseQuery(emptyCaseQuery);
     onNavigate('case');
   }
   function loadClients(offset: number, query = clientQuery) {
@@ -167,7 +175,7 @@ export function RecordsWorkspace({
     void run(async (signal) => {
       setCaseDetail(null);
       setCases(emptyPage());
-      setCases(await searchCases(query.text, query.status, offset, signal));
+      setCases(await searchCases(query, offset, signal));
       setCaseQuery(query);
     });
   }
@@ -202,6 +210,17 @@ export function RecordsWorkspace({
       );
     });
   }
+  function saveCase(current: CaseDetail, input: CaseUpdateInput) {
+    void run(async (signal) => {
+      await updateCase(current.id, input, signal);
+      setCaseDetail(null);
+      setCases(emptyPage());
+      setNotice('Expediente actualizado.');
+      setCaseDetail(await getCase(current.id, signal));
+      setCases(await searchCases(caseQuery, 0, signal));
+    });
+  }
+
   function openCase(id: string) {
     void run(async (signal) => {
       setCaseDetail(null);
@@ -571,13 +590,20 @@ export function RecordsWorkspace({
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                loadCases(0, { text: caseText, status: caseStatus });
+                loadCases(0, {
+                  text: caseText.trim(),
+                  status: caseStatus,
+                  client: caseClient.trim(),
+                  responsible: caseResponsible.trim(),
+                });
               }}
             >
               <fieldset disabled={busy}>
-                <legend>Buscar por folio o descripción</legend>
+                <legend>Filtros de expedientes</legend>
                 <p>
-                  <label htmlFor="case-search">Folio o descripción</label>
+                  <label htmlFor="case-search">
+                    Folio, referencia externa o descripción
+                  </label>
                   <input
                     id="case-search"
                     value={caseText}
@@ -603,6 +629,26 @@ export function RecordsWorkspace({
                       <option key={state}>{state}</option>
                     ))}
                   </select>
+                </p>
+                <p>
+                  <label htmlFor="case-client-filter">Nombre del cliente</label>
+                  <input
+                    id="case-client-filter"
+                    value={caseClient}
+                    onChange={(event) => setCaseClient(event.target.value)}
+                    maxLength={200}
+                  />
+                </p>
+                <p>
+                  <label htmlFor="case-responsible-filter">
+                    Abogado principal
+                  </label>
+                  <input
+                    id="case-responsible-filter"
+                    value={caseResponsible}
+                    onChange={(event) => setCaseResponsible(event.target.value)}
+                    maxLength={200}
+                  />
                 </p>
                 <button type="submit">Buscar expedientes</button>
               </fieldset>
@@ -670,10 +716,15 @@ export function RecordsWorkspace({
           </div>
           {view === 'case' && caseDetail && (
             <CaseDetailView
-              key={caseDetail.id}
+              key={`${caseDetail.id}:${caseDetail.revision}`}
               caseDetail={caseDetail}
               busy={busy}
-              canConsultClient={can('cliente.consultar')}
+              canEdit={can('expediente.actualizar') && caseDetail.canEdit}
+              onSave={(input) => saveCase(caseDetail, input)}
+              onReload={() => openCase(caseDetail.id)}
+              canConsultClient={
+                can('cliente.consultar') && caseDetail.clientName !== null
+              }
               onOpenClient={openClient}
               canConsultDocuments={can('documento.consultar')}
               canUploadDocuments={can('documento.cargar')}

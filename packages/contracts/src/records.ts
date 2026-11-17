@@ -47,6 +47,20 @@ export interface CaseInput {
   externalAuthority?: string;
 }
 
+export type CaseUpdateReason =
+  | 'CORREGIR_CAPTURA'
+  | 'PRECISAR_DESCRIPCION'
+  | 'ACTUALIZAR_REFERENCIA'
+  | 'OTRA_CORRECCION';
+
+export interface CaseUpdateInput {
+  revision: number;
+  reason: CaseUpdateReason;
+  description?: string;
+  externalNumber?: string | null;
+  externalAuthority?: string | null;
+}
+
 export interface CaseSummary {
   id: string;
   folio: string;
@@ -60,6 +74,8 @@ export interface CaseSummary {
 }
 
 export interface CaseDetail extends CaseSummary {
+  canEdit: boolean;
+  clientName: string | null;
   assignments: Array<{
     userId: string;
     name: string;

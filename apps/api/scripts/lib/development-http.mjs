@@ -32,7 +32,9 @@ export class DevelopmentBrowser {
   async mutate(path, data, method = 'POST') {
     const csrf = await this.request('auth/csrf');
     if (csrf.status !== 200)
-      throw new DevelopmentSetupError('No se pudo preparar CSRF de prueba.');
+      throw new DevelopmentSetupError(
+        `No se pudo preparar CSRF de prueba (HTTP ${csrf.status}).`,
+      );
     return this.request(path, method, data, {
       'X-CSRF-Token': csrf.data.csrfToken,
     });
