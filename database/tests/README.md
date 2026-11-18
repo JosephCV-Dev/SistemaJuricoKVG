@@ -71,3 +71,8 @@ separación administrativa, revocación, motivo e historial y revierte los datos
 PostgreSQL aislado. Usa el fixture de plataforma, baseline y migraciones.
 Prueba los permisos y la revisión, y representa una versión documental
 ficticia con metadatos de Storage. Revierte la prueba completa.
+
+`document-organization-local.sql` cubre CU009–CU011 en PostgreSQL aislado,
+con el fixture de plataforma, baseline y migraciones. Comprueba alcance antes
+de mostrar resultados, categorías, revisión, traslado, historial y hash.
+Revierte sus datos y usa metadatos Storage ficticios.

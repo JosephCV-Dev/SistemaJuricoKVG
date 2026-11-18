@@ -162,7 +162,10 @@ try {
     'logo_local_cargado',
   );
   stage = 'DOCUMENTOS';
-  await page.getByRole('button', { name: 'Documentos', exact: true }).click();
+  await page
+    .locator('.detail-tabs')
+    .getByRole('button', { name: 'Documentos', exact: true })
+    .click();
   await page
     .getByText('Este expediente no tiene documentos visibles.', { exact: true })
     .waitFor();

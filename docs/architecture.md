@@ -271,3 +271,8 @@ Las opciones de cambio de estado y su validación consultan la misma matriz SQL.
 El cambio conserva motivo y revisión en el historial. Los avances usan una
 solicitud idempotente y se agregan con autor y fecha de servidor. La proyección
 de referencias documentales aplica alcance a cada versión en cada consulta.
+
+La búsqueda documental aplica permisos en PostgreSQL antes de ordenar y paginar.
+Clasificar o trasladar usa el mismo RPC ordinario con revisión y alcance vigente.
+Los cambios de metadatos y sus historiales se confirman en una sola transacción,
+con acceso posterior según el expediente asociado.

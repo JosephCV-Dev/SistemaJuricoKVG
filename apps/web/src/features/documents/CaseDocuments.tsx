@@ -7,6 +7,7 @@ import type {
   RecordPage,
   UploadStatus,
 } from '@kvg/contracts';
+import { DocumentDetails } from './DocumentDetails';
 import { AuthRequestError } from '../../shared/api/session-http';
 import {
   categories,
@@ -16,7 +17,6 @@ import {
   uploadStatus,
   listDocuments,
   getDocument,
-  downloadVersion,
 } from './documents-api';
 
 const labels = {
@@ -32,11 +32,13 @@ export function CaseDocuments({
   canUpload,
   canDownload,
   onAccessFailure,
+  onOpenCase,
 }: {
   caseId: string;
   canUpload: boolean;
   canDownload: boolean;
   onAccessFailure: (status: number) => void;
+  onOpenCase?: (id: string) => void;
 }) {
   const [page, setPage] = useState<RecordPage<DocumentSummary>>({
     items: [],
@@ -133,20 +135,6 @@ export function CaseDocuments({
           ? 'Archivo recibido. Actualiza documentos para consultar su disponibilidad en la beta.'
           : 'Archivo recibido. Permanecerá bloqueado hasta completar el análisis.',
       );
-    });
-  }
-  async function download(id: string) {
-    await run(async (signal) => {
-      const blob = await downloadVersion(id, signal);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = detail
-        ? `${detail.name}.${detail.version?.format.toLowerCase() ?? 'bin'}`
-        : `KVG-${id}`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setNotice('Descarga autorizada.');
     });
   }
   return (
@@ -358,54 +346,29 @@ export function CaseDocuments({
         </button>
       </p>
       {detail && (
-        <div className="record-detail">
-          <h4>Documento: {detail.name}</h4>
-          {detail.version?.beta && (
-            <p>Archivo beta sin análisis antimalware.</p>
-          )}
-          <dl>
-            <dt>Categoría</dt>
-            <dd>{detail.categoryName}</dd>
-            <dt>Registrado</dt>
-            <dd>
-              {new Intl.DateTimeFormat('es-MX', {
-                dateStyle: 'medium',
-                timeZone: 'America/Merida',
-              }).format(new Date(detail.createdAt))}
-            </dd>
-            <dt>Autor</dt>
-            <dd>{detail.authorName}</dd>
-            <dt>Versión vigente</dt>
-            <dd>
-              {detail.version
-                ? `v${detail.version.number} · ${detail.version.status}`
-                : 'Sin versión habilitada'}
-            </dd>
-            {detail.version && (
-              <>
-                <dt>Formato y tamaño</dt>
-                <dd>
-                  {detail.version.format} · {detail.version.size} bytes
-                </dd>
-                <dt>SHA-256</dt>
-                <dd>{detail.version.sha256}</dd>
-              </>
-            )}
-          </dl>
-          {detail.version && canDownload && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void download(detail.version!.id)}
-            >
-              Descargar original
-            </button>
-          )}
-          <p className="sub">
-            El contenido se entrega como archivo adjunto; no se ejecuta dentro
-            del sistema.
-          </p>
-        </div>
+        <DocumentDetails
+          key={`${detail.id}:${detail.revision}`}
+          detail={detail}
+          busy={busy}
+          canDownload={canDownload}
+          run={run}
+          {...(onOpenCase ? { onOpenCase } : {})}
+          onDownload={() => setNotice('Descarga autorizada.')}
+          onRefresh={() =>
+            void run(async (signal) =>
+              setDetail(await getDocument(detail.id, signal)),
+            )
+          }
+          onSaved={async (result, signal) => {
+            const moved = result.caseId !== detail.caseId;
+            setNotice(
+              moved ? 'Documento trasladado.' : 'Categoría actualizada.',
+            );
+            const updated = await getDocument(result.id, signal);
+            setDetail(updated);
+            setPage(await listDocuments(caseId, 0, signal));
+          }}
+        />
       )}
     </section>
   );

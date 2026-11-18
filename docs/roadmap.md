@@ -36,9 +36,13 @@ de abogados activos, historial y la lista de expedientes asignados o concedidos.
 motivo y autorización jurídica, además de avances y correcciones que conservan
 autoría e historial. [Contrato de seguimiento](clients-and-cases.md#paso-4d-estados-y-avances).
 
-El siguiente avance es **5A, clasificación, asociación y búsqueda documental**
-(CU009–CU011). La demo mantiene su modo beta local. El antimalware operativo
-y el despliegue separado siguen pendientes.
+**5A implementado.** CU009–CU011 incorporan búsqueda por metadatos,
+clasificación con historial y traslado con revisión, trazabilidad y alcance
+sobre origen y destino. [Contrato y pruebas](documents.md#paso-5a-organización-y-búsqueda).
+
+El siguiente avance es **5B, metadatos y versiones** (CU014/CU029).
+La demo mantiene su modo beta local. El antimalware operativo y el despliegue
+separado siguen pendientes.
 
 Los controles que permanecen activos y los límites están en
 [security-current-scope.md](security-current-scope.md).
@@ -172,12 +176,12 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 > Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz con el estilo mínimo existente.
 
-**Siguiente petición recomendada para el paso 5A**
+**Siguiente petición recomendada para el paso 5B**
 
-> Amplía CU009–CU011. Permite clasificar y asociar documentos con motivo y
-> trazabilidad, y buscarlos por metadatos dentro del alcance autorizado.
-> Aplica permisos sobre expediente de origen y destino cuando corresponda,
-> conserva originales y versiones y mantén el diseño KVG.
+> Implementa CU014/CU029. Separa edición de metadatos y registro de una
+> nueva versión. Permite consultar el historial y descargar originales
+> autorizados. Preserva cada versión, revalida alcance y revisión y conserva
+> la interfaz KVG.
 
 **Petición para retomar el prototipo y despliegue cuando haya recursos:**
 

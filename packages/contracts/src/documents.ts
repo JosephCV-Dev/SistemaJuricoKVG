@@ -36,12 +36,21 @@ export interface DocumentSummary {
   caseId: string;
   name: string;
   categoryId: string;
+  categoryName?: string;
+  caseFolio?: string | null;
+  createdAt?: string;
   versionId: string | null;
   number: number | null;
   status: string | null;
 }
 export interface DocumentDetail extends DocumentSummary {
   createdAt: string;
+  revision: number;
+  canClassify: boolean;
+  canAssociate: boolean;
+  fileAvailable: boolean;
+  classifications: DocumentClassification[];
+  associations: DocumentAssociation[];
   authorId: string;
   authorName: string;
   categoryName: string;
@@ -55,4 +64,54 @@ export interface DocumentDetail extends DocumentSummary {
     publishedAt: string;
     beta?: true;
   };
+}
+
+export type ClassificationReason =
+  'CORREGIR_CLASIFICACION' | 'ORGANIZACION_CATALOGO' | 'OTRA_CORRECCION';
+export interface DocumentClassification {
+  id: string;
+  previous: string;
+  category: string;
+  reason: string | null;
+  author: string;
+  at: string;
+}
+export interface DocumentAssociation {
+  id: string;
+  hasSource: boolean;
+  sourceFolio: string | null;
+  destinationFolio: string | null;
+  reason: string | null;
+  author: string;
+  at: string;
+}
+export interface DocumentFilters {
+  caseId?: string;
+  categoryId?: string;
+  text?: string;
+  folio?: string;
+  client?: string;
+  from?: string;
+  to?: string;
+  status?: 'RECIBIDO' | 'EN_REVISION' | 'VALIDADO' | 'ARCHIVADO';
+  order?: 'recientes' | 'antiguos' | 'nombre';
+}
+export interface DocumentDestination {
+  id: string;
+  folio: string;
+}
+export interface DocumentClassificationInput {
+  revision: number;
+  categoryId: string;
+  reason?: ClassificationReason;
+}
+export interface DocumentAssociationInput {
+  revision: number;
+  destinationId: string;
+  reason: string;
+}
+export interface DocumentOrganizationResult {
+  id: string;
+  caseId: string;
+  revision: number;
 }

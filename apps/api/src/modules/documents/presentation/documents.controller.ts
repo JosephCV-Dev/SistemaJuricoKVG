@@ -5,6 +5,7 @@ import {
   Post,
   Put,
   Param,
+  Patch,
   Query,
   Req,
   Res,
@@ -19,10 +20,15 @@ import type { Request, Response } from 'express';
 import { RequirePermission } from '../../identity/presentation/access.decorators';
 import { CsrfGuard } from '../../identity/presentation/csrf.guard';
 import { userAccessToken } from '../../identity/presentation/user-access-token';
-import { RecordIdDto } from '../../../common/dto/record.dto';
+import { RecordIdDto, SearchRecordsDto } from '../../../common/dto/record.dto';
 import { DocumentsService } from '../application/documents.service';
 import { MAX_FILE_BYTES } from '../domain/document.types';
-import { CreateUploadDto, SearchDocumentsDto } from './documents.dto';
+import {
+  CreateUploadDto,
+  SearchDocumentsDto,
+  ClassifyDocumentDto,
+  AssociateDocumentDto,
+} from './documents.dto';
 const scope = ['PRINCIPAL', 'COLABORADOR', 'EXPLICITO'];
 @Controller('documents')
 export class DocumentsController {
@@ -38,6 +44,11 @@ export class DocumentsController {
   @Get('categories')
   @RequirePermission('documento.cargar', scope)
   categories(@Req() req: Request) {
+    return this.documents.repository.categories(userAccessToken(req));
+  }
+  @Get('search-categories')
+  @RequirePermission('documento.consultar', scope)
+  searchCategories(@Req() req: Request) {
     return this.documents.repository.categories(userAccessToken(req));
   }
   @Get('upload-availability')
@@ -90,11 +101,11 @@ export class DocumentsController {
   @Get()
   @RequirePermission('documento.consultar', scope)
   search(@Query() q: SearchDocumentsDto, @Req() req: Request) {
-    return this.documents.repository.search(
-      userAccessToken(req),
-      q.caseId,
-      q.offset,
-    );
+    if (q.from && q.to && q.from > q.to)
+      throw new BadRequestException(
+        'La fecha inicial no puede ser posterior a la final.',
+      );
+    return this.documents.repository.search(userAccessToken(req), q);
   }
   @Get('versions/:id/download')
   @RequirePermission('documento.descargar', scope)
@@ -131,6 +142,49 @@ export class DocumentsController {
       this.downloading--;
     }
     // La autorización no afirma recepción efectiva por el cliente.
+  }
+  @Get(':id/destinations')
+  @RequirePermission('documento.asociar', scope)
+  destinations(
+    @Param() p: RecordIdDto,
+    @Query() q: SearchRecordsDto,
+    @Req() req: Request,
+  ) {
+    if (q.text && q.text.length > 40)
+      throw new BadRequestException('El folio no puede superar 40 caracteres.');
+    return this.documents.repository.destinations(
+      userAccessToken(req),
+      p.id,
+      q,
+    );
+  }
+  @Patch(':id/category')
+  @UseGuards(CsrfGuard)
+  @RequirePermission('documento.clasificar', scope)
+  classify(
+    @Param() p: RecordIdDto,
+    @Body() input: ClassifyDocumentDto,
+    @Req() req: Request,
+  ) {
+    return this.documents.repository.classify(
+      userAccessToken(req),
+      p.id,
+      input,
+    );
+  }
+  @Patch(':id/association')
+  @UseGuards(CsrfGuard)
+  @RequirePermission('documento.asociar', scope)
+  associate(
+    @Param() p: RecordIdDto,
+    @Body() input: AssociateDocumentDto,
+    @Req() req: Request,
+  ) {
+    return this.documents.repository.associate(
+      userAccessToken(req),
+      p.id,
+      input,
+    );
   }
   @Get(':id')
   @RequirePermission('documento.consultar', scope)

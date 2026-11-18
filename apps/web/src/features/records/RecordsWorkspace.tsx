@@ -1,3 +1,4 @@
+import { DocumentSearch } from '../documents/DocumentSearch';
 import { AssignedCases } from './AssignedCases';
 import { CaseAssignmentPanel } from './CaseAssignmentPanel';
 import { CaseReassignmentWorkspace } from './CaseReassignmentWorkspace';
@@ -105,7 +106,11 @@ export function RecordsWorkspace({
           setEditTypes(null);
           setCaseDetail(null);
           setShowAssignment(false);
-          if (view === 'assigned' || view === 'reassign')
+          if (
+            view === 'assigned' ||
+            view === 'reassign' ||
+            view === 'documents'
+          )
             setAccessRevision((previous) => previous + 1);
           setClients(emptyPage());
           setCases(emptyPage());
@@ -328,6 +333,7 @@ export function RecordsWorkspace({
             'cliente.registrar',
             'expediente.consultar',
             'expediente.reasignar',
+            'documento.consultar',
           ].includes(item.permission),
         ) && (
           <p>
@@ -598,6 +604,16 @@ export function RecordsWorkspace({
         />
       )}
 
+      {view === 'documents' && can('documento.consultar') && (
+        <DocumentSearch
+          busy={busy}
+          run={run}
+          accessRevision={accessRevision}
+          canDownload={can('documento.descargar')}
+          onOpenCase={(id) => openCase(id, 'cases')}
+          onNotice={setNotice}
+        />
+      )}
       {['cases', 'case'].includes(view) && can('expediente.consultar') && (
         <section className="panel" aria-labelledby="cases-heading">
           <div className="section-header">
@@ -807,6 +823,7 @@ export function RecordsWorkspace({
                 can('cliente.consultar') && caseDetail.clientName !== null
               }
               onOpenClient={openClient}
+              onOpenCase={(id) => openCase(id, caseReturn)}
               canConsultDocuments={can('documento.consultar')}
               canUploadDocuments={can('documento.cargar')}
               canDownloadDocuments={can('documento.descargar')}

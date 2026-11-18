@@ -58,6 +58,8 @@ export function Sidebar({
           link('assigned', 'Mis expedientes', view === 'assigned')}
         {can('expediente.reasignar') &&
           link('reassign', 'Reasignar expedientes', view === 'reassign')}
+        {can('documento.consultar') &&
+          link('documents', 'Documentos', view === 'documents')}
         <p className="nav-group">Cuenta</p>
         {link('session', 'Mi sesión', view === 'session')}
       </nav>

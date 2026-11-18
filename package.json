@@ -43,7 +43,8 @@
     "dev:beta": "npm run build --workspace @kvg/api && concurrently --kill-others --names api,web,documents \"npm run start:api\" \"npm run dev:web\" \"npm run worker:documents --workspace @kvg/api\"",
     "setup:cases:dev": "node apps/api/scripts/setup-record-updates-dev.mjs cases",
     "setup:assignments:dev": "node apps/api/scripts/setup-record-updates-dev.mjs assignments",
-    "setup:tracking:dev": "node apps/api/scripts/setup-record-updates-dev.mjs tracking"
+    "setup:tracking:dev": "node apps/api/scripts/setup-record-updates-dev.mjs tracking",
+    "setup:document-organization:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentOrganization"
   },
   "devDependencies": {
     "concurrently": "10.0.6",

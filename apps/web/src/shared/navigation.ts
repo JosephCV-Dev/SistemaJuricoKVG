@@ -8,6 +8,7 @@ export type WorkspaceView =
   | 'cases'
   | 'case'
   | 'new-case'
+  | 'documents'
   | 'session';
 
 export const viewTitles: Record<WorkspaceView, string> = {
@@ -20,5 +21,6 @@ export const viewTitles: Record<WorkspaceView, string> = {
   reassign: 'Reasignación',
   case: 'Detalle del expediente',
   'new-case': 'Nuevo expediente',
+  documents: 'Documentos',
   session: 'Mi sesión',
 };

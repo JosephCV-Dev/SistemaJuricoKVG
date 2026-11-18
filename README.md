@@ -158,7 +158,8 @@ Los pasos **3A** y el recorrido documental local de **3B** están implementados.
 3B incorpora también un ensayo acotado de datos/objetos cifrados en PostgreSQL
 Docker aislado, con los límites documentados. **3C queda pospuesto** por acuerdo
 del usuario. **4A a 4D** están implementados con sus migraciones en desarrollo.
-El siguiente avance es **5A, clasificación, asociación y búsqueda documental**.
+**5A** añade búsqueda documental, clasificación y traslado entre expedientes
+autorizados. El siguiente avance es **5B, metadatos y versiones**.
 
 - [Documentos privados, trabajador y verificación](docs/documents.md).
 - [Ensayo acotado de copia y recuperación](docs/recovery-rehearsal.md).

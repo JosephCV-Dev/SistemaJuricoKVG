@@ -156,3 +156,54 @@ Referencias técnicas consultadas: [ClamAV Docker](https://docs.clamav.net/manua
 Se conservan para más adelante las imágenes y la configuración del
 [despliegue de prueba 3C](staging-deployment.md). Su ensayo HTTPS local no sustituye
 la aceptación documental real en el alojamiento y Supabase separados pendientes.
+
+## Paso 5A: organización y búsqueda
+
+CU009–CU011 (SCRUM-128/129/130) añaden **Documentos** al menú y acciones de
+organización dentro de la ficha. La búsqueda general combina nombre,
+categoría, folio, cliente, fechas de registro (UTC) y estado documental.
+Puede ordenarse por fecha o nombre. Por defecto devuelve 20 resultados por
+página. Solo incluye versiones publicadas accesibles para la sesión. La
+pestaña del expediente conserva también sus registros sin versión publicada.
+El filtro de cliente requiere permiso de cliente y el de folio requiere
+permiso de expediente. El listado devuelve si hay otra página dentro del
+alcance autorizado.
+
+**Clasificar documento** selecciona una categoría activa. El motivo de
+clasificación es opcional y se elige de un catálogo reducido. La bitácora
+conserva las categorías anterior y nueva, actor, fecha y revisión.
+**Cambiar expediente** busca destinos por folio y exige un motivo. Se admite
+en estado documental Recibido o En revisión, con origen y destino editables y
+autorizados. La clasificación queda bloqueada para un documento archivado.
+Ambas acciones requieren una versión publicada y una revisión vigente. Las
+cargas en curso deben terminar antes de modificar su documento.
+
+El traslado conserva la versión exacta y su hash. Se registra una asociación
+nueva y se aplica el alcance del destino a la ficha y a la descarga. El historial
+oculta folios y motivo de las asociaciones cuyos expedientes la sesión ya no
+puede consultar. Los avances previos se conservan como historial. Las versiones
+vinculadas a esos avances se siguen mostrando según el expediente y alcance
+vigentes.
+
+| Ruta                                      | Control                                                                                                         |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/documents`                   | Filtros `text`, `categoryId`, `caseId`, `folio`, `client`, `from`, `to`, `status`, `order`, `limit` y `offset`. |
+| `GET /api/v1/documents/search-categories` | Catálogo activo para identidades con permiso de consulta documental.                                            |
+| `GET /api/v1/documents/:id/destinations`  | Folios de destinos editables y autorizados, paginados.                                                          |
+| `PATCH /api/v1/documents/:id/category`    | CSRF, revisión, permiso y alcance de clasificación, categoría activa.                                           |
+| `PATCH /api/v1/documents/:id/association` | CSRF, revisión, motivo y alcance de origen y destino.                                                           |
+
+La migración `202611170012_document_organization.sql` se aplicó al Supabase de
+desarrollo con `npm run setup:document-organization:dev`. Pasaron 87 pruebas
+de `npm run check` y la comprobación de privilegios y buckets privados.
+El [ensayo SQL aislado](../database/tests/document-organization-local.sql)
+comprobó filtros, exclusión de documentos sin publicar, revisión obsoleta,
+categoría inactiva, traslado permitido y denegado, historial filtrado y
+conservación del original. Queda pendiente medir NFR-0006 con un volumen de
+datos representativo del despacho.
+
+En Chromium a 390 px con MFA real, Secretaría buscó un documento ficticio
+por nombre, categoría, folio y cliente, lo reclasificó y lo trasladó a otro
+expediente autorizado. Se verificaron ambos historiales y la igualdad byte
+por byte de la descarga. El abogado con acceso solamente al expediente de
+origen recibió 403 al consultar y descargar el documento trasladado.

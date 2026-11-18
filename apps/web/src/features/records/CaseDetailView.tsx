@@ -27,6 +27,7 @@ export function CaseDetailView({
   saveProgress,
   canConsultClient,
   onOpenClient,
+  onOpenCase,
   canConsultDocuments,
   canUploadDocuments,
   canDownloadDocuments,
@@ -52,6 +53,7 @@ export function CaseDetailView({
   onProgressSaved: (signal: AbortSignal) => Promise<void>;
   canConsultClient: boolean;
   onOpenClient: (id: string) => void;
+  onOpenCase: (id: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [changingState, setChangingState] = useState(false);
@@ -207,6 +209,7 @@ export function CaseDetailView({
           canUpload={canUploadDocuments}
           canDownload={canDownloadDocuments}
           onAccessFailure={onAccessFailure}
+          onOpenCase={onOpenCase}
         />
       )}
       <div hidden={section !== 'history'}>

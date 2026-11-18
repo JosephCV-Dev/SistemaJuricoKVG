@@ -1,5 +1,10 @@
 import type {
   DocumentCategory,
+  DocumentFilters,
+  DocumentDestination,
+  DocumentClassificationInput,
+  DocumentAssociationInput,
+  DocumentOrganizationResult,
   DocumentDetail,
   DocumentSummary,
   DocumentUploadInput,
@@ -28,6 +33,11 @@ function summary(v: unknown): DocumentSummary {
     caseId: text(r.caseId),
     name: text(r.name),
     categoryId: text(r.categoryId),
+    ...(r.categoryName === undefined
+      ? {}
+      : { categoryName: text(r.categoryName) }),
+    ...(r.caseFolio === undefined ? {} : { caseFolio: nullable(r.caseFolio) }),
+    ...(r.createdAt === undefined ? {} : { createdAt: text(r.createdAt) }),
     versionId: nullable(r.versionId),
     number: r.number === null ? null : integer(r.number),
     status: nullable(r.status),
@@ -66,33 +76,47 @@ export async function uploadAvailability(
 }
 export async function categories(
   signal: AbortSignal,
+  forSearch = false,
 ): Promise<DocumentCategory[]> {
-  const v = await getJson(base + '/categories', signal);
-  if (!Array.isArray(v)) return invalid();
-  return v.map((value) => {
-    const r = obj(value);
+  const value = await getJson(
+    base + (forSearch ? '/search-categories' : '/categories'),
+    signal,
+  );
+  return array(value, (item) => {
+    const r = obj(item);
     return { id: text(r.id), name: text(r.name) };
   });
+}
+function array<T>(value: unknown, read: (item: unknown) => T): T[] {
+  if (!Array.isArray(value)) return invalid();
+  return value.map(read);
+}
+function bool(value: unknown): boolean {
+  return typeof value === 'boolean' ? value : invalid();
+}
+function page<T>(value: unknown, read: (item: unknown) => T): RecordPage<T> {
+  const r = obj(value);
+  const limit = integer(r.limit);
+  const items = array(r.items, read);
+  if (limit < 1 || limit > 50 || items.length > limit) return invalid();
+  return { items, limit, offset: integer(r.offset), hasMore: bool(r.hasMore) };
 }
 export async function listDocuments(
   caseId: string,
   offset: number,
   signal: AbortSignal,
-): Promise<RecordPage<DocumentSummary>> {
-  const r = obj(
-    await getJson(
-      `${base}?${new URLSearchParams({ caseId, offset: String(offset) })}`,
-      signal,
-    ),
-  );
-  if (!Array.isArray(r.items) || typeof r.hasMore !== 'boolean')
-    return invalid();
-  return {
-    items: r.items.map(summary),
-    limit: integer(r.limit),
-    offset: integer(r.offset),
-    hasMore: r.hasMore,
-  };
+) {
+  return searchDocuments({ caseId }, offset, signal);
+}
+export async function searchDocuments(
+  filters: DocumentFilters,
+  offset: number,
+  signal: AbortSignal,
+) {
+  const query = new URLSearchParams({ offset: String(offset) });
+  for (const [key, value] of Object.entries(filters))
+    if (value) query.set(key, value);
+  return page(await getJson(`${base}?${query}`, signal), summary);
 }
 export async function getDocument(
   id: string,
@@ -102,6 +126,33 @@ export async function getDocument(
   const v = r.version === null ? null : obj(r.version);
   return {
     ...summary(r),
+    revision: integer(r.revision),
+    canClassify: bool(r.canClassify),
+    canAssociate: bool(r.canAssociate),
+    fileAvailable: bool(r.fileAvailable),
+    classifications: array(r.classifications, (item) => {
+      const row = obj(item);
+      return {
+        id: text(row.id),
+        previous: text(row.previous),
+        category: text(row.category),
+        reason: nullable(row.reason),
+        author: text(row.author),
+        at: text(row.at),
+      };
+    }),
+    associations: array(r.associations, (item) => {
+      const row = obj(item);
+      return {
+        id: text(row.id),
+        hasSource: bool(row.hasSource),
+        sourceFolio: nullable(row.sourceFolio),
+        destinationFolio: nullable(row.destinationFolio),
+        reason: nullable(row.reason),
+        author: text(row.author),
+        at: text(row.at),
+      };
+    }),
     createdAt: text(r.createdAt),
     authorId: text(r.authorId),
     authorName: text(r.authorName),
@@ -173,4 +224,58 @@ export async function downloadVersion(id: string, signal: AbortSignal) {
   const blob = await response.blob();
   if (blob.size > 20_000_000) return invalid();
   return blob;
+}
+
+export async function documentDestinations(
+  id: string,
+  folio: string,
+  offset: number,
+  signal: AbortSignal,
+): Promise<RecordPage<DocumentDestination>> {
+  const query = new URLSearchParams({ text: folio, offset: String(offset) });
+  return page(
+    await getJson(
+      `${base}/${encodeURIComponent(id)}/destinations?${query}`,
+      signal,
+    ),
+    (value) => {
+      const row = obj(value);
+      return { id: text(row.id), folio: text(row.folio) };
+    },
+  );
+}
+export async function organizeDocument(
+  id: string,
+  input: DocumentClassificationInput | DocumentAssociationInput,
+  signal: AbortSignal,
+): Promise<DocumentOrganizationResult> {
+  const path = 'destinationId' in input ? 'association' : 'category';
+  const row = obj(
+    await readJson(
+      await mutate(
+        `${base}/${encodeURIComponent(id)}/${path}`,
+        input,
+        signal,
+        'PATCH',
+      ),
+    ),
+  );
+  return {
+    id: text(row.id),
+    caseId: text(row.caseId),
+    revision: integer(row.revision),
+  };
+}
+export async function saveDocumentDownload(
+  detail: DocumentDetail,
+  signal: AbortSignal,
+) {
+  if (!detail.version) return;
+  const blob = await downloadVersion(detail.version.id, signal);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${detail.name}.${detail.version.format.toLowerCase()}`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

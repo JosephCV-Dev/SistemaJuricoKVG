@@ -152,3 +152,8 @@ CU006 y CU017 se implementaron en 4D. PostgreSQL calcula las transiciones por
 revisión, alcance y responsable activo. Los avances y sus correcciones registran
 autor y fecha del servidor y pueden referir versiones autorizadas del mismo
 expediente. [Contrato de seguimiento](clients-and-cases.md#paso-4d-estados-y-avances).
+
+CU009–CU011 (SCRUM-128/129/130) están implementados en 5A. SQL filtra antes
+de paginar, conserva el original al reclasificar o trasladar y aplica el
+alcance del destino al acceso posterior. El motivo de traslado y la
+clasificación anterior y nueva quedan registrados. [Contrato documental](documents.md#paso-5a-organización-y-búsqueda).

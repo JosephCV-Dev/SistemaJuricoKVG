@@ -175,3 +175,146 @@ test('documentos aplican guard, DTO, alcance y CSRF incluso al recibir bytes', a
   state.capabilities = [];
   assert.equal((await browser.request(`documents/uploads/${id}`)).status, 403);
 });
+
+test('filtros, clasificación y traslado respetan sesión, permisos, revisión y CSRF', async (t) => {
+  const calls = [];
+  const destination = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const { browser, state } = await application(t, {
+    rpc: {
+      execute: async (token, operation, input) => {
+        assert.match(token, /local-private-aal2/);
+        calls.push({ operation, input });
+        if (operation === 'documento.buscar') return [];
+        if (operation === 'documento.destinos')
+          return [
+            {
+              expediente_id: destination,
+              folio_interno: 'KVG-FICTICIO',
+              descripcion: 'no exponer',
+            },
+          ];
+        if (operation === 'catalogos.consultar')
+          return { categorias: [{ categoria_id: id, nombre: 'Ficticio' }] };
+        return { documento_id: id, expediente_id: destination, revision: 3 };
+      },
+    },
+  });
+  assert.equal((await browser.request('documents?text=ficticio')).status, 401);
+  await authenticated(browser);
+  const permit = (permission) => ({
+    permission,
+    context: 'EXPLICITO',
+    requiresMfa: true,
+    requiresDecision: false,
+  });
+  state.capabilities = [permit('documento.consultar')];
+  assert.equal(
+    (await browser.request('documents/search-categories')).status,
+    200,
+  );
+  assert.equal(
+    (await browser.request('documents?order=arbitrario')).status,
+    400,
+  );
+  assert.equal(
+    (await browser.request('documents?from=2026-11-17&to=2026-11-01')).status,
+    400,
+  );
+  const found = await browser.request(
+    'documents?text=contrato&client=Ficticio&folio=KVG&order=nombre&limit=5',
+  );
+  assert.equal(found.status, 200);
+  assert.deepEqual(await found.json(), {
+    items: [],
+    offset: 0,
+    limit: 5,
+    hasMore: false,
+  });
+  assert.deepEqual(calls.at(-1), {
+    operation: 'documento.buscar',
+    input: {
+      texto: 'contrato',
+      cliente: 'Ficticio',
+      folio: 'KVG',
+      orden: 'nombre',
+      limite: 6,
+      desplazamiento: 0,
+    },
+  });
+  const patch = (path, body, csrf = browser.csrfToken) =>
+    browser.request(`documents/${id}/${path}`, {
+      method: 'PATCH',
+      body,
+      headers: { Origin: APP_ORIGIN, 'X-CSRF-Token': csrf },
+    });
+  const classification = {
+    revision: 2,
+    categoryId: id,
+    reason: 'CORREGIR_CLASIFICACION',
+  };
+  assert.equal((await patch('category', classification)).status, 403);
+  state.capabilities.push(
+    permit('documento.clasificar'),
+    permit('documento.asociar'),
+  );
+  assert.equal((await patch('category', classification, '')).status, 403);
+  assert.equal(
+    (await patch('category', { ...classification, revision: '2' })).status,
+    400,
+  );
+  assert.equal(
+    (await patch('category', { ...classification, reason: 'dato libre' }))
+      .status,
+    400,
+  );
+  assert.equal(
+    (await patch('category', { ...classification, versionId: id })).status,
+    400,
+  );
+  assert.equal((await patch('category', classification)).status, 200);
+  assert.deepEqual(calls.at(-1), {
+    operation: 'documento.clasificar',
+    input: {
+      documento_id: id,
+      revision: 2,
+      categoria_id: id,
+      motivo: 'CORREGIR_CLASIFICACION',
+    },
+  });
+  const catalog = await browser.request(
+    `documents/${id}/destinations?text=KVG`,
+  );
+  assert.equal(catalog.status, 200);
+  assert.deepEqual((await catalog.json()).items, [
+    { id: destination, folio: 'KVG-FICTICIO' },
+  ]);
+  assert.equal(
+    (
+      await patch('association', {
+        revision: 2,
+        destinationId: destination,
+        reason: '   ',
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await patch('association', {
+        revision: 2,
+        destinationId: destination,
+        reason: '  Traslado ficticio  ',
+      })
+    ).status,
+    200,
+  );
+  assert.deepEqual(calls.at(-1), {
+    operation: 'documento.asociar',
+    input: {
+      documento_id: id,
+      revision: 2,
+      expediente_destino_id: destination,
+      motivo: 'Traslado ficticio',
+    },
+  });
+});

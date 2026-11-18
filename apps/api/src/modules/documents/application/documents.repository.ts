@@ -5,6 +5,11 @@ import type {
   DocumentSummary,
   DocumentDetail,
   DocumentCategory,
+  DocumentFilters,
+  DocumentDestination,
+  DocumentClassificationInput,
+  DocumentAssociationInput,
+  DocumentOrganizationResult,
   RecordPage,
 } from '@kvg/contracts';
 export abstract class DocumentsRepository {
@@ -15,9 +20,23 @@ export abstract class DocumentsRepository {
   abstract upload(token: string, id: string): Promise<UploadStatus>;
   abstract search(
     token: string,
-    caseId: string,
-    offset: number,
+    filters: DocumentFilters & { limit: number; offset: number },
   ): Promise<RecordPage<DocumentSummary>>;
+  abstract destinations(
+    token: string,
+    id: string,
+    query: { text?: string; limit: number; offset: number },
+  ): Promise<RecordPage<DocumentDestination>>;
+  abstract classify(
+    token: string,
+    id: string,
+    input: DocumentClassificationInput,
+  ): Promise<DocumentOrganizationResult>;
+  abstract associate(
+    token: string,
+    id: string,
+    input: DocumentAssociationInput,
+  ): Promise<DocumentOrganizationResult>;
   abstract get(token: string, id: string): Promise<DocumentDetail>;
   abstract categories(token: string): Promise<DocumentCategory[]>;
   abstract authorizeDownload(
