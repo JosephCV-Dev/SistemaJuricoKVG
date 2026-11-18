@@ -739,3 +739,71 @@ input[type='file'] {
 .client-profile-card .badge {
   margin-inline-start: 8px;
 }
+
+.login-preview {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 12% 90%, #52243f 0%, transparent 48%),
+    radial-gradient(ellipse at 85% 10%, #314b78 0%, transparent 55%), #121d32;
+}
+.login-preview .login-ghost-fibers {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+.login-preview .access-main {
+  --bg: #111c30;
+  --ink: #f2f5fc;
+  --mut: #b5c4df;
+  --line: #526381;
+  --acb: #233555;
+  --control-line: #7183a2;
+  color: var(--ink);
+  color-scheme: dark;
+  background: linear-gradient(150deg, rgb(26 40 66 / 98%), rgb(17 23 41 / 98%));
+  border-color: var(--line);
+  border-radius: 20px;
+  box-shadow: 0 18px 55px rgb(6 12 24 / 55%);
+}
+
+.login-logo-filter {
+  position: absolute;
+}
+.login-preview .access-brand img {
+  filter: url('#kvg-login-ink');
+}
+.login-preview .access-brand p {
+  margin-top: 10px;
+}
+.login-preview .visual-heading > .app-icon {
+  color: #c7d9ff;
+}
+.login-preview input {
+  background: #101b30;
+  min-height: 46px;
+}
+.login-preview :focus-visible {
+  outline-color: #a9c7ff;
+}
+.login-preview button[type='submit'] {
+  justify-content: center;
+  min-height: 46px;
+  background: linear-gradient(105deg, #34578e, #78344e);
+  border-color: #a07391;
+}
+.login-preview .button-secondary,
+.login-preview code {
+  color: var(--ink);
+}
+.login-preview a {
+  color: #c2d6ff;
+}
+.login-preview [role='alert'] {
+  background: #3e2235;
+  color: #ffcad8;
+  border-color: #ef8faf;
+}

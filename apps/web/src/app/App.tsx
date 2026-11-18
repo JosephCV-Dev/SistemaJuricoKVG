@@ -1,6 +1,7 @@
 import type { AuthState, SessionCapabilities } from '@kvg/contracts';
 import { useState } from 'react';
 import { IdentitySection } from '../features/identity/IdentitySection';
+import GhostFibers from '../features/identity/GhostFibers';
 import { RecordsWorkspace } from '../features/records/RecordsWorkspace';
 import { Icon } from '../shared/ui/Icon';
 import { Sidebar } from './Sidebar';
@@ -33,7 +34,28 @@ export function App() {
   }
   const authenticated = auth.status === 'authenticated';
   return (
-    <div className={authenticated ? 'app-layout' : 'access-layout'}>
+    <div
+      className={authenticated ? 'app-layout' : 'access-layout login-preview'}
+    >
+      {!authenticated && (
+        <GhostFibers
+          className="login-ghost-fibers"
+          aria-hidden="true"
+          glowColor="#527fc4"
+          secondaryColor="#aa476b"
+          lineColor="#bfd1f4"
+          gradient="along"
+          layers={2}
+          threads={48}
+          speed={0.26}
+          brightness={0.84}
+          particles={0.15}
+          mouseInteraction={false}
+          pulseOnClick={false}
+          intro={false}
+          dpr={1}
+        />
+      )}
       <a className="skip-link" href="#main-content">
         Ir al contenido
       </a>
@@ -53,6 +75,30 @@ export function App() {
       >
         {!authenticated && (
           <div className="access-brand">
+            <svg
+              className="login-logo-filter"
+              width="0"
+              height="0"
+              aria-hidden="true"
+            >
+              <defs>
+                <filter
+                  id="kvg-login-ink"
+                  x="0"
+                  y="0"
+                  width="100%"
+                  height="100%"
+                  colorInterpolationFilters="sRGB"
+                >
+                  <feColorMatrix in="SourceGraphic" type="luminanceToAlpha" />
+                  <feComponentTransfer result="ink-mask">
+                    <feFuncA type="linear" slope="-1.35" intercept="1.31" />
+                  </feComponentTransfer>
+                  <feFlood floodColor="#e5a0b5" result="ink" />
+                  <feComposite in="ink" in2="ink-mask" operator="in" />
+                </filter>
+              </defs>
+            </svg>
             <img
               src="/kvg-logo.jpg"
               alt="KVG Asesores Corporativos"
