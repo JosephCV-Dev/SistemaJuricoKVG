@@ -31,7 +31,7 @@ export function validateEnvironment(
     throw new Error('NODE_ENV debe ser development, test o production.');
   }
 
-  const rawPort = String(input.API_PORT ?? '3000');
+  const rawPort = String(input.API_PORT ?? input.PORT ?? '3000');
   const port = Number(rawPort);
   if (
     !/^\d+$/.test(rawPort) ||
@@ -53,7 +53,9 @@ export function validateEnvironment(
     'SUPABASE_PUBLISHABLE_KEY',
   );
   const originText =
-    optionalText(input.APP_ORIGIN, 'APP_ORIGIN') ?? 'http://127.0.0.1:5173';
+    optionalText(input.APP_ORIGIN, 'APP_ORIGIN') ??
+    optionalText(input.RENDER_EXTERNAL_URL, 'RENDER_EXTERNAL_URL') ??
+    'http://127.0.0.1:5173';
   let origin: URL;
   try {
     origin = new URL(originText);

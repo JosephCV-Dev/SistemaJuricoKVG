@@ -16,6 +16,7 @@
     "dev:web": "npm run dev --workspace @kvg/web",
     "build": "npm run build --workspace @kvg/contracts && npm run build --workspace @kvg/api && npm run build --workspace @kvg/web",
     "start:api": "npm run start --workspace @kvg/api",
+    "start:render": "npm run start:render --workspace @kvg/api",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run build --workspace @kvg/api && npm run test --workspace @kvg/api",
     "format": "prettier --write .",

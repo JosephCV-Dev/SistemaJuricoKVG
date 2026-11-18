@@ -76,6 +76,11 @@ plegable en móvil, controles de formulario consistentes, foco de teclado y
 tablas desplazables. El siguiente bloque es **8**, configuración de producción,
 revisión de seguridad y lanzamiento. [Verificación visual](interface.md#paso-7).
 
+**8 verificado en desarrollo.** La comprobación incluye los roles de la demo,
+una carga y descarga beta, el ensayo HTTPS local y la restauración aislada.
+La validación en el destino de producción queda pendiente.
+[Estado de alojamiento y evidencia](release-verification.md).
+
 La demo mantiene su modo beta local. El antimalware operativo y el despliegue
 separado siguen pendientes.
 
@@ -176,7 +181,10 @@ casos de uso. [Cambios y verificación](interface.md#paso-7).
 
 ### 8. Configuración de producción, revisión de seguridad y lanzamiento
 
-Antes del lanzamiento final, elegir y documentar alojamiento y operación según PT06/PT08, sin fijar todavía un proveedor. Separar desarrollo, pruebas y producción y revisar los recorridos funcionales completos en el entorno de destino.
+Render alojará la web, la API y el trabajador. Supabase alojará PostgreSQL,
+Auth y Storage. Queda adaptar el paquete al despliegue en Render, separar
+desarrollo, pruebas y producción, y verificar los recorridos en el destino.
+[Verificación previa al lanzamiento](release-verification.md).
 
 - Configurar secretos, su custodia y rotación; retirar credenciales de propietario del proceso ordinario y comprobar los privilegios mínimos del rol de sesiones y de los trabajadores.
 - Revisar Supabase Auth, invitaciones, MFA, recuperación y límites de intentos. La limitación local por proceso debe adaptarse a varias instancias y coordinarse con los controles del proveedor.
