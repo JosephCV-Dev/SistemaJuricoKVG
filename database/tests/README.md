@@ -82,3 +82,9 @@ baseline y migraciones. Comprueba edición auditada, reserva idempotente, dos
 intentos con la misma revisión, rechazo, historial con permiso independiente
 de descarga y conservación de la revisión jurídica de la primera versión.
 Revierte la transacción y representa Storage con referencias ficticias.
+
+`document-review-local.sql` verifica CU016/CU026 con el mismo fixture,
+baseline y migraciones aplicadas a PostgreSQL efímero. Comprueba la
+privacidad de observaciones, correcciones, transiciones, evidencia por
+versión, revocación en sesión vigente y bloqueo técnico. Revierte los
+datos y usa referencias ficticias de Storage.

@@ -34,6 +34,9 @@ import {
   ClassifyDocumentDto,
   AssociateDocumentDto,
   UpdateDocumentMetadataDto,
+  DocumentVersionIdDto,
+  DocumentReviewDto,
+  DocumentStateDto,
 } from './documents.dto';
 const scope = ['PRINCIPAL', 'COLABORADOR', 'EXPLICITO'];
 @Controller('documents')
@@ -186,6 +189,51 @@ export class DocumentsController {
     @Req() req: Request,
   ) {
     return this.documents.createVersion(userAccessToken(req), p.id, input);
+  }
+  @Get(':id/versions/:versionId/review')
+  @RequirePermission('documento.consultar', scope)
+  versionReview(
+    @Param() p: DocumentVersionIdDto,
+    @Query() query: RecordPaginationDto,
+    @Req() req: Request,
+  ) {
+    return this.documents.repository.versionReview(
+      userAccessToken(req),
+      p.id,
+      p.versionId,
+      query,
+    );
+  }
+  @Post(':id/versions/:versionId/review')
+  @UseGuards(CsrfGuard)
+  @RequirePermission('documento.revisar', scope)
+  review(
+    @Param() p: DocumentVersionIdDto,
+    @Body() input: DocumentReviewDto,
+    @Req() req: Request,
+  ) {
+    return this.documents.repository.review(
+      userAccessToken(req),
+      p.id,
+      p.versionId,
+      input,
+    );
+  }
+  @Patch(':id/versions/:versionId/state')
+  @UseGuards(CsrfGuard)
+  @RequirePermission('documento.consultar', scope)
+  changeState(
+    @Param() p: DocumentVersionIdDto,
+    @Body() input: DocumentStateDto,
+    @Req() req: Request,
+  ) {
+    // El RPC comprueba el permiso específico según estado y versión bloqueados.
+    return this.documents.repository.changeState(
+      userAccessToken(req),
+      p.id,
+      p.versionId,
+      input,
+    );
   }
   @Patch(':id/metadata')
   @UseGuards(CsrfGuard)

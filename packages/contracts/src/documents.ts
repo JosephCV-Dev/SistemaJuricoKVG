@@ -1,3 +1,5 @@
+import type { RecordPage } from './records';
+
 export type UploadState =
   | 'RECIBIENDO'
   | 'PENDIENTE_VERIFICACION'
@@ -92,6 +94,58 @@ export interface DocumentVersionHistoryEntry extends DocumentVersion {
   }[];
 }
 
+export type DocumentState =
+  'RECIBIDO' | 'EN_REVISION' | 'VALIDADO' | 'ARCHIVADO';
+export type DocumentReviewOutcome =
+  'OBSERVACIONES' | 'APTO_PARA_VALIDAR' | 'REQUIERE_CORRECCION';
+export interface DocumentReviewInput {
+  requestId: string;
+  result: DocumentReviewOutcome;
+  observations: string;
+  correctsId?: string;
+}
+export interface DocumentReviewResult {
+  id: string;
+  currentVersionChanged: boolean;
+}
+export interface DocumentStateInput {
+  revision: number;
+  status: DocumentState;
+  reason: string;
+  reviewId?: string;
+}
+export interface DocumentStateResult {
+  versionId: string;
+  status: DocumentState;
+  revision: number;
+}
+interface DocumentTimelineEntry {
+  id: string;
+  author: string;
+  at: string;
+}
+export interface DocumentLegalReview extends DocumentTimelineEntry {
+  kind: 'review';
+  result: DocumentReviewOutcome;
+  observations: string;
+  correctsId: string | null;
+  superseded: boolean;
+}
+export interface DocumentStateChange extends DocumentTimelineEntry {
+  kind: 'state';
+  previous: DocumentState | null;
+  status: DocumentState;
+  reason: string;
+  reviewId: string | null;
+}
+export interface DocumentVersionReview extends DocumentStateResult {
+  number: number;
+  current: boolean;
+  canReview: boolean;
+  transitions: { status: DocumentState; requiresReview: boolean }[];
+  timeline: RecordPage<DocumentLegalReview | DocumentStateChange>;
+}
+
 export type ClassificationReason =
   'CORREGIR_CLASIFICACION' | 'ORGANIZACION_CATALOGO' | 'OTRA_CORRECCION';
 export interface DocumentClassification {
@@ -119,7 +173,7 @@ export interface DocumentFilters {
   client?: string;
   from?: string;
   to?: string;
-  status?: 'RECIBIDO' | 'EN_REVISION' | 'VALIDADO' | 'ARCHIVADO';
+  status?: DocumentState;
   order?: 'recientes' | 'antiguos' | 'nombre';
 }
 export interface DocumentDestination {

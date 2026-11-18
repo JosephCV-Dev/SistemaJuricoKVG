@@ -17,11 +17,7 @@ import {
   uploadStatus,
 } from './documents-api';
 
-const versionDate = new Intl.DateTimeFormat('es-MX', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-  timeZone: 'America/Merida',
-});
+import { documentTimestamp } from './document-format';
 
 function uploadMessage(status: UploadStatus): string {
   switch (status.state) {
@@ -47,6 +43,7 @@ export function DocumentVersions({
   onPublished,
   onRefresh,
   onDownload,
+  onOpenReview,
 }: {
   detail: DocumentDetail;
   busy: boolean;
@@ -54,6 +51,7 @@ export function DocumentVersions({
   onPublished: (signal: AbortSignal) => Promise<void>;
   onRefresh: () => void;
   onDownload: () => void;
+  onOpenReview: (versionId: string) => void;
 }) {
   const formId = useId();
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -265,8 +263,7 @@ export function DocumentVersions({
                     {item.status.replaceAll('_', ' ')}
                   </p>
                   <p>
-                    {item.author} ·{' '}
-                    {versionDate.format(new Date(item.publishedAt))}
+                    {item.author} · {documentTimestamp(item.publishedAt)}
                   </p>
                   <p>Motivo: {item.reason}</p>
                   <p>
@@ -281,7 +278,7 @@ export function DocumentVersions({
                       {item.reviews.map((review) => (
                         <li key={review.id}>
                           {review.result.replaceAll('_', ' ')} · {review.author}{' '}
-                          · {versionDate.format(new Date(review.at))}
+                          · {documentTimestamp(review.at)}
                         </li>
                       ))}
                     </ul>
@@ -301,6 +298,14 @@ export function DocumentVersions({
                       Descargar versión {item.number}
                     </button>
                   )}
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    disabled={busy}
+                    onClick={() => onOpenReview(item.id)}
+                  >
+                    Revisión y estado de la versión {item.number}
+                  </button>
                 </li>
               ))}
             </ol>

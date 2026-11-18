@@ -10,12 +10,18 @@ import {
   Min,
   Max,
 } from 'class-validator';
+import type { DocumentReviewOutcome, DocumentState } from '@kvg/contracts';
 import {
   CreationDto,
+  RecordIdDto,
   Trim,
   SearchRecordsDto,
   IfProvided,
 } from '../../../common/dto/record.dto';
+import {
+  DOCUMENT_REVIEW_OUTCOMES,
+  DOCUMENT_STATES,
+} from '../domain/document.types';
 class DocumentFileDto extends CreationDto {
   @Trim()
   @IsString()
@@ -47,14 +53,27 @@ export class SearchDocumentsDto extends SearchRecordsDto {
   @IsDateString({ strict: true })
   to?: string;
   @IfProvided()
-  @IsIn(['RECIBIDO', 'EN_REVISION', 'VALIDADO', 'ARCHIVADO'])
-  status?: 'RECIBIDO' | 'EN_REVISION' | 'VALIDADO' | 'ARCHIVADO';
+  @IsIn(DOCUMENT_STATES)
+  status?: DocumentState;
   @IfProvided()
   @IsIn(['recientes', 'antiguos', 'nombre'])
   order?: 'recientes' | 'antiguos' | 'nombre';
 }
 class DocumentRevisionDto {
   @IsInt() @Min(1) @Max(2147483647) revision!: number;
+}
+export class DocumentVersionIdDto extends RecordIdDto {
+  @IsUUID('4') versionId!: string;
+}
+export class DocumentReviewDto extends CreationDto {
+  @IsIn(DOCUMENT_REVIEW_OUTCOMES) result!: DocumentReviewOutcome;
+  @Trim() @IsString() @MinLength(1) @MaxLength(4000) observations!: string;
+  @IfProvided() @IsUUID('4') correctsId?: string;
+}
+export class DocumentStateDto extends DocumentRevisionDto {
+  @IsIn(DOCUMENT_STATES) status!: DocumentState;
+  @Trim() @IsString() @MinLength(1) @MaxLength(2000) reason!: string;
+  @IfProvided() @IsUUID('4') reviewId?: string;
 }
 export class UpdateDocumentMetadataDto extends DocumentRevisionDto {
   @Trim()

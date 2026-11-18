@@ -5,6 +5,15 @@ import type {
   DocumentClassificationInput,
   DocumentAssociationInput,
   DocumentOrganizationResult,
+  DocumentLegalReview,
+  DocumentReviewInput,
+  DocumentReviewResult,
+  DocumentReviewOutcome,
+  DocumentState,
+  DocumentStateChange,
+  DocumentStateInput,
+  DocumentStateResult,
+  DocumentVersionReview,
   DocumentDetail,
   DocumentMetadataInput,
   DocumentVersion,
@@ -18,6 +27,10 @@ import type {
   UploadState,
 } from '@kvg/contracts';
 import { getJson, mutate, readJson } from '../../shared/api/session-http.ts';
+import {
+  documentReviewLabels,
+  documentStateLabels,
+} from './document-format.ts';
 const invalid = (): never => {
   throw new Error('La respuesta documental no cumple el contrato.');
 };
@@ -97,6 +110,54 @@ function array<T>(value: unknown, read: (item: unknown) => T): T[] {
 }
 function bool(value: unknown): boolean {
   return typeof value === 'boolean' ? value : invalid();
+}
+function documentState(value: unknown): DocumentState {
+  const state = text(value);
+  return Object.hasOwn(documentStateLabels, state)
+    ? (state as DocumentState)
+    : invalid();
+}
+function reviewOutcome(value: unknown): DocumentReviewOutcome {
+  const result = text(value);
+  return Object.hasOwn(documentReviewLabels, result)
+    ? (result as DocumentReviewOutcome)
+    : invalid();
+}
+function stateResult(row: Record<string, unknown>): DocumentStateResult {
+  return {
+    versionId: text(row.versionId),
+    status: documentState(row.status),
+    revision: integer(row.revision),
+  };
+}
+function reviewEvent(
+  value: unknown,
+): DocumentLegalReview | DocumentStateChange {
+  const row = obj(value);
+  const shared = {
+    id: text(row.id),
+    author: text(row.author),
+    at: text(row.at),
+  };
+  if (row.kind === 'review')
+    return {
+      ...shared,
+      kind: 'review',
+      result: reviewOutcome(row.result),
+      observations: text(row.observations),
+      correctsId: nullable(row.correctsId),
+      superseded: bool(row.superseded),
+    };
+  if (row.kind === 'state')
+    return {
+      ...shared,
+      kind: 'state',
+      previous: row.previous === null ? null : documentState(row.previous),
+      status: documentState(row.status),
+      reason: text(row.reason),
+      reviewId: nullable(row.reviewId),
+    };
+  return invalid();
 }
 function page<T>(value: unknown, read: (item: unknown) => T): RecordPage<T> {
   const r = obj(value);
@@ -223,6 +284,69 @@ export async function documentVersions(
         }),
       };
     },
+  );
+}
+function versionResource(id: string, versionId: string) {
+  return `${base}/${encodeURIComponent(id)}/versions/${encodeURIComponent(versionId)}`;
+}
+export async function documentVersionReview(
+  id: string,
+  versionId: string,
+  offset: number,
+  signal: AbortSignal,
+): Promise<DocumentVersionReview> {
+  const query = new URLSearchParams({ offset: String(offset) });
+  const row = obj(
+    await getJson(`${versionResource(id, versionId)}/review?${query}`, signal),
+  );
+  return {
+    ...stateResult(row),
+    number: integer(row.number),
+    current: bool(row.current),
+    canReview: bool(row.canReview),
+    transitions: array(row.transitions, (value) => {
+      const transition = obj(value);
+      return {
+        status: documentState(transition.status),
+        requiresReview: bool(transition.requiresReview),
+      };
+    }),
+    timeline: page(row.timeline, reviewEvent),
+  };
+}
+export async function saveDocumentReview(
+  id: string,
+  versionId: string,
+  input: DocumentReviewInput,
+  signal: AbortSignal,
+): Promise<DocumentReviewResult> {
+  const row = obj(
+    await readJson(
+      await mutate(`${versionResource(id, versionId)}/review`, input, signal),
+    ),
+  );
+  return {
+    id: text(row.id),
+    currentVersionChanged: bool(row.currentVersionChanged),
+  };
+}
+export async function changeDocumentState(
+  id: string,
+  versionId: string,
+  input: DocumentStateInput,
+  signal: AbortSignal,
+): Promise<DocumentStateResult> {
+  return stateResult(
+    obj(
+      await readJson(
+        await mutate(
+          `${versionResource(id, versionId)}/state`,
+          input,
+          signal,
+          'PATCH',
+        ),
+      ),
+    ),
   );
 }
 export async function uploadStatus(

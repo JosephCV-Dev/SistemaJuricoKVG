@@ -434,3 +434,153 @@ test('metadatos, carga nueva e historial mantienen contratos y permisos separado
   );
   assert(calls.every((call) => typeof call.token === 'string' && call.token));
 });
+
+test('revisión y estado documental conservan versión, guard, CSRF y evidencia tipada', async (t) => {
+  const versionId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const reviewId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  const calls = [];
+  const { browser, state } = await application(t, {
+    rpc: {
+      execute: async (token, operation, input) => {
+        calls.push({ token, operation, input });
+        if (operation === 'documento.revision')
+          return {
+            version_id: versionId,
+            estado: 'EN_REVISION',
+            revision: 2,
+            numero_version: 1,
+            vigente: true,
+            puede_revisar: true,
+            transiciones: [{ destino: 'VALIDADO', requiere_revision: true }],
+            eventos: [
+              {
+                tipo: 'revision',
+                id: reviewId,
+                autor: 'Abogacía ficticia',
+                fecha: '2026-11-17T12:00:00Z',
+                resultado: 'APTO_PARA_VALIDAR',
+                observaciones: 'Cotejo ficticio',
+                corrige_id: null,
+                corregida: false,
+              },
+            ],
+          };
+        if (operation === 'documento.revisar')
+          return {
+            revision_juridica_id: reviewId,
+            version_vigente_cambio: true,
+          };
+        if (operation === 'documento.cambiar_estado')
+          return { version_id: versionId, estado: 'VALIDADO', revision: 3 };
+        throw new Error('RPC inesperada');
+      },
+    },
+  });
+  const permit = (permission) => ({
+    permission,
+    context: 'PRINCIPAL',
+    requiresMfa: true,
+    requiresDecision: false,
+  });
+  const path = `documents/${id}/versions/${versionId}`;
+  const review = {
+    requestId: id,
+    result: 'APTO_PARA_VALIDAR',
+    observations: ' Cotejo ficticio ',
+  };
+  const status = {
+    revision: 2,
+    status: 'VALIDADO',
+    reason: ' Evidencia aprobada ',
+    reviewId,
+  };
+  const patch = (body, csrf = browser.csrfToken) =>
+    browser.request(path + '/state', {
+      method: 'PATCH',
+      body,
+      headers: { Origin: APP_ORIGIN, 'X-CSRF-Token': csrf },
+    });
+  assert.equal((await browser.request(path + '/review')).status, 401);
+  await authenticated(browser);
+  state.capabilities = [permit('documento.consultar')];
+  assert.equal((await browser.post(path + '/review', review)).status, 403);
+  assert.equal((await patch(status, '')).status, 403);
+  assert.equal((await patch({ ...status, versionId })).status, 400);
+  assert.equal((await patch({ ...status, revision: '2' })).status, 400);
+  assert.equal((await patch({ ...status, reviewId: null })).status, 400);
+  assert.equal(
+    (await browser.request(`documents/${id}/versions/ajena/review`)).status,
+    400,
+  );
+  const timeline = await browser.request(path + '/review?limit=1&offset=0');
+  assert.equal(timeline.status, 200);
+  const workspace = await timeline.json();
+  assert.equal(workspace.versionId, versionId);
+  assert.deepEqual(workspace.transitions, [
+    { status: 'VALIDADO', requiresReview: true },
+  ]);
+  assert.equal(workspace.timeline.items[0].observations, 'Cotejo ficticio');
+  assert.deepEqual(calls.at(-1).input, {
+    documento_id: id,
+    version_id: versionId,
+    limite: 2,
+    desplazamiento: 0,
+  });
+  state.capabilities.push(
+    permit('documento.revisar'),
+    permit('documento.validar'),
+  );
+  assert.equal(
+    (
+      await browser.request(path + '/review', {
+        method: 'POST',
+        body: review,
+        headers: { Origin: APP_ORIGIN },
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (await browser.post(path + '/review', { ...review, authorId: id })).status,
+    400,
+  );
+  assert.equal(
+    (await browser.post(path + '/review', { ...review, observations: '  ' }))
+      .status,
+    400,
+  );
+  assert.equal(
+    (await browser.post(path + '/review', { ...review, result: 'VALIDADO' }))
+      .status,
+    400,
+  );
+  const saved = await browser.post(path + '/review', review);
+  assert.equal(saved.status, 201);
+  assert.deepEqual(await saved.json(), {
+    id: reviewId,
+    currentVersionChanged: true,
+  });
+  assert.deepEqual(calls.at(-1).input, {
+    documento_id: id,
+    version_id: versionId,
+    solicitud_id: id,
+    resultado: 'APTO_PARA_VALIDAR',
+    observaciones: 'Cotejo ficticio',
+  });
+  const changed = await patch(status);
+  assert.equal(changed.status, 200);
+  assert.deepEqual(await changed.json(), {
+    versionId,
+    status: 'VALIDADO',
+    revision: 3,
+  });
+  assert.deepEqual(calls.at(-1).input, {
+    documento_id: id,
+    version_id: versionId,
+    revision: 2,
+    estado: 'VALIDADO',
+    motivo: 'Evidencia aprobada',
+    revision_juridica_id: reviewId,
+  });
+  assert(calls.every((call) => call.token.startsWith('local-private-aal2')));
+});

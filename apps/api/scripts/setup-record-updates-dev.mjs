@@ -16,11 +16,12 @@ const migrations = {
   tracking: ['202611170011_case_tracking.sql'],
   documentOrganization: ['202611170012_document_organization.sql'],
   documentVersions: ['202611170013_document_versions.sql'],
+  documentReview: ['202611170014_document_legal_review.sql'],
 };
 try {
   if (!Object.hasOwn(migrations, scope))
     throw new DevelopmentSetupError(
-      'Indica la preparación de clientes, expedientes, asignaciones, seguimiento, organización documental o versiones.',
+      'Indica la preparación de clientes, expedientes, asignaciones, seguimiento, organización documental, versiones o revisión jurídica.',
     );
   const config = await developmentConfig();
   const fixture = await readDevelopmentFixture(config);

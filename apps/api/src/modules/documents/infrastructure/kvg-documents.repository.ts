@@ -11,6 +11,13 @@ import type {
   DocumentMetadataInput,
   DocumentVersion,
   DocumentVersionHistoryEntry,
+  DocumentReviewInput,
+  DocumentReviewResult,
+  DocumentVersionReview,
+  DocumentLegalReview,
+  DocumentStateChange,
+  DocumentStateInput,
+  DocumentStateResult,
   DocumentOrganizationResult,
 } from '@kvg/contracts';
 import { KvgRpcService } from '../../../infrastructure/supabase/kvg-rpc.service';
@@ -24,6 +31,10 @@ import {
   invalidRpcResult,
 } from '../../../infrastructure/supabase/rpc-result';
 import { DocumentsRepository } from '../application/documents.repository';
+import {
+  DOCUMENT_REVIEW_OUTCOMES,
+  DOCUMENT_STATES,
+} from '../domain/document.types';
 const states = [
   'RECIBIENDO',
   'PENDIENTE_VERIFICACION',
@@ -98,6 +109,53 @@ function versionHistory(value: unknown): DocumentVersionHistoryEntry {
     }),
   };
 }
+function flag(value: unknown): boolean {
+  return typeof value === 'boolean' ? value : invalidRpcResult();
+}
+function documentState(value: unknown) {
+  return DOCUMENT_STATES.find((state) => state === value) ?? invalidRpcResult();
+}
+function stateResult(row: Record<string, unknown>): DocumentStateResult {
+  return {
+    versionId: text(row.version_id),
+    status: documentState(row.estado),
+    revision: integer(row.revision),
+  };
+}
+function timelineEvent(
+  value: unknown,
+): DocumentLegalReview | DocumentStateChange {
+  const row = obj(value);
+  const shared = {
+    id: text(row.id),
+    author: text(row.autor),
+    at: date(row.fecha),
+  };
+  switch (row.tipo) {
+    case 'revision':
+      return {
+        ...shared,
+        kind: 'review',
+        result:
+          DOCUMENT_REVIEW_OUTCOMES.find((result) => result === row.resultado) ??
+          invalidRpcResult(),
+        observations: text(row.observaciones),
+        correctsId: nullable(row.corrige_id),
+        superseded: flag(row.corregida),
+      };
+    case 'estado':
+      return {
+        ...shared,
+        kind: 'state',
+        previous: row.origen === null ? null : documentState(row.origen),
+        status: documentState(row.destino),
+        reason: text(row.motivo),
+        reviewId: nullable(row.revision_juridica_id),
+      };
+    default:
+      return invalidRpcResult();
+  }
+}
 @Injectable()
 export class KvgDocumentsRepository extends DocumentsRepository {
   constructor(private readonly rpc: KvgRpcService) {
@@ -160,6 +218,75 @@ export class KvgDocumentsRepository extends DocumentsRepository {
       ),
       limit,
       offset,
+    );
+  }
+  async versionReview(
+    token: string,
+    id: string,
+    versionId: string,
+    { limit, offset }: { limit: number; offset: number },
+  ): Promise<DocumentVersionReview> {
+    const row = obj(
+      await this.rpc.execute(token, 'documento.revision', {
+        documento_id: id,
+        version_id: versionId,
+        limite: limit + 1,
+        desplazamiento: offset,
+      }),
+    );
+    return {
+      ...stateResult(row),
+      number: integer(row.numero_version),
+      current: flag(row.vigente),
+      canReview: flag(row.puede_revisar),
+      transitions: array(row.transiciones, (value) => {
+        const transition = obj(value);
+        return {
+          status: documentState(transition.destino),
+          requiresReview: flag(transition.requiere_revision),
+        };
+      }),
+      timeline: page(array(row.eventos, timelineEvent), limit, offset),
+    };
+  }
+  async review(
+    token: string,
+    id: string,
+    versionId: string,
+    input: DocumentReviewInput,
+  ): Promise<DocumentReviewResult> {
+    const row = obj(
+      await this.rpc.execute(token, 'documento.revisar', {
+        documento_id: id,
+        version_id: versionId,
+        solicitud_id: input.requestId,
+        observaciones: input.observations,
+        resultado: input.result,
+        ...(input.correctsId ? { corrige_revision_id: input.correctsId } : {}),
+      }),
+    );
+    return {
+      id: text(row.revision_juridica_id),
+      currentVersionChanged: flag(row.version_vigente_cambio),
+    };
+  }
+  async changeState(
+    token: string,
+    id: string,
+    versionId: string,
+    input: DocumentStateInput,
+  ): Promise<DocumentStateResult> {
+    return stateResult(
+      obj(
+        await this.rpc.execute(token, 'documento.cambiar_estado', {
+          documento_id: id,
+          version_id: versionId,
+          revision: input.revision,
+          estado: input.status,
+          motivo: input.reason,
+          ...(input.reviewId ? { revision_juridica_id: input.reviewId } : {}),
+        }),
+      ),
     );
   }
   async upload(token: string, id: string) {

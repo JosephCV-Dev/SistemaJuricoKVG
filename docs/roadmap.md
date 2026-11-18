@@ -46,8 +46,12 @@ vigente y las revisiones jurídicas de cada original. Una reserva obsoleta
 queda cancelada y la descarga de anteriores conserva su permiso específico.
 [Contrato y pruebas](documents.md#paso-5b-de-metadatos-y-versiones).
 
-El siguiente avance es **5C**, revisión jurídica y estados documentales
-(CU016/CU026).
+**5C implementado.** CU016/CU026 (SCRUM-134/135) registran observaciones
+jurídicas vinculadas a la versión examinada. Las transiciones autorizadas
+afectan a la vigente y validarla requiere una revisión apta de esa misma versión.
+[Contrato y pruebas](documents.md#paso-5c-de-revisión-jurídica-y-estados).
+
+El siguiente avance es **5D**, retiro y recuperación documental (CU027/CU028).
 La demo mantiene su modo beta local. El antimalware operativo y el despliegue
 separado siguen pendientes.
 
@@ -183,12 +187,12 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 > Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz con el estilo mínimo existente.
 
-**Siguiente petición recomendada para el paso 5C**
+**Siguiente petición recomendada para el paso 5D**
 
-> Implementa CU016/CU026. Vincula las observaciones y decisiones jurídicas a
-> la versión exacta, aplica las transiciones permitidas y conserva el historial.
-> Verifica que una decisión de otra versión y un permiso revocado no permitan
-> validar la vigente. Mantén la interfaz KVG.
+> Implementa CU027/CU028. Aplica retiro lógico con motivo y auditoría y recupera
+> solo cuando el permiso, las restricciones vigentes y la integridad de los
+> originales lo permitan. Verifica la denegación de consulta y descarga durante
+> el retiro. Mantén la interfaz KVG y los pendientes acordados para la beta.
 
 **Petición para retomar el prototipo y despliegue cuando haya recursos:**
 

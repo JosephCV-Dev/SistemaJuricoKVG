@@ -163,3 +163,9 @@ registra revisión y motivo. Publicar una nueva versión conserva originales,
 autoría y hash, exige revisión vigente y comienza en `RECIBIDO`. El historial
 respeta alcance y permiso de consulta de versiones. La descarga usa su propio
 permiso. [Contrato y evidencia](documents.md#paso-5b-de-metadatos-y-versiones).
+
+CU016 y CU026 (SCRUM-134/135) se cubren en 5C. Las observaciones jurídicas
+quedan en la versión examinada, tienen acceso restringido y se corrigen con
+otra entrada. Las transiciones de la vigente llevan motivo y revisión. Validar
+requiere evidencia apta de esa versión y permiso específico actual.
+[Contrato y evidencia](documents.md#paso-5c-de-revisión-jurídica-y-estados).

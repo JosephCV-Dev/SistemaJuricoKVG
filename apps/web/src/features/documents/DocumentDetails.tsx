@@ -4,16 +4,20 @@ import type {
   DocumentCategory,
   DocumentDestination,
   DocumentDetail,
+  DocumentVersionReview,
   RecordPage,
 } from '@kvg/contracts';
 import {
   categories,
   documentDestinations,
+  documentVersionReview,
   organizeDocument,
   saveDocumentDownload,
   updateDocumentMetadata,
 } from './documents-api';
 import { DocumentVersions } from './DocumentVersions';
+import { DocumentReview } from './DocumentReview';
+import { documentStateLabels } from './document-format';
 
 export type RunDocumentAction = (
   action: (signal: AbortSignal) => Promise<void>,
@@ -65,7 +69,13 @@ export function DocumentDetails({
     useState<RecordPage<DocumentDestination> | null>(null);
   const [destinationId, setDestination] = useState('');
   const [reason, setReason] = useState('');
+  const [review, setReview] = useState<DocumentVersionReview | null>(null);
   const original = detail.version;
+  function openReview(versionId: string) {
+    void run(async (signal) => {
+      setReview(await documentVersionReview(detail.id, versionId, 0, signal));
+    });
+  }
   function searchDestinations(term: string, offset: number) {
     setTargets(null);
     setDestination('');
@@ -124,6 +134,16 @@ export function DocumentDetails({
             }
           >
             Descargar original
+          </button>
+        )}
+        {original && detail.fileAvailable && (
+          <button
+            className="button-secondary"
+            type="button"
+            disabled={busy}
+            onClick={() => openReview(original.id)}
+          >
+            Revisión y estado
           </button>
         )}
         {detail.caseFolio && onOpenCase && (
@@ -454,6 +474,25 @@ export function DocumentDetails({
         </div>
       )}
 
+      {review && (
+        <DocumentReview
+          key={review.versionId}
+          documentId={detail.id}
+          workspace={review}
+          busy={busy}
+          run={run}
+          onClose={() => setReview(null)}
+          onWorkspaceChange={setReview}
+          onRefreshDocument={onRefresh}
+          onChanged={(signal, status) =>
+            onSaved(
+              detail.id,
+              signal,
+              `Estado actualizado a ${documentStateLabels[status]}.`,
+            )
+          }
+        />
+      )}
       {(detail.canUploadVersion || detail.canViewVersions) && (
         <DocumentVersions
           detail={detail}
@@ -464,6 +503,7 @@ export function DocumentDetails({
           }
           onRefresh={onRefresh}
           onDownload={onDownload}
+          onOpenReview={openReview}
         />
       )}
       {detail.classifications.length > 0 && (

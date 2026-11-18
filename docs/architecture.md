@@ -284,3 +284,9 @@ del solicitante. La revisión obsoleta termina el trabajo sin actualizar la
 versión vigente. El nombre y su motivo quedan en un historial privado de
 metadatos. El historial de versiones proyecta integridad y revisiones jurídicas
 con el JWT del usuario. El broker autoriza y comprueba cada descarga por versión.
+
+CU016 y CU026 usan el RPC ordinario y bloquean documento y versión al escribir.
+La matriz SQL determina las transiciones que se muestran y las que se pueden
+confirmar con la autorización actual. Las observaciones y sus correcciones son
+inmutables y permanecen en la versión revisada aunque cambie la vigente. La
+bitácora referencia las operaciones sin copiar las observaciones jurídicas.

@@ -143,8 +143,8 @@ consulta, descarga original y vista móvil del panel documental.
 
 El ensayo acotado de copia y recuperación está en [recovery-rehearsal.md](recovery-rehearsal.md).
 La preparación local no completa el despliegue HTTPS separado (3C), administración
-de trabajos, gestión integral de respaldos, captura de revisiones jurídicas, retiro
-ni recuperación de un documento desde la interfaz. No acredita una garantía RPO/RTO,
+de trabajos, gestión integral de respaldos, retiro ni recuperación de un
+documento desde la interfaz. No acredita una garantía RPO/RTO,
 seguridad absoluta de archivos o restauración completa de Supabase Auth/Storage.
 
 Referencias técnicas consultadas: [ClamAV Docker](https://docs.clamav.net/manual/Installing/Docker.html),
@@ -257,3 +257,59 @@ El trabajador rechazó una carga inválida y canceló un intento con revisión
 obsoleta. El abogado sin alcance recibió 403 al consultar el historial, editar
 y descargar la primera versión. Las publicaciones de este ensayo usaron la
 beta de desarrollo.
+
+## Paso 5C de revisión jurídica y estados
+
+CU016/CU026 (SCRUM-134/135) se usan desde **Revisión y estado** en la ficha
+del documento. El historial de versiones permite consultar la misma sección
+para una versión anterior autorizada. Las entradas se paginan y registran
+autor y fecha de servidor, presentada en hora de Mérida.
+
+Un abogado autorizado registra observaciones de una versión técnicamente
+habilitada con uno de tres resultados, Observaciones, Apto para validar o
+Requiere corrección. La captura conserva la versión examinada si se publica
+otra durante la revisión y muestra un aviso. Una corrección agrega una entrada
+vinculada a la anterior. La revisión corregida permanece en el historial y
+deja de servir como evidencia para una validación nueva. Un reintento conserva
+la misma solicitud cuando el contenido coincide.
+
+La matriz de transiciones se aplica a la versión vigente y a un expediente
+editable. El servidor comprueba la revisión de esa versión, el permiso y el
+motivo justo antes de guardar el cambio y su evento de historial juntos.
+
+| Origen      | Destino     | Condición                                                               |
+| ----------- | ----------- | ----------------------------------------------------------------------- |
+| Recibido    | En revisión | Permiso de iniciar revisión.                                            |
+| En revisión | Recibido    | Permiso de solicitar corrección y su motivo.                            |
+| En revisión | Validado    | Abogado con permiso de validar y revisión apta de la versión.           |
+| Validado    | Archivado   | Permiso de archivar.                                                    |
+| Archivado   | Validado    | Abogado con permiso de reactivar y conservación de la evidencia previa. |
+
+Las observaciones jurídicas se muestran a abogados con alcance de expediente
+y permiso de revisar o validar la versión. Otras cuentas autorizadas pueden
+consultar sus cambios de estado según alcance. La bitácora guarda identidad,
+fecha y referencia de operación con metadatos acotados. El estado y el último
+resultado de análisis técnico son independientes.
+
+| Ruta                                                    | Control                                            |
+| ------------------------------------------------------- | -------------------------------------------------- |
+| `GET /api/v1/documents/:id/versions/:versionId/review`  | Historial paginado y acciones por alcance.         |
+| `POST /api/v1/documents/:id/versions/:versionId/review` | Captura jurídica con solicitud idempotente y CSRF. |
+| `PATCH /api/v1/documents/:id/versions/:versionId/state` | Transición con revisión, motivo, permiso y CSRF.   |
+
+Se aplicó `202611170014_document_legal_review.sql` al Supabase de desarrollo
+con `npm run setup:document-review:dev`. El
+[ensayo SQL aislado](../database/tests/document-review-local.sql) comprobó
+las cinco transiciones, idempotencia, corrección, revocación en sesión
+vigente, privacidad de observaciones, bloqueo técnico y denegaciones por
+revisión obsoleta o evidencia de otra versión.
+
+Pasaron 90 pruebas de `npm run check` y la comprobación de privilegios y
+buckets privados. En Chromium a 390 px con MFA real, Secretaría cambió un
+documento ficticio a En revisión y Abogacía registró su observación y validó
+esa versión. Secretaría recibió 403 al intentar validarla y el resultado de
+su consulta omitió la observación jurídica. La publicación de otra versión
+mientras se redactaba una revisión conservó la observación en la versión
+examinada y mostró un aviso. El servidor denegó cambiar el estado de esa
+versión anterior y usar su evidencia para validar la nueva. Las cargas de
+este ensayo usaron la beta de desarrollo.

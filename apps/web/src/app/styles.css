@@ -294,6 +294,9 @@ tr:last-child td {
 .document-version-history {
   overflow-wrap: anywhere;
 }
+.document-observations {
+  white-space: pre-wrap;
+}
 .review {
   background: var(--acb);
   padding: 16px;

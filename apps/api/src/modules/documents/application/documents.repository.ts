@@ -12,6 +12,11 @@ import type {
   DocumentMetadataInput,
   DocumentVersionUploadInput,
   DocumentVersionHistoryEntry,
+  DocumentVersionReview,
+  DocumentReviewInput,
+  DocumentReviewResult,
+  DocumentStateInput,
+  DocumentStateResult,
   DocumentOrganizationResult,
   RecordPage,
 } from '@kvg/contracts';
@@ -35,6 +40,24 @@ export abstract class DocumentsRepository {
     id: string,
     query: { limit: number; offset: number },
   ): Promise<RecordPage<DocumentVersionHistoryEntry>>;
+  abstract versionReview(
+    token: string,
+    id: string,
+    versionId: string,
+    query: { limit: number; offset: number },
+  ): Promise<DocumentVersionReview>;
+  abstract review(
+    token: string,
+    id: string,
+    versionId: string,
+    input: DocumentReviewInput,
+  ): Promise<DocumentReviewResult>;
+  abstract changeState(
+    token: string,
+    id: string,
+    versionId: string,
+    input: DocumentStateInput,
+  ): Promise<DocumentStateResult>;
   abstract upload(token: string, id: string): Promise<UploadStatus>;
   abstract search(
     token: string,

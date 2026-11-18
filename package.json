@@ -45,7 +45,8 @@
     "setup:assignments:dev": "node apps/api/scripts/setup-record-updates-dev.mjs assignments",
     "setup:tracking:dev": "node apps/api/scripts/setup-record-updates-dev.mjs tracking",
     "setup:document-organization:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentOrganization",
-    "setup:document-versions:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentVersions"
+    "setup:document-versions:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentVersions",
+    "setup:document-review:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentReview"
   },
   "devDependencies": {
     "concurrently": "10.0.6",
