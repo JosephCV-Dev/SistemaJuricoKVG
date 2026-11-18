@@ -58,6 +58,20 @@ async function recordsApp(t) {
             contactos: [],
             identificaciones: [],
           };
+        case 'expediente.cambiar_estado':
+          return { expediente_id: CASE, estado: input.estado, revision: 2 };
+        case 'expediente.avanzar':
+          return { avance_id: REQUEST };
+        case 'expediente.referencias_avance':
+          return [
+            {
+              version_id: REQUEST,
+              documento_id: CASE,
+              nombre: 'Documento ficticio',
+              numero_version: 1,
+              localizador_objeto: 'private',
+            },
+          ];
         case 'expediente.asignar':
         case 'expediente.reasignar':
           return { asignacion_id: REQUEST, expediente_id: CASE, revision: 2 };
@@ -579,4 +593,116 @@ test('asignaciones usan sesión, CSRF y permiso específico; la gestión adminis
       conservar_colaboracion: true,
     },
   });
+});
+
+test('seguimiento conserva el contrato de estado y avances con CSRF, DTO y permiso vigente', async (t) => {
+  const { browser, calls, state } = await recordsApp(t);
+  await authenticated(browser);
+  const path = `cases/${CASE}`;
+  const status = (body, csrf = browser.csrfToken) =>
+    browser.request(path + '/status', {
+      method: 'PATCH',
+      body,
+      headers: { Origin: APP_ORIGIN, 'X-CSRF-Token': csrf },
+    });
+  assert.equal(
+    (
+      await status(
+        { revision: 1, status: 'EN_PROCESO', reason: 'Ficticio' },
+        '',
+      )
+    ).status,
+    403,
+  );
+  for (const input of [
+    { revision: 1, status: 'NUEVO', reason: 'Ficticio' },
+    { revision: '1', status: 'EN_PROCESO', reason: 'Ficticio' },
+    { revision: 1, status: 'EN_PROCESO', reason: '  ' },
+    { revision: 1, status: 'CONCLUIDO', reason: 'Ficticio', actorId: CLIENT },
+  ])
+    assert.equal((await status(input)).status, 400);
+  const changed = await status({
+    revision: 1,
+    status: 'CONCLUIDO',
+    reason: '  Decisión  ',
+    approvalReference: 'APR-01',
+  });
+  assert.equal(changed.status, 200);
+  assert.deepEqual(calls.at(-1), {
+    operation: 'expediente.cambiar_estado',
+    input: {
+      expediente_id: CASE,
+      revision: 1,
+      estado: 'CONCLUIDO',
+      motivo: 'Decisión',
+      referencia_autorizacion: 'APR-01',
+    },
+  });
+  const data = { requestId: REQUEST, description: 'Ficticio' };
+  assert.equal((await browser.post(path + '/progress', data)).status, 403);
+  state.capabilities.push({
+    permission: 'expediente.avanzar',
+    context: 'EXPLICITO',
+    requiresMfa: true,
+    requiresDecision: false,
+  });
+  assert.equal(
+    (
+      await browser.post(path + '/progress', {
+        ...data,
+        occurredOn: '2026-11-17',
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await browser.post(path + '/progress', {
+        ...data,
+        versionIds: [CASE, CASE],
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (await browser.post(path + '/progress', { ...data, authorId: FOREIGN }))
+      .status,
+    400,
+  );
+  assert.equal(
+    (
+      await browser.post(path + '/progress', {
+        ...data,
+        correctsId: CLIENT,
+        occurredOn: '2026-11-17',
+        source: 'Actuación ficticia',
+        versionIds: [CASE],
+      })
+    ).status,
+    201,
+  );
+  assert.deepEqual(calls.at(-1), {
+    operation: 'expediente.avanzar',
+    input: {
+      expediente_id: CASE,
+      solicitud_id: REQUEST,
+      descripcion: 'Ficticio',
+      corrige_avance_id: CLIENT,
+      fecha_hecho: '2026-11-17',
+      procedencia: 'Actuación ficticia',
+      versiones: [{ version_id: CASE }],
+    },
+  });
+  const references = await browser.request(
+    path + '/progress-references?text=Doc',
+  );
+  assert.equal(references.status, 200);
+  assert.deepEqual((await references.json()).items, [
+    {
+      versionId: REQUEST,
+      documentId: CASE,
+      name: 'Documento ficticio',
+      number: 1,
+    },
+  ]);
 });

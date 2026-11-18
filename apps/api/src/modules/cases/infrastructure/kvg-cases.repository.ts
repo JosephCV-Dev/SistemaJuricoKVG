@@ -25,23 +25,20 @@ import type {
   AssignedSearch,
   AssignmentChange,
   ReassignmentChange,
+  StateChange,
+  ProgressInput,
+  ProgressReference,
   NewCase,
 } from '../domain/case.types';
 
 export function readCase(value: unknown): CaseRecord {
   const row = rpcRecord(value);
-  if (
-    !['NUEVO', 'EN_PROCESO', 'PENDIENTE', 'CONCLUIDO', 'ARCHIVADO'].includes(
-      String(row.estado_expediente_codigo),
-    )
-  )
-    return invalidRpcResult();
   return {
     id: rpcText(row.expediente_id),
     folio: rpcText(row.folio_interno),
     clientId: rpcText(row.cliente_principal_id),
     description: rpcText(row.descripcion),
-    status: row.estado_expediente_codigo as CaseState,
+    status: readStatus(row.estado_expediente_codigo),
     externalNumber: rpcNullableText(row.numero_externo),
     externalAuthority: rpcNullableText(row.autoridad_externa),
     createdAt: rpcDate(row.creado_en),
@@ -95,6 +92,16 @@ export class KvgCasesRepository extends CasesRepository {
     return {
       ...readCase(row),
       canAssign: row.puede_asignar === true,
+      hasActivePrincipal: row.principal_activo === true,
+      canAddProgress: row.puede_avanzar === true,
+      transitions: rpcArray(row.transiciones ?? [], (value) => {
+        const item = rpcRecord(value);
+        if (typeof item.juridica !== 'boolean') return invalidRpcResult();
+        return {
+          status: readStatus(item.destino),
+          requiresDecision: item.juridica,
+        };
+      }),
       clientName: rpcNullableText(row.nombre_cliente ?? null),
       canEdit: row.puede_editar === true,
       assignments: rpcArray(row.asignaciones, (value) => {
@@ -119,16 +126,71 @@ export class KvgCasesRepository extends CasesRepository {
           to: rpcText(item.estado_destino_codigo),
           reason: rpcText(item.motivo),
           at: rpcDate(item.registrado_en),
+          authorName: rpcNullableText(item.nombre_autor ?? null),
+          approvalReference: rpcNullableText(
+            item.referencia_autorizacion ?? null,
+          ),
         };
       }),
       progress: rpcArray(row.avances, (value) => {
         const item = rpcRecord(value);
         return {
+          id: rpcText(item.avance_id),
           description: rpcText(item.descripcion),
           at: rpcDate(item.registrado_en),
+          authorName: rpcNullableText(item.nombre_autor ?? null),
+          correctsId: rpcNullableText(item.corrige_avance_id ?? null),
+          occurredOn: rpcNullableText(item.fecha_hecho ?? null),
+          source: rpcNullableText(item.procedencia ?? null),
+          references: rpcArray(item.referencias ?? [], readProgressReference),
         };
       }),
     };
+  }
+  async changeState(token: string, id: string, input: StateChange) {
+    const row = rpcRecord(
+      await this.rpc.execute(token, 'expediente.cambiar_estado', {
+        expediente_id: id,
+        revision: input.revision,
+        estado: input.status,
+        motivo: input.reason,
+        ...(input.approvalReference
+          ? { referencia_autorizacion: input.approvalReference }
+          : {}),
+      }),
+    );
+    return {
+      caseId: rpcText(row.expediente_id),
+      status: readStatus(row.estado),
+      revision: rpcInteger(row.revision),
+    };
+  }
+  async addProgress(token: string, id: string, input: ProgressInput) {
+    const row = rpcRecord(
+      await this.rpc.execute(token, 'expediente.avanzar', {
+        expediente_id: id,
+        solicitud_id: input.requestId,
+        descripcion: input.description,
+        ...(input.correctsId ? { corrige_avance_id: input.correctsId } : {}),
+        ...(input.occurredOn ? { fecha_hecho: input.occurredOn } : {}),
+        ...(input.source ? { procedencia: input.source } : {}),
+        ...(input.versionIds?.length
+          ? {
+              versiones: input.versionIds.map((version_id) => ({ version_id })),
+            }
+          : {}),
+      }),
+    );
+    return { id: rpcText(row.avance_id) };
+  }
+  async progressReferences(token: string, id: string, input: CaseSearch) {
+    return rpcArray(
+      await this.rpc.execute(token, 'expediente.referencias_avance', {
+        expediente_id: id,
+        ...searchPage(input),
+      }),
+      readProgressReference,
+    );
   }
   async assigned(token: string, input: AssignedSearch) {
     const rows = await this.rpc.execute(token, 'expediente.asignados', {
@@ -272,5 +334,27 @@ function readAssignmentResult(value: unknown): CaseAssignmentResult {
     assignmentId: rpcText(row.asignacion_id),
     caseId: rpcText(row.expediente_id),
     revision: rpcInteger(row.revision),
+  };
+}
+
+function readStatus(value: unknown): CaseState {
+  switch (value) {
+    case 'NUEVO':
+    case 'EN_PROCESO':
+    case 'PENDIENTE':
+    case 'CONCLUIDO':
+    case 'ARCHIVADO':
+      return value;
+    default:
+      return invalidRpcResult();
+  }
+}
+function readProgressReference(value: unknown): ProgressReference {
+  const row = rpcRecord(value);
+  return {
+    versionId: rpcText(row.version_id),
+    documentId: rpcText(row.documento_id),
+    name: rpcText(row.nombre),
+    number: rpcInteger(row.numero_version),
   };
 }

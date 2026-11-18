@@ -1,5 +1,8 @@
 import {
   IsIn,
+  IsArray,
+  ArrayMaxSize,
+  ArrayUnique,
   IsBoolean,
   IsDateString,
   IsInt,
@@ -141,4 +144,57 @@ export class SearchAssignedCasesDto extends SearchRecordsDto {
   @IfProvided()
   @IsIn(['PRINCIPAL', 'COLABORADOR', 'EXPLICITO'])
   participation?: 'PRINCIPAL' | 'COLABORADOR' | 'EXPLICITO';
+}
+
+export class ChangeCaseStateDto {
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  revision!: number;
+
+  @IsIn(['EN_PROCESO', 'PENDIENTE', 'CONCLUIDO', 'ARCHIVADO'])
+  status!: CaseState;
+
+  @Trim()
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(2000)
+  reason!: string;
+
+  @IfProvided()
+  @Trim()
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(512)
+  approvalReference?: string;
+}
+export class RecordCaseProgressDto extends CreationDto {
+  @Trim()
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(4000)
+  description!: string;
+
+  @IfProvided()
+  @IsUUID('4')
+  correctsId?: string;
+
+  @IfProvided()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsDateString({ strict: true })
+  occurredOn?: string;
+
+  @IfProvided()
+  @Trim()
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(512)
+  source?: string;
+
+  @IfProvided()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ArrayUnique()
+  @IsUUID('4', { each: true })
+  versionIds?: string[];
 }

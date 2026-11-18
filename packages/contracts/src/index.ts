@@ -46,6 +46,12 @@ export type {
   CaseAssignmentSummary,
   CaseTeam,
   AssignedCase,
+  CaseTransition,
+  CaseStateChangeInput,
+  CaseStateChangeResult,
+  CaseProgressReference,
+  CaseProgress,
+  CaseProgressInput,
 } from './records';
 
 export type * from './documents';

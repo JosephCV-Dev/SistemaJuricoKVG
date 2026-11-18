@@ -75,6 +75,9 @@ export interface CaseSummary {
 
 export interface CaseDetail extends CaseSummary {
   canAssign: boolean;
+  hasActivePrincipal: boolean;
+  canAddProgress: boolean;
+  transitions: CaseTransition[];
   canEdit: boolean;
   clientName: string | null;
   assignments: Array<{
@@ -90,8 +93,10 @@ export interface CaseDetail extends CaseSummary {
     to: string;
     reason: string;
     at: string;
+    authorName: string | null;
+    approvalReference: string | null;
   }>;
-  progress: Array<{ description: string; at: string }>;
+  progress: CaseProgress[];
 }
 
 export interface RecordPage<T> {
@@ -149,4 +154,44 @@ export interface CaseTeam extends CaseAssignmentSummary {
 }
 export interface AssignedCase extends CaseSummary {
   participation: CaseParticipation[];
+}
+
+export interface CaseTransition {
+  status: CaseStatus;
+  requiresDecision: boolean;
+}
+export interface CaseStateChangeInput {
+  revision: number;
+  status: CaseStatus;
+  reason: string;
+  approvalReference?: string;
+}
+export interface CaseStateChangeResult {
+  caseId: string;
+  status: CaseStatus;
+  revision: number;
+}
+export interface CaseProgressReference {
+  versionId: string;
+  documentId: string;
+  name: string;
+  number: number;
+}
+export interface CaseProgress {
+  id: string;
+  description: string;
+  at: string;
+  authorName: string | null;
+  correctsId: string | null;
+  occurredOn: string | null;
+  source: string | null;
+  references: CaseProgressReference[];
+}
+export interface CaseProgressInput {
+  requestId: string;
+  description: string;
+  correctsId?: string;
+  occurredOn?: string;
+  source?: string;
+  versionIds?: string[];
 }

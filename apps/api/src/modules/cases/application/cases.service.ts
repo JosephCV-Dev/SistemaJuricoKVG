@@ -7,6 +7,8 @@ import type {
   AssignedSearch,
   AssignmentChange,
   ReassignmentChange,
+  StateChange,
+  ProgressInput,
 } from '../domain/case.types';
 @Injectable()
 export class CasesService {
@@ -54,6 +56,21 @@ export class CasesService {
       forReassignment,
     );
     return { ...team, lawyers: this.page(lawyers, input) };
+  }
+  changeState(token: string, id: string, input: StateChange) {
+    return this.cases.changeState(token, id, input);
+  }
+  addProgress(token: string, id: string, input: ProgressInput) {
+    return this.cases.addProgress(token, id, input);
+  }
+  async progressReferences(token: string, id: string, input: CaseSearch) {
+    return this.page(
+      await this.cases.progressReferences(token, id, {
+        ...input,
+        limit: input.limit + 1,
+      }),
+      input,
+    );
   }
   async search(token: string, input: CaseSearch) {
     return this.page(

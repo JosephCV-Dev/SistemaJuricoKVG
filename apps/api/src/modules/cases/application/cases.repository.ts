@@ -14,6 +14,10 @@ import type {
   AssignedSearch,
   AssignmentChange,
   ReassignmentChange,
+  ProgressInput,
+  ProgressReference,
+  StateChange,
+  CaseState,
 } from '../domain/case.types';
 export abstract class CasesRepository {
   abstract assigned(
@@ -46,6 +50,21 @@ export abstract class CasesRepository {
     id: string,
     input: ReassignmentChange,
   ): Promise<CaseAssignmentResult>;
+  abstract changeState(
+    token: string,
+    id: string,
+    input: StateChange,
+  ): Promise<{ caseId: string; status: CaseState; revision: number }>;
+  abstract addProgress(
+    token: string,
+    id: string,
+    input: ProgressInput,
+  ): Promise<{ id: string }>;
+  abstract progressReferences(
+    token: string,
+    id: string,
+    input: CaseSearch,
+  ): Promise<ProgressReference[]>;
   abstract create(token: string, input: NewCase): Promise<CaseRecord>;
   abstract update(
     token: string,

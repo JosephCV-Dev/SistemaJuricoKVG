@@ -66,3 +66,8 @@ con Supabase se comprueba por separado mediante `npm run test:records:live`.
 ficticias. Requiere PostgreSQL efímero sin red, el fixture de plataforma, baseline
 y migraciones. Ejecuta el RPC con roles y contexto de la prueba, comprueba
 separación administrativa, revocación, motivo e historial y revierte los datos.
+
+`case-tracking-local.sql` verifica estados y avances de CU006/CU017 en
+PostgreSQL aislado. Usa el fixture de plataforma, baseline y migraciones.
+Prueba los permisos y la revisión, y representa una versión documental
+ficticia con metadatos de Storage. Revierte la prueba completa.

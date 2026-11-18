@@ -349,3 +349,50 @@ equipo de reasignación. La ficha jurídica respondió 403 para este último.
 El Supabase de desarrollo tiene un solo abogado activo. El relevo entre dos
 abogados, incluida la promoción del colaborador y la revocación del saliente,
 se probó en PostgreSQL aislado con identidades ficticias.
+
+## Paso 4D: estados y avances
+
+**CU006 / SCRUM-43.** Desde **Resumen**, los usuarios ven las transiciones que
+permite el expediente para su sesión. Se guarda la revisión y el motivo. Entrar
+en proceso o pasar a pendiente exige un abogado principal activo. Concluir y
+reabrir requieren al principal vigente y una referencia de autorización. La
+bitácora y **Historial** conservan estado anterior, destino, motivo y autoría.
+
+| Estado actual | Destinos previstos por la matriz      |
+| ------------- | ------------------------------------- |
+| Nuevo         | En proceso                            |
+| En proceso    | Pendiente o Concluido                 |
+| Pendiente     | En proceso o Concluido                |
+| Concluido     | Archivado o En proceso por reapertura |
+| Archivado     | En proceso por reapertura             |
+
+Una revisión obsoleta devuelve 409. Los cambios se confirman junto con el
+historial en una sola transacción y el folio y cliente principal se conservan.
+
+**CU017 / SCRUM-46.** En **Avances**, el abogado con permiso registra una
+descripción y, opcionalmente, una fecha del hecho con procedencia. Puede
+elegir versiones autorizadas del mismo expediente y corregir una entrada.
+La corrección crea un avance nuevo que referencia al original. La fecha y
+autoría del registro provienen del servidor. El avance no cambia el estado
+ni la revisión del expediente. La interfaz mantiene el UUID de la solicitud si
+se reintenta el mismo borrador mientras el formulario sigue abierto. SQL conserva
+un avance único por solicitud y vuelve a comprobar el alcance al reintentar.
+
+| Ruta                                        | Propósito                                                                                                                           |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/cases/:id`                     | Devuelve transiciones vigentes, historial y avances con las referencias que la identidad puede consultar.                           |
+| `PATCH /api/v1/cases/:id/status`            | Cambia el estado por UUID y revisión con CSRF, motivo y referencia cuando aplica. SQL exige el permiso específico de la transición. |
+| `GET /api/v1/cases/:id/progress-references` | Busca versiones consultables del mismo expediente para un avance.                                                                   |
+| `POST /api/v1/cases/:id/progress`           | Registra un avance por solicitud con CSRF, permiso, expediente editable y versiones autorizadas.                                    |
+
+La migración `202611170011_case_tracking.sql` se aplicó al Supabase de desarrollo
+mediante `npm run setup:tracking:dev`. La [prueba SQL aislada](../database/tests/case-tracking-local.sql)
+cubre la matriz, permisos de Secretaría y colaborador, la decisión del principal,
+archivo y reapertura, idempotencia, correcciones y referencias cruzadas denegadas.
+Pasaron `npm run check` con 86 pruebas y la comprobación de privilegios.
+
+Dos solicitudes concurrentes sobre la misma revisión produjeron una transición,
+un evento de historial y un conflicto. En Chromium a 390 px con MFA real,
+Secretaría inició y suspendió un expediente ficticio. El abogado vinculó una
+versión publicada en la beta, registró una corrección y concluyó el expediente
+con referencia de autorización. El ensayo aislado cubrió archivo y reapertura.

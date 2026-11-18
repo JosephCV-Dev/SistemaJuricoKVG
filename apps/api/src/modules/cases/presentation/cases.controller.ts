@@ -24,6 +24,8 @@ import {
   AssignCaseDto,
   ReassignCaseDto,
   SearchAssignedCasesDto,
+  ChangeCaseStateDto,
+  RecordCaseProgressDto,
 } from './cases.dto';
 const caseScope = ['PRINCIPAL', 'COLABORADOR', 'EXPLICITO'];
 
@@ -127,6 +129,44 @@ export class CasesController {
     return this.cases.reassign(userAccessToken(request), path.id, input);
   }
 
+  @Patch(':id/status')
+  @RequirePermission('expediente.consultar', caseScope)
+  @UseGuards(CsrfGuard)
+  changeState(
+    @Param() path: RecordIdDto,
+    @Body() input: ChangeCaseStateDto,
+    @Req() request: Request,
+  ) {
+    // SQL decide el permiso exacto de la transición según el estado y recurso vigentes.
+    return this.cases.changeState(userAccessToken(request), path.id, input);
+  }
+  @Get(':id/progress-references')
+  @RequirePermission('expediente.avanzar', caseScope)
+  progressReferences(
+    @Param() path: RecordIdDto,
+    @Query() input: SearchRecordsDto,
+    @Req() request: Request,
+  ) {
+    return this.cases.progressReferences(
+      userAccessToken(request),
+      path.id,
+      input,
+    );
+  }
+  @Post(':id/progress')
+  @RequirePermission('expediente.avanzar', caseScope)
+  @UseGuards(CsrfGuard)
+  addProgress(
+    @Param() path: RecordIdDto,
+    @Body() input: RecordCaseProgressDto,
+    @Req() request: Request,
+  ) {
+    if (input.occurredOn && !input.source)
+      throw new BadRequestException(
+        'Indica la procedencia de la fecha del hecho.',
+      );
+    return this.cases.addProgress(userAccessToken(request), path.id, input);
+  }
   @Get(':id')
   @RequirePermission('expediente.consultar', caseScope)
   get(@Param() input: RecordIdDto, @Req() request: Request) {

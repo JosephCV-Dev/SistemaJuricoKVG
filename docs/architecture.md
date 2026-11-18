@@ -266,3 +266,8 @@ El administrador recibe solo folio, estado y equipo vigente para un relevo. El
 listado del abogado filtra por asignaciones y concesiones vigentes antes de
 paginar. El cambio de principal, cierre de accesos, posible continuidad como
 colaborador y auditoría se ejecutan en una misma transacción de PostgreSQL.
+
+Las opciones de cambio de estado y su validación consultan la misma matriz SQL.
+El cambio conserva motivo y revisión en el historial. Los avances usan una
+solicitud idempotente y se agregan con autor y fecha de servidor. La proyección
+de referencias documentales aplica alcance a cada versión en cada consulta.

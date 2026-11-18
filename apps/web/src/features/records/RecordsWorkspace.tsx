@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 import type {
   CaseDetail,
   CaseSummary,
+  CaseStateChangeInput,
   CaseUpdateInput,
   ClientDetail,
   ClientSummary,
@@ -29,6 +30,8 @@ import {
   searchClients,
   updateClient,
   updateCase,
+  changeCaseState,
+  addCaseProgress,
 } from './records-api';
 
 const emptyPage = <T,>(): RecordPage<T> => ({
@@ -229,6 +232,17 @@ export function RecordsWorkspace({
       setCaseDetail(null);
       setCases(emptyPage());
       setNotice('Expediente actualizado.');
+      setCaseDetail(await getCase(current.id, signal));
+      setCases(await searchCases(caseQuery, 0, signal));
+    });
+  }
+
+  function saveCaseState(current: CaseDetail, input: CaseStateChangeInput) {
+    void run(async (signal) => {
+      await changeCaseState(current.id, input, signal);
+      setCaseDetail(null);
+      setCases(emptyPage());
+      setNotice('Estado actualizado.');
       setCaseDetail(await getCase(current.id, signal));
       setCases(await searchCases(caseQuery, 0, signal));
     });
@@ -780,6 +794,15 @@ export function RecordsWorkspace({
               canEdit={can('expediente.actualizar') && caseDetail.canEdit}
               onSave={(input) => saveCase(caseDetail, input)}
               onReload={() => openCase(caseDetail.id)}
+              run={run}
+              onStateChange={(input) => saveCaseState(caseDetail, input)}
+              saveProgress={async (input, signal) => {
+                await addCaseProgress(caseDetail.id, input, signal);
+              }}
+              onProgressSaved={async (signal) => {
+                setNotice('Avance registrado.');
+                setCaseDetail(await getCase(caseDetail.id, signal));
+              }}
               canConsultClient={
                 can('cliente.consultar') && caseDetail.clientName !== null
               }

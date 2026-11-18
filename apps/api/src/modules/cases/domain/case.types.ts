@@ -31,6 +31,9 @@ export interface CaseRecord {
 }
 export interface CaseInformation extends CaseRecord {
   canAssign: boolean;
+  hasActivePrincipal: boolean;
+  canAddProgress: boolean;
+  transitions: Array<{ status: CaseState; requiresDecision: boolean }>;
   canEdit: boolean;
   clientName: string | null;
   assignments: Array<{
@@ -46,8 +49,19 @@ export interface CaseInformation extends CaseRecord {
     to: string;
     reason: string;
     at: string;
+    authorName: string | null;
+    approvalReference: string | null;
   }>;
-  progress: Array<{ description: string; at: string }>;
+  progress: Array<{
+    id: string;
+    description: string;
+    at: string;
+    authorName: string | null;
+    correctsId: string | null;
+    occurredOn: string | null;
+    source: string | null;
+    references: ProgressReference[];
+  }>;
 }
 export interface CaseSearch {
   text?: string;
@@ -76,4 +90,25 @@ export interface ReassignmentChange {
   reason: string;
   approvalReference: string;
   keepCollaborator: boolean;
+}
+
+export interface StateChange {
+  revision: number;
+  status: CaseState;
+  reason: string;
+  approvalReference?: string;
+}
+export interface ProgressReference {
+  versionId: string;
+  documentId: string;
+  name: string;
+  number: number;
+}
+export interface ProgressInput {
+  requestId: string;
+  description: string;
+  correctsId?: string;
+  occurredOn?: string;
+  source?: string;
+  versionIds?: string[];
 }

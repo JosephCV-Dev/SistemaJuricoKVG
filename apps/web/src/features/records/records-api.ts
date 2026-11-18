@@ -17,6 +17,10 @@ import type {
   CaseParticipation,
   CaseReassignmentInput,
   CaseTeam,
+  CaseStateChangeInput,
+  CaseProgressInput,
+  CaseProgressReference,
+  CaseStatus,
 } from '@kvg/contracts';
 import { getJson, mutate, readJson } from '../../shared/api/session-http.ts';
 
@@ -198,6 +202,15 @@ export async function getCase(
   return {
     ...readCase(row),
     canAssign: bool(row.canAssign),
+    hasActivePrincipal: bool(row.hasActivePrincipal),
+    canAddProgress: bool(row.canAddProgress),
+    transitions: array(row.transitions, (value) => {
+      const item = record(value);
+      return {
+        status: readStatus(item.status),
+        requiresDecision: bool(item.requiresDecision),
+      };
+    }),
     canEdit: bool(row.canEdit),
     clientName: nullable(row.clientName),
     assignments: array(row.assignments, (value) => {
@@ -218,11 +231,22 @@ export async function getCase(
         to: text(item.to),
         reason: text(item.reason),
         at: date(item.at),
+        authorName: nullable(item.authorName),
+        approvalReference: nullable(item.approvalReference),
       };
     }),
     progress: array(row.progress, (value) => {
       const item = record(value);
-      return { description: text(item.description), at: date(item.at) };
+      return {
+        id: text(item.id),
+        description: text(item.description),
+        at: date(item.at),
+        authorName: nullable(item.authorName),
+        correctsId: nullable(item.correctsId),
+        occurredOn: nullable(item.occurredOn),
+        source: nullable(item.source),
+        references: array(item.references, readProgressReference),
+      };
     }),
   };
 }
@@ -387,4 +411,77 @@ export async function saveCaseAssignment(
     caseId: text(result.caseId),
     revision: number(result.revision),
   };
+}
+
+function readStatus(value: unknown): CaseStatus {
+  switch (value) {
+    case 'NUEVO':
+    case 'EN_PROCESO':
+    case 'PENDIENTE':
+    case 'CONCLUIDO':
+    case 'ARCHIVADO':
+      return value;
+    default:
+      return invalid();
+  }
+}
+function readProgressReference(value: unknown): CaseProgressReference {
+  const row = record(value);
+  return {
+    versionId: text(row.versionId),
+    documentId: text(row.documentId),
+    name: text(row.name),
+    number: number(row.number),
+  };
+}
+export async function changeCaseState(
+  id: string,
+  input: CaseStateChangeInput,
+  signal: AbortSignal,
+) {
+  const row = record(
+    await readJson(
+      await mutate(
+        `/api/v1/cases/${encodeURIComponent(id)}/status`,
+        input,
+        signal,
+        'PATCH',
+      ),
+    ),
+  );
+  return {
+    caseId: text(row.caseId),
+    status: readStatus(row.status),
+    revision: number(row.revision),
+  };
+}
+export async function addCaseProgress(
+  id: string,
+  input: CaseProgressInput,
+  signal: AbortSignal,
+) {
+  const row = record(
+    await readJson(
+      await mutate(
+        `/api/v1/cases/${encodeURIComponent(id)}/progress`,
+        input,
+        signal,
+      ),
+    ),
+  );
+  return { id: text(row.id) };
+}
+export async function getProgressReferences(
+  id: string,
+  search: string,
+  offset: number,
+  signal: AbortSignal,
+) {
+  return page(
+    await getJson(
+      `/api/v1/cases/${encodeURIComponent(id)}/progress-references?${paging(search, offset)}`,
+      signal,
+    ),
+    readProgressReference,
+  );
 }

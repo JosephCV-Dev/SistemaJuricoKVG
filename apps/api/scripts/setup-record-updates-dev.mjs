@@ -13,11 +13,12 @@ const migrations = {
   clients: ['202611170007_client_search_and_update.sql'],
   cases: ['202611170009_case_search_and_update.sql'],
   assignments: ['202611170010_case_assignments.sql'],
+  tracking: ['202611170011_case_tracking.sql'],
 };
 try {
   if (!Object.hasOwn(migrations, scope))
     throw new DevelopmentSetupError(
-      'Indica la preparación de clientes, expedientes o asignaciones.',
+      'Indica la preparación de clientes, expedientes, asignaciones o seguimiento.',
     );
   const config = await developmentConfig();
   const fixture = await readDevelopmentFixture(config);

@@ -147,3 +147,8 @@ separado. [Contrato beta](document-beta.md).
 CU007, CU015 y CU025 se implementaron en 4C. La gestión administrativa usa
 metadatos mínimos y la lista jurídica calcula participación con la identidad de
 la sesión. [Contrato de asignaciones](clients-and-cases.md#paso-4c-asignaciones-y-acceso).
+
+CU006 y CU017 se implementaron en 4D. PostgreSQL calcula las transiciones por
+revisión, alcance y responsable activo. Los avances y sus correcciones registran
+autor y fecha del servidor y pueden referir versiones autorizadas del mismo
+expediente. [Contrato de seguimiento](clients-and-cases.md#paso-4d-estados-y-avances).
