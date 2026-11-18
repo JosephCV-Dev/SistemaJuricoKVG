@@ -5,7 +5,10 @@ import {
   ServiceUnavailableException,
   BadGatewayException,
 } from '@nestjs/common';
-import type { DocumentUploadInput } from '@kvg/contracts';
+import type {
+  DocumentUploadInput,
+  DocumentVersionUploadInput,
+} from '@kvg/contracts';
 import { DocumentsRepository } from './documents.repository';
 import { PrivateFiles } from './private-files.port';
 import { DocumentUploadPolicy } from './document-upload-policy';
@@ -24,6 +27,10 @@ export class DocumentsService {
   create(token: string, input: DocumentUploadInput) {
     this.uploads.assertEnabled();
     return this.repository.create(token, input);
+  }
+  createVersion(token: string, id: string, input: DocumentVersionUploadInput) {
+    this.uploads.assertEnabled();
+    return this.repository.createVersion(token, id, input);
   }
   async receive(token: string, id: string, bytes: Buffer) {
     this.uploads.assertEnabled();

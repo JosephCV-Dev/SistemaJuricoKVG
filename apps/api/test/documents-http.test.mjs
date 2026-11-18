@@ -318,3 +318,119 @@ test('filtros, clasificación y traslado respetan sesión, permisos, revisión y
     },
   });
 });
+
+test('metadatos, carga nueva e historial mantienen contratos y permisos separados', async (t) => {
+  const calls = [];
+  const versionId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const { browser, state } = await application(t, {
+    uploadMode: 'beta',
+    rpc: {
+      execute: async (token, operation, input) => {
+        calls.push({ token, operation, input });
+        if (operation === 'documento.actualizar')
+          return { documento_id: id, expediente_id: id, revision: 4 };
+        if (operation === 'documento.cargar')
+          return { carga_id: id, documento_id: id, estado: 'RECIBIENDO' };
+        if (operation === 'documento.versiones')
+          return [
+            {
+              version_id: versionId,
+              numero_version: 1,
+              estado_documento_codigo: 'RECIBIDO',
+              sha256: 'a'.repeat(64),
+              formato: 'PNG',
+              tamano_bytes: 500,
+              publicado_en: '2026-11-17T12:00:00Z',
+              autor: 'Autor ficticio',
+              motivo: 'Primera entrega',
+              vigente: true,
+              puede_descargar: false,
+              sin_antimalware: true,
+              revisiones: [],
+              localizador_objeto: 'Interno y excluido por el adaptador',
+            },
+          ];
+        throw new Error('RPC inesperada');
+      },
+    },
+  });
+  const permit = (permission) => ({
+    permission,
+    context: 'EXPLICITO',
+    requiresMfa: true,
+    requiresDecision: false,
+  });
+  const path = `documents/${id}`;
+  const list = path + '/versions';
+  assert.equal((await browser.request(list)).status, 401);
+  await authenticated(browser);
+  state.capabilities = [permit('documento.consultar')];
+  const metadata = {
+    revision: 3,
+    name: '  Título ficticio  ',
+    reason: ' Corrección ',
+  };
+  const version = {
+    revision: 3,
+    requestId: id,
+    originalName: 'Ficticio.png',
+    reason: '  Otra entrega  ',
+  };
+  const patch = (body, token = browser.csrfToken) =>
+    browser.request(path + '/metadata', {
+      method: 'PATCH',
+      body,
+      headers: { Origin: APP_ORIGIN, 'X-CSRF-Token': token },
+    });
+  assert.equal((await patch(metadata)).status, 403);
+  assert.equal((await browser.post(list, version)).status, 403);
+  assert.equal((await browser.request(list)).status, 403);
+  state.capabilities.push(permit('documento.actualizar'));
+  assert.equal((await patch(metadata, '')).status, 403);
+  assert.equal((await patch({ ...metadata, reason: '  ' })).status, 400);
+  assert.equal((await patch({ ...metadata, categoryId: id })).status, 400);
+  assert.equal(
+    (await browser.post(list, { ...version, caseId: id })).status,
+    400,
+  );
+  assert.equal(
+    (await browser.post(list, { ...version, originalName: 'ficticio.exe' }))
+      .status,
+    400,
+  );
+  assert.equal(
+    (await browser.post(list, { ...version, revision: '3' })).status,
+    400,
+  );
+  assert.deepEqual(calls, []);
+  assert.equal((await patch(metadata)).status, 200);
+  assert.deepEqual(calls.at(-1).input, {
+    documento_id: id,
+    revision: 3,
+    nombre: 'Título ficticio',
+    motivo: 'Corrección',
+  });
+  assert.equal((await browser.post(list, version)).status, 201);
+  assert.deepEqual(calls.at(-1).input, {
+    documento_id: id,
+    revision: 3,
+    clave_idempotencia: id,
+    nombre_original: 'Ficticio.png',
+    motivo: 'Otra entrega',
+  });
+  state.capabilities.push(permit('documento.versiones'));
+  assert.equal((await browser.request(list + '?text=texto')).status, 400);
+  const page = await browser.request(list + '?limit=1');
+  assert.equal(page.status, 200);
+  const { items } = await page.json();
+  assert.equal(items[0].id, versionId);
+  assert.equal(items[0].canDownload, false);
+  assert.equal(items[0].current, true);
+  assert.equal(items[0].beta, true);
+  assert(!JSON.stringify(items).includes('localizador'));
+  assert.equal(
+    (await browser.request(`documents/versions/${versionId}/download`)).status,
+    403,
+  );
+  assert(calls.every((call) => typeof call.token === 'string' && call.token));
+});

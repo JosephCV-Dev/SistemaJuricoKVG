@@ -291,6 +291,9 @@ tr:last-child td {
   padding-top: 12px;
   margin-top: 20px;
 }
+.document-version-history {
+  overflow-wrap: anywhere;
+}
 .review {
   background: var(--acb);
   padding: 16px;

@@ -16,10 +16,7 @@ import {
   SearchRecordsDto,
   IfProvided,
 } from '../../../common/dto/record.dto';
-export class CreateUploadDto extends CreationDto {
-  @IsUUID('4') caseId!: string;
-  @IsUUID('4') categoryId!: string;
-  @Trim() @IsString() @MinLength(1) @MaxLength(200) name!: string;
+class DocumentFileDto extends CreationDto {
   @Trim()
   @IsString()
   @MinLength(1)
@@ -27,6 +24,14 @@ export class CreateUploadDto extends CreationDto {
   @Matches(/^[^\x00-\x1f\x7f/\\]+\.(?:pdf|docx|jpe?g|png)$/i)
   originalName!: string;
   @Trim() @IsString() @MinLength(1) @MaxLength(2000) reason!: string;
+}
+export class CreateUploadDto extends DocumentFileDto {
+  @IsUUID('4') caseId!: string;
+  @IsUUID('4') categoryId!: string;
+  @Trim() @IsString() @MinLength(1) @MaxLength(200) name!: string;
+}
+export class CreateVersionUploadDto extends DocumentFileDto {
+  @IsInt() @Min(1) @Max(2147483647) revision!: number;
 }
 export class SearchDocumentsDto extends SearchRecordsDto {
   @IfProvided() @IsUUID('4') caseId?: string;
@@ -50,6 +55,16 @@ export class SearchDocumentsDto extends SearchRecordsDto {
 }
 class DocumentRevisionDto {
   @IsInt() @Min(1) @Max(2147483647) revision!: number;
+}
+export class UpdateDocumentMetadataDto extends DocumentRevisionDto {
+  @Trim()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  @Matches(/^[^\x00-\x1f\x7f]+$/)
+  name!: string;
+
+  @Trim() @IsString() @MinLength(1) @MaxLength(2000) reason!: string;
 }
 export class ClassifyDocumentDto extends DocumentRevisionDto {
   @IsUUID('4') categoryId!: string;

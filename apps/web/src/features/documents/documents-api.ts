@@ -6,6 +6,10 @@ import type {
   DocumentAssociationInput,
   DocumentOrganizationResult,
   DocumentDetail,
+  DocumentMetadataInput,
+  DocumentVersion,
+  DocumentVersionHistoryEntry,
+  DocumentVersionUploadInput,
   DocumentSummary,
   DocumentUploadInput,
   DocumentUploadAvailability,
@@ -101,6 +105,18 @@ function page<T>(value: unknown, read: (item: unknown) => T): RecordPage<T> {
   if (limit < 1 || limit > 50 || items.length > limit) return invalid();
   return { items, limit, offset: integer(r.offset), hasMore: bool(r.hasMore) };
 }
+function version(r: Record<string, unknown>): DocumentVersion {
+  return {
+    id: text(r.id),
+    number: integer(r.number),
+    size: integer(r.size),
+    sha256: text(r.sha256),
+    format: text(r.format),
+    status: text(r.status),
+    publishedAt: text(r.publishedAt),
+    ...(r.beta === true ? { beta: true } : {}),
+  };
+}
 export async function listDocuments(
   caseId: string,
   offset: number,
@@ -129,6 +145,9 @@ export async function getDocument(
     revision: integer(r.revision),
     canClassify: bool(r.canClassify),
     canAssociate: bool(r.canAssociate),
+    canEditName: bool(r.canEditName),
+    canUploadVersion: bool(r.canUploadVersion),
+    canViewVersions: bool(r.canViewVersions),
     fileAvailable: bool(r.fileAvailable),
     classifications: array(r.classifications, (item) => {
       const row = obj(item);
@@ -157,18 +176,7 @@ export async function getDocument(
     authorId: text(r.authorId),
     authorName: text(r.authorName),
     categoryName: text(r.categoryName),
-    version: v
-      ? {
-          id: text(v.id),
-          number: integer(v.number),
-          size: integer(v.size),
-          sha256: text(v.sha256),
-          format: text(v.format),
-          status: text(v.status),
-          publishedAt: text(v.publishedAt),
-          ...(v.beta === true ? { beta: true } : {}),
-        }
-      : null,
+    version: v ? version(v) : null,
   };
 }
 export async function createUpload(
@@ -176,6 +184,46 @@ export async function createUpload(
   signal: AbortSignal,
 ) {
   return upload(await readJson(await mutate(base + '/uploads', input, signal)));
+}
+export async function createVersionUpload(
+  id: string,
+  input: DocumentVersionUploadInput,
+  signal: AbortSignal,
+) {
+  const path = `${base}/${encodeURIComponent(id)}/versions`;
+  return upload(await readJson(await mutate(path, input, signal)));
+}
+export async function documentVersions(
+  id: string,
+  offset: number,
+  signal: AbortSignal,
+): Promise<RecordPage<DocumentVersionHistoryEntry>> {
+  const query = new URLSearchParams({ offset: String(offset) });
+  return page(
+    await getJson(
+      `${base}/${encodeURIComponent(id)}/versions?${query}`,
+      signal,
+    ),
+    (value) => {
+      const row = obj(value);
+      return {
+        ...version(row),
+        author: text(row.author),
+        reason: text(row.reason),
+        current: bool(row.current),
+        canDownload: bool(row.canDownload),
+        reviews: array(row.reviews, (value) => {
+          const review = obj(value);
+          return {
+            id: text(review.id),
+            author: text(review.author),
+            result: text(review.result),
+            at: text(review.at),
+          };
+        }),
+      };
+    },
+  );
 }
 export async function uploadStatus(
   id: string,
@@ -250,6 +298,24 @@ export async function organizeDocument(
   signal: AbortSignal,
 ): Promise<DocumentOrganizationResult> {
   const path = 'destinationId' in input ? 'association' : 'category';
+  return changeDocument(id, path, input, signal);
+}
+export async function updateDocumentMetadata(
+  id: string,
+  input: DocumentMetadataInput,
+  signal: AbortSignal,
+): Promise<DocumentOrganizationResult> {
+  return changeDocument(id, 'metadata', input, signal);
+}
+async function changeDocument(
+  id: string,
+  path: 'association' | 'category' | 'metadata',
+  input:
+    | DocumentClassificationInput
+    | DocumentAssociationInput
+    | DocumentMetadataInput,
+  signal: AbortSignal,
+): Promise<DocumentOrganizationResult> {
   const row = obj(
     await readJson(
       await mutate(
@@ -267,15 +333,15 @@ export async function organizeDocument(
   };
 }
 export async function saveDocumentDownload(
-  detail: DocumentDetail,
+  name: string,
+  version: DocumentVersion,
   signal: AbortSignal,
 ) {
-  if (!detail.version) return;
-  const blob = await downloadVersion(detail.version.id, signal);
+  const blob = await downloadVersion(version.id, signal);
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `${detail.name}.${detail.version.format.toLowerCase()}`;
+  link.download = `${name}-v${version.number}.${version.format.toLowerCase()}`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

@@ -7,6 +7,10 @@ import type {
   DocumentFilters,
   DocumentClassificationInput,
   DocumentAssociationInput,
+  DocumentVersionUploadInput,
+  DocumentMetadataInput,
+  DocumentVersion,
+  DocumentVersionHistoryEntry,
   DocumentOrganizationResult,
 } from '@kvg/contracts';
 import { KvgRpcService } from '../../../infrastructure/supabase/kvg-rpc.service';
@@ -57,6 +61,43 @@ const summary = (value: unknown): DocumentSummary => {
     status: nullable(r.estado_documento_codigo),
   };
 };
+function version(r: Record<string, unknown>): DocumentVersion {
+  return {
+    id: text(r.version_id),
+    number: integer(r.numero_version),
+    sha256: text(r.sha256),
+    size: integer(r.tamano_bytes),
+    format: text(r.formato),
+    status: text(r.estado_documento_codigo),
+    publishedAt: date(r.publicado_en),
+    ...(r.sin_antimalware === true ? { beta: true as const } : {}),
+  };
+}
+
+function versionHistory(value: unknown): DocumentVersionHistoryEntry {
+  const row = obj(value);
+  if (
+    typeof row.vigente !== 'boolean' ||
+    typeof row.puede_descargar !== 'boolean'
+  )
+    return invalidRpcResult();
+  return {
+    ...version(row),
+    author: text(row.autor),
+    reason: text(row.motivo),
+    current: row.vigente,
+    canDownload: row.puede_descargar,
+    reviews: array(row.revisiones, (value) => {
+      const review = obj(value);
+      return {
+        id: text(review.id),
+        author: text(review.autor),
+        result: text(review.resultado),
+        at: date(review.fecha),
+      };
+    }),
+  };
+}
 @Injectable()
 export class KvgDocumentsRepository extends DocumentsRepository {
   constructor(private readonly rpc: KvgRpcService) {
@@ -72,6 +113,53 @@ export class KvgDocumentsRepository extends DocumentsRepository {
         nombre_original: i.originalName,
         motivo: i.reason,
       }),
+    );
+  }
+  async createVersion(
+    token: string,
+    id: string,
+    input: DocumentVersionUploadInput,
+  ) {
+    return upload(
+      await this.rpc.execute(token, 'documento.cargar', {
+        documento_id: id,
+        revision: input.revision,
+        clave_idempotencia: input.requestId,
+        nombre_original: input.originalName,
+        motivo: input.reason,
+      }),
+    );
+  }
+  async updateMetadata(
+    token: string,
+    id: string,
+    input: DocumentMetadataInput,
+  ) {
+    return organized(
+      await this.rpc.execute(token, 'documento.actualizar', {
+        documento_id: id,
+        revision: input.revision,
+        nombre: input.name,
+        motivo: input.reason,
+      }),
+    );
+  }
+  async versions(
+    token: string,
+    id: string,
+    { limit, offset }: { limit: number; offset: number },
+  ) {
+    return page(
+      array(
+        await this.rpc.execute(token, 'documento.versiones', {
+          documento_id: id,
+          limite: limit + 1,
+          desplazamiento: offset,
+        }),
+        versionHistory,
+      ),
+      limit,
+      offset,
     );
   }
   async upload(token: string, id: string) {
@@ -195,6 +283,9 @@ export class KvgDocumentsRepository extends DocumentsRepository {
       revision: integer(r.revision),
       canClassify: r.puede_clasificar === true,
       canAssociate: r.puede_asociar === true,
+      canEditName: r.puede_editar_nombre === true,
+      canUploadVersion: r.puede_subir_version === true,
+      canViewVersions: r.puede_ver_versiones === true,
       fileAvailable:
         typeof r.archivo_disponible === 'boolean'
           ? r.archivo_disponible
@@ -227,18 +318,7 @@ export class KvgDocumentsRepository extends DocumentsRepository {
       authorId: text(r.creado_por),
       authorName: text(r.nombre_autor),
       categoryName: text(r.nombre_categoria),
-      version: v
-        ? {
-            id: text(v.version_id),
-            number: integer(v.numero_version),
-            sha256: text(v.sha256),
-            size: integer(v.tamano_bytes),
-            format: text(v.formato),
-            status: text(v.estado_documento_codigo),
-            publishedAt: date(v.publicado_en),
-            ...(v.sin_antimalware === true ? { beta: true as const } : {}),
-          }
-        : null,
+      version: v ? version(v) : null,
     };
   }
   async authorizeDownload(token: string, id: string) {

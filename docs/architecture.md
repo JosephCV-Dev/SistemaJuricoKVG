@@ -276,3 +276,11 @@ La búsqueda documental aplica permisos en PostgreSQL antes de ordenar y paginar
 Clasificar o trasladar usa el mismo RPC ordinario con revisión y alcance vigente.
 Los cambios de metadatos y sus historiales se confirman en una sola transacción,
 con acceso posterior según el expediente asociado.
+
+CU014 reutiliza la recepción privada y el trabajador de CU008 para publicar
+un original nuevo. PostgreSQL bloquea el documento durante la publicación,
+comprueba la revisión reservada y vuelve a evaluar las capacidades y el alcance
+del solicitante. La revisión obsoleta termina el trabajo sin actualizar la
+versión vigente. El nombre y su motivo quedan en un historial privado de
+metadatos. El historial de versiones proyecta integridad y revisiones jurídicas
+con el JWT del usuario. El broker autoriza y comprueba cada descarga por versión.

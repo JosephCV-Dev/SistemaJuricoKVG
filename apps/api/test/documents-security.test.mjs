@@ -174,6 +174,8 @@ function workerPorts() {
           },
           localizador_destino: 'target',
         };
+      if (op === 'carga.publicar' || op === 'carga.publicar_beta')
+        return { estado: 'COMPLETADO', version_id: 'version' };
       return {};
     },
     read: async () => bytes,
@@ -376,4 +378,25 @@ test('el modo normal no entrega originales beta aunque el broker devuelva la aut
     ).download('user', 'version'),
     bytes,
   );
+});
+
+test('el trabajador registra una cancelación de publicación sin reintentar ni anunciar versión', async () => {
+  const p = workerPorts();
+  const execute = p.files.execute;
+  p.files.execute = async (operation, input) => {
+    if (operation === 'carga.publicar')
+      return { estado: 'CANCELADO', resultado: 'CONFLICTO_REVISION' };
+    return execute(operation, input);
+  };
+  const worker = new DocumentWorker(p.files, {
+    verify: async () => ({
+      size: bytes.length,
+      sha256: sha,
+      format: 'PDF',
+      mime: 'application/pdf',
+      engine: 'solo-prueba-local',
+    }),
+  });
+  assert.equal(await worker.once(), 'cancelled');
+  assert(!p.calls.includes('trabajo.fallar'));
 });

@@ -76,3 +76,9 @@ ficticia con metadatos de Storage. Revierte la prueba completa.
 con el fixture de plataforma, baseline y migraciones. Comprueba alcance antes
 de mostrar resultados, categorías, revisión, traslado, historial y hash.
 Revierte sus datos y usa metadatos Storage ficticios.
+
+`document-versions-local.sql` verifica CU014/CU029 después del mismo fixture,
+baseline y migraciones. Comprueba edición auditada, reserva idempotente, dos
+intentos con la misma revisión, rechazo, historial con permiso independiente
+de descarga y conservación de la revisión jurídica de la primera versión.
+Revierte la transacción y representa Storage con referencias ficticias.

@@ -159,7 +159,9 @@ Los pasos **3A** y el recorrido documental local de **3B** están implementados.
 Docker aislado, con los límites documentados. **3C queda pospuesto** por acuerdo
 del usuario. **4A a 4D** están implementados con sus migraciones en desarrollo.
 **5A** añade búsqueda documental, clasificación y traslado entre expedientes
-autorizados. El siguiente avance es **5B, metadatos y versiones**.
+autorizados. **5B** incorpora edición del nombre con motivo, publicación de
+versiones y descarga autorizada de originales históricos. El siguiente avance
+es **5C**, revisión jurídica y estados documentales.
 
 - [Documentos privados, trabajador y verificación](docs/documents.md).
 - [Ensayo acotado de copia y recuperación](docs/recovery-rehearsal.md).

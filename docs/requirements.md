@@ -157,3 +157,9 @@ CU009–CU011 (SCRUM-128/129/130) están implementados en 5A. SQL filtra antes
 de paginar, conserva el original al reclasificar o trasladar y aplica el
 alcance del destino al acceso posterior. El motivo de traslado y la
 clasificación anterior y nueva quedan registrados. [Contrato documental](documents.md#paso-5a-organización-y-búsqueda).
+
+CU014 y CU029 (SCRUM-133/137) están implementados en 5B. Editar el nombre
+registra revisión y motivo. Publicar una nueva versión conserva originales,
+autoría y hash, exige revisión vigente y comienza en `RECIBIDO`. El historial
+respeta alcance y permiso de consulta de versiones. La descarga usa su propio
+permiso. [Contrato y evidencia](documents.md#paso-5b-de-metadatos-y-versiones).

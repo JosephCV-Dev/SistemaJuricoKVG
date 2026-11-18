@@ -20,14 +20,20 @@ import type { Request, Response } from 'express';
 import { RequirePermission } from '../../identity/presentation/access.decorators';
 import { CsrfGuard } from '../../identity/presentation/csrf.guard';
 import { userAccessToken } from '../../identity/presentation/user-access-token';
-import { RecordIdDto, SearchRecordsDto } from '../../../common/dto/record.dto';
+import {
+  RecordIdDto,
+  RecordPaginationDto,
+  SearchRecordsDto,
+} from '../../../common/dto/record.dto';
 import { DocumentsService } from '../application/documents.service';
 import { MAX_FILE_BYTES } from '../domain/document.types';
 import {
   CreateUploadDto,
+  CreateVersionUploadDto,
   SearchDocumentsDto,
   ClassifyDocumentDto,
   AssociateDocumentDto,
+  UpdateDocumentMetadataDto,
 } from './documents.dto';
 const scope = ['PRINCIPAL', 'COLABORADOR', 'EXPLICITO'];
 @Controller('documents')
@@ -156,6 +162,43 @@ export class DocumentsController {
       userAccessToken(req),
       p.id,
       q,
+    );
+  }
+  @Get(':id/versions')
+  @RequirePermission('documento.versiones', scope)
+  versions(
+    @Param() p: RecordIdDto,
+    @Query() query: RecordPaginationDto,
+    @Req() req: Request,
+  ) {
+    return this.documents.repository.versions(
+      userAccessToken(req),
+      p.id,
+      query,
+    );
+  }
+  @Post(':id/versions')
+  @UseGuards(CsrfGuard)
+  @RequirePermission('documento.actualizar', scope)
+  createVersion(
+    @Param() p: RecordIdDto,
+    @Body() input: CreateVersionUploadDto,
+    @Req() req: Request,
+  ) {
+    return this.documents.createVersion(userAccessToken(req), p.id, input);
+  }
+  @Patch(':id/metadata')
+  @UseGuards(CsrfGuard)
+  @RequirePermission('documento.actualizar', scope)
+  updateMetadata(
+    @Param() p: RecordIdDto,
+    @Body() input: UpdateDocumentMetadataDto,
+    @Req() req: Request,
+  ) {
+    return this.documents.repository.updateMetadata(
+      userAccessToken(req),
+      p.id,
+      input,
     );
   }
   @Patch(':id/category')

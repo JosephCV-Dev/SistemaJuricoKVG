@@ -4,7 +4,6 @@ import type {
   DocumentCategory,
   DocumentDestination,
   DocumentDetail,
-  DocumentOrganizationResult,
   RecordPage,
 } from '@kvg/contracts';
 import {
@@ -12,7 +11,9 @@ import {
   documentDestinations,
   organizeDocument,
   saveDocumentDownload,
+  updateDocumentMetadata,
 } from './documents-api';
+import { DocumentVersions } from './DocumentVersions';
 
 export type RunDocumentAction = (
   action: (signal: AbortSignal) => Promise<void>,
@@ -43,15 +44,16 @@ export function DocumentDetails({
   busy: boolean;
   canDownload: boolean;
   run: RunDocumentAction;
-  onSaved: (
-    result: DocumentOrganizationResult,
-    signal: AbortSignal,
-  ) => Promise<void>;
+  onSaved: (id: string, signal: AbortSignal, message: string) => Promise<void>;
   onRefresh: () => void;
   onDownload: () => void;
   onOpenCase?: (id: string) => void;
 }) {
-  const [form, setForm] = useState<'category' | 'association' | null>(null);
+  const [form, setForm] = useState<
+    'metadata' | 'category' | 'association' | null
+  >(null);
+  const [name, setName] = useState(detail.name);
+  const [nameReason, setNameReason] = useState('');
   const [catalog, setCatalog] = useState<DocumentCategory[]>([]);
   const [categoryId, setCategory] = useState('');
   const [classificationReason, setClassificationReason] = useState<
@@ -63,6 +65,7 @@ export function DocumentDetails({
     useState<RecordPage<DocumentDestination> | null>(null);
   const [destinationId, setDestination] = useState('');
   const [reason, setReason] = useState('');
+  const original = detail.version;
   function searchDestinations(term: string, offset: number) {
     setTargets(null);
     setDestination('');
@@ -109,13 +112,13 @@ export function DocumentDetails({
         )}
       </dl>
       <div className="actions">
-        {detail.version && detail.fileAvailable && canDownload && (
+        {original && detail.fileAvailable && canDownload && (
           <button
             type="button"
             disabled={busy}
             onClick={() =>
               void run(async (signal) => {
-                await saveDocumentDownload(detail, signal);
+                await saveDocumentDownload(detail.name, original, signal);
                 onDownload();
               })
             }
@@ -158,8 +161,83 @@ export function DocumentDetails({
             Cambiar expediente
           </button>
         )}
+        {detail.canEditName && !form && (
+          <button
+            className="button-secondary"
+            type="button"
+            disabled={busy}
+            onClick={() => setForm('metadata')}
+          >
+            Editar metadatos
+          </button>
+        )}
       </div>
 
+      {form === 'metadata' && (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (
+              !name.trim() ||
+              !nameReason.trim() ||
+              name.trim() === detail.name
+            )
+              return;
+            void run(async (signal) => {
+              const result = await updateDocumentMetadata(
+                detail.id,
+                {
+                  revision: detail.revision,
+                  name: name.trim(),
+                  reason: nameReason.trim(),
+                },
+                signal,
+              );
+              await onSaved(
+                result.id,
+                signal,
+                'Nombre del documento actualizado.',
+              );
+            });
+          }}
+        >
+          <fieldset disabled={busy}>
+            <legend>Editar metadatos</legend>
+            <p>
+              <label htmlFor="document-edit-name">Nombre del documento</label>
+              <input
+                id="document-edit-name"
+                required
+                maxLength={200}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </p>
+            <p>
+              <label htmlFor="document-edit-reason">
+                Motivo del cambio de nombre
+              </label>
+              <textarea
+                id="document-edit-reason"
+                required
+                maxLength={2000}
+                value={nameReason}
+                onChange={(event) => setNameReason(event.target.value)}
+              />
+            </p>
+            <button
+              type="submit"
+              disabled={
+                !name.trim() ||
+                !nameReason.trim() ||
+                name.trim() === detail.name
+              }
+            >
+              Guardar metadatos
+            </button>
+          </fieldset>
+        </form>
+      )}
       {form === 'category' && (
         <form
           onSubmit={(event) => {
@@ -167,18 +245,21 @@ export function DocumentDetails({
             if (!categoryId) return;
             void run(async (signal) =>
               onSaved(
-                await organizeDocument(
-                  detail.id,
-                  {
-                    revision: detail.revision,
-                    categoryId,
-                    ...(classificationReason
-                      ? { reason: classificationReason }
-                      : {}),
-                  },
-                  signal,
-                ),
+                (
+                  await organizeDocument(
+                    detail.id,
+                    {
+                      revision: detail.revision,
+                      categoryId,
+                      ...(classificationReason
+                        ? { reason: classificationReason }
+                        : {}),
+                    },
+                    signal,
+                  )
+                ).id,
                 signal,
+                'Categoría actualizada.',
               ),
             );
           }}
@@ -262,16 +343,19 @@ export function DocumentDetails({
                   if (!destinationId || !reason.trim()) return;
                   void run(async (signal) =>
                     onSaved(
-                      await organizeDocument(
-                        detail.id,
-                        {
-                          revision: detail.revision,
-                          destinationId,
-                          reason: reason.trim(),
-                        },
-                        signal,
-                      ),
+                      (
+                        await organizeDocument(
+                          detail.id,
+                          {
+                            revision: detail.revision,
+                            destinationId,
+                            reason: reason.trim(),
+                          },
+                          signal,
+                        )
+                      ).id,
                       signal,
+                      'Documento trasladado.',
                     ),
                   );
                 }}
@@ -365,11 +449,23 @@ export function DocumentDetails({
             disabled={busy}
             onClick={onRefresh}
           >
-            Consultar clasificación y expediente vigentes
+            Actualizar ficha
           </button>
         </div>
       )}
 
+      {(detail.canUploadVersion || detail.canViewVersions) && (
+        <DocumentVersions
+          detail={detail}
+          busy={busy}
+          run={run}
+          onPublished={(signal) =>
+            onSaved(detail.id, signal, 'La nueva versión quedó vigente.')
+          }
+          onRefresh={onRefresh}
+          onDownload={onDownload}
+        />
+      )}
       {detail.classifications.length > 0 && (
         <details>
           <summary>Historial de clasificación</summary>

@@ -5,12 +5,22 @@ export type UploadState =
   | 'RECHAZADO'
   | 'ERROR_VERIFICACION'
   | 'ABANDONADO';
-export interface DocumentUploadInput {
+export interface DocumentFileInput {
   requestId: string;
+  originalName: string;
+  reason: string;
+}
+export interface DocumentUploadInput extends DocumentFileInput {
   caseId: string;
   name: string;
   categoryId: string;
-  originalName: string;
+}
+export interface DocumentVersionUploadInput extends DocumentFileInput {
+  revision: number;
+}
+export interface DocumentMetadataInput {
+  revision: number;
+  name: string;
   reason: string;
 }
 export interface DocumentUpload {
@@ -48,22 +58,38 @@ export interface DocumentDetail extends DocumentSummary {
   revision: number;
   canClassify: boolean;
   canAssociate: boolean;
+  canEditName: boolean;
+  canUploadVersion: boolean;
+  canViewVersions: boolean;
   fileAvailable: boolean;
   classifications: DocumentClassification[];
   associations: DocumentAssociation[];
   authorId: string;
   authorName: string;
   categoryName: string;
-  version: null | {
+  version: DocumentVersion | null;
+}
+export interface DocumentVersion {
+  id: string;
+  number: number;
+  sha256: string;
+  size: number;
+  format: string;
+  status: string;
+  publishedAt: string;
+  beta?: true;
+}
+export interface DocumentVersionHistoryEntry extends DocumentVersion {
+  author: string;
+  reason: string;
+  current: boolean;
+  canDownload: boolean;
+  reviews: {
     id: string;
-    number: number;
-    sha256: string;
-    size: number;
-    format: string;
-    status: string;
-    publishedAt: string;
-    beta?: true;
-  };
+    author: string;
+    result: string;
+    at: string;
+  }[];
 }
 
 export type ClassificationReason =

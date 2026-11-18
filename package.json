@@ -44,7 +44,8 @@
     "setup:cases:dev": "node apps/api/scripts/setup-record-updates-dev.mjs cases",
     "setup:assignments:dev": "node apps/api/scripts/setup-record-updates-dev.mjs assignments",
     "setup:tracking:dev": "node apps/api/scripts/setup-record-updates-dev.mjs tracking",
-    "setup:document-organization:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentOrganization"
+    "setup:document-organization:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentOrganization",
+    "setup:document-versions:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentVersions"
   },
   "devDependencies": {
     "concurrently": "10.0.6",

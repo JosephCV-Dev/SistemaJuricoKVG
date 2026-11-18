@@ -23,13 +23,7 @@ export class RecordIdDto {
   id!: string;
 }
 
-export class SearchRecordsDto {
-  @IfProvided()
-  @Trim()
-  @IsString()
-  @MaxLength(200)
-  text?: string;
-
+export class RecordPaginationDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -41,6 +35,14 @@ export class SearchRecordsDto {
   @Min(0)
   @Max(10000)
   offset = 0;
+}
+
+export class SearchRecordsDto extends RecordPaginationDto {
+  @IfProvided()
+  @Trim()
+  @IsString()
+  @MaxLength(200)
+  text?: string;
 }
 
 export class CreationDto {

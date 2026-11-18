@@ -359,14 +359,11 @@ export function CaseDocuments({
               setDetail(await getDocument(detail.id, signal)),
             )
           }
-          onSaved={async (result, signal) => {
-            const moved = result.caseId !== detail.caseId;
-            setNotice(
-              moved ? 'Documento trasladado.' : 'Categoría actualizada.',
-            );
-            const updated = await getDocument(result.id, signal);
+          onSaved={async (id, signal, message) => {
+            const updated = await getDocument(id, signal);
             setDetail(updated);
             setPage(await listDocuments(caseId, 0, signal));
+            setNotice(message);
           }}
         />
       )}

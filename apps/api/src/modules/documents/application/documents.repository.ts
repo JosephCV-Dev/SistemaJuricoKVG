@@ -9,6 +9,9 @@ import type {
   DocumentDestination,
   DocumentClassificationInput,
   DocumentAssociationInput,
+  DocumentMetadataInput,
+  DocumentVersionUploadInput,
+  DocumentVersionHistoryEntry,
   DocumentOrganizationResult,
   RecordPage,
 } from '@kvg/contracts';
@@ -17,6 +20,21 @@ export abstract class DocumentsRepository {
     token: string,
     input: DocumentUploadInput,
   ): Promise<DocumentUpload>;
+  abstract createVersion(
+    token: string,
+    id: string,
+    input: DocumentVersionUploadInput,
+  ): Promise<DocumentUpload>;
+  abstract updateMetadata(
+    token: string,
+    id: string,
+    input: DocumentMetadataInput,
+  ): Promise<DocumentOrganizationResult>;
+  abstract versions(
+    token: string,
+    id: string,
+    query: { limit: number; offset: number },
+  ): Promise<RecordPage<DocumentVersionHistoryEntry>>;
   abstract upload(token: string, id: string): Promise<UploadStatus>;
   abstract search(
     token: string,

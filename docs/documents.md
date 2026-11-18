@@ -143,8 +143,8 @@ consulta, descarga original y vista móvil del panel documental.
 
 El ensayo acotado de copia y recuperación está en [recovery-rehearsal.md](recovery-rehearsal.md).
 La preparación local no completa el despliegue HTTPS separado (3C), administración
-de trabajos, gestión integral de respaldos, versiones/revisión jurídica, retiro ni
-recuperación de un documento desde la interfaz. No acredita una garantía RPO/RTO,
+de trabajos, gestión integral de respaldos, captura de revisiones jurídicas, retiro
+ni recuperación de un documento desde la interfaz. No acredita una garantía RPO/RTO,
 seguridad absoluta de archivos o restauración completa de Supabase Auth/Storage.
 
 Referencias técnicas consultadas: [ClamAV Docker](https://docs.clamav.net/manual/Installing/Docker.html),
@@ -207,3 +207,53 @@ por nombre, categoría, folio y cliente, lo reclasificó y lo trasladó a otro
 expediente autorizado. Se verificaron ambos historiales y la igualdad byte
 por byte de la descarga. El abogado con acceso solamente al expediente de
 origen recibió 403 al consultar y descargar el documento trasladado.
+
+## Paso 5B de metadatos y versiones
+
+CU014/CU029 (SCRUM-133/137) se usan desde la ficha de un documento, en la
+búsqueda general o en el expediente. **Editar metadatos** cambia el nombre
+con un motivo obligatorio y revisión vigente. Aplica a documentos en Recibido
+o En revisión dentro de expedientes editables. La categoría conserva
+**Clasificar documento** y el expediente conserva **Cambiar expediente**.
+El motivo y los nombres anterior y nuevo quedan en un historial SQL privado
+e inmutable. La bitácora registra actor, campo y revisión.
+
+**Cargar nueva versión** exige motivo, revisión y alcance vigentes de consulta,
+edición y carga. Usa el flujo privado de CU008, con la marca por archivo si se
+publica en beta. El botón **Consultar estado de la nueva versión** informa si
+se publicó, fue rechazada o se canceló, entre otros estados de la carga. En
+caso de rechazo permanece el original vigente. Si la revisión cambió antes
+de publicar, el trabajo se cancela y la ficha debe actualizarse para intentar de
+nuevo. Cada publicación confirmada inicia en `RECIBIDO` y conserva los originales
+previos con sus propias revisiones. Si se quiere volver a unos bytes anteriores,
+se puede descargar ese original autorizado y enviarlo como una versión nueva.
+
+**Ver historial de versiones** identifica la secuencia, la vigente y el hash
+SHA-256, autor, motivo y fecha de cada publicación. Muestra el resultado, autor y
+fecha de las revisiones jurídicas registradas en la versión correspondiente.
+Cada descarga requiere el permiso específico y vuelve a verificar alcance e
+integridad. Los archivos beta restringidos se filtran del historial cuando la
+beta está apagada. Sus documentos siguen admitiendo una nueva versión bajo
+identidad autorizada cuando se abre su ficha desde el expediente.
+
+| Ruta                                   | Control                                                                       |
+| -------------------------------------- | ----------------------------------------------------------------------------- |
+| `PATCH /api/v1/documents/:id/metadata` | Edición de nombre con revisión, motivo, permiso, alcance y CSRF.              |
+| `POST /api/v1/documents/:id/versions`  | Reserva idempotente por documento y revisión. La recepción usa la ruta CU008. |
+| `GET /api/v1/documents/:id/versions`   | Historial paginado con consulta y permiso de versiones; sin rutas privadas.   |
+
+Se aplicó `202611170013_document_versions.sql` al Supabase de desarrollo con
+`npm run setup:document-versions:dev`. Pasaron `npm run check` (89 pruebas)
+y la comprobación de permisos y buckets privados. El
+[ensayo SQL aislado](../database/tests/document-versions-local.sql) verificó
+revisión obsoleta, reintento, conflicto de publicación, rechazo, revocación
+antes de publicar, consulta sin permiso de descarga y conservación de la
+revisión jurídica de una versión previa ya validada. Usa referencias ficticias
+de Storage.
+
+En Chromium a 390 px con MFA real, Secretaría renombró un documento ficticio,
+cargó una nueva versión y descargó ambos originales sin cambios en sus bytes.
+El trabajador rechazó una carga inválida y canceló un intento con revisión
+obsoleta. El abogado sin alcance recibió 403 al consultar el historial, editar
+y descargar la primera versión. Las publicaciones de este ensayo usaron la
+beta de desarrollo.

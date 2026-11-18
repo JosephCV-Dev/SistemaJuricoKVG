@@ -40,7 +40,14 @@ autoría e historial. [Contrato de seguimiento](clients-and-cases.md#paso-4d-est
 clasificación con historial y traslado con revisión, trazabilidad y alcance
 sobre origen y destino. [Contrato y pruebas](documents.md#paso-5a-organización-y-búsqueda).
 
-El siguiente avance es **5B, metadatos y versiones** (CU014/CU029).
+**5B implementado.** CU014/CU029 (SCRUM-133/137) separan la edición del
+nombre de la publicación de una nueva versión. El historial identifica la
+vigente y las revisiones jurídicas de cada original. Una reserva obsoleta
+queda cancelada y la descarga de anteriores conserva su permiso específico.
+[Contrato y pruebas](documents.md#paso-5b-de-metadatos-y-versiones).
+
+El siguiente avance es **5C**, revisión jurídica y estados documentales
+(CU016/CU026).
 La demo mantiene su modo beta local. El antimalware operativo y el despliegue
 separado siguen pendientes.
 
@@ -176,12 +183,12 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 > Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz con el estilo mínimo existente.
 
-**Siguiente petición recomendada para el paso 5B**
+**Siguiente petición recomendada para el paso 5C**
 
-> Implementa CU014/CU029. Separa edición de metadatos y registro de una
-> nueva versión. Permite consultar el historial y descargar originales
-> autorizados. Preserva cada versión, revalida alcance y revisión y conserva
-> la interfaz KVG.
+> Implementa CU016/CU026. Vincula las observaciones y decisiones jurídicas a
+> la versión exacta, aplica las transiciones permitidas y conserva el historial.
+> Verifica que una decisión de otra versión y un permiso revocado no permitan
+> validar la vigente. Mantén la interfaz KVG.
 
 **Petición para retomar el prototipo y despliegue cuando haya recursos:**
 

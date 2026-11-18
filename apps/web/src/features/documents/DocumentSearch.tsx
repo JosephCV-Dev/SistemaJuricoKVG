@@ -288,14 +288,10 @@ export function DocumentSearch({
             )
           }
           onDownload={() => onNotice('Descarga autorizada.')}
-          onSaved={async (result, signal) => {
-            onNotice(
-              result.caseId === detail.caseId
-                ? 'Categoría actualizada.'
-                : 'Documento trasladado.',
-            );
-            setDetail(await getDocument(result.id, signal));
+          onSaved={async (id, signal, message) => {
+            setDetail(await getDocument(id, signal));
             setResults(await searchDocuments(query, 0, signal));
+            onNotice(message);
           }}
         />
       )}
