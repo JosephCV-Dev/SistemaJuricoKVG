@@ -75,6 +75,12 @@ export class DocumentStateDto extends DocumentRevisionDto {
   @Trim() @IsString() @MinLength(1) @MaxLength(2000) reason!: string;
   @IfProvided() @IsUUID('4') reviewId?: string;
 }
+export class RetireDocumentDto extends DocumentRevisionDto {
+  @Trim() @IsString() @MinLength(1) @MaxLength(2000) reason!: string;
+}
+export class RecoverDocumentDto extends RetireDocumentDto {
+  @IsUUID('4') requestId!: string;
+}
 export class UpdateDocumentMetadataDto extends DocumentRevisionDto {
   @Trim()
   @IsString()

@@ -169,3 +169,9 @@ quedan en la versión examinada, tienen acceso restringido y se corrigen con
 otra entrada. Las transiciones de la vigente llevan motivo y revisión. Validar
 requiere evidencia apta de esa versión y permiso específico actual.
 [Contrato y evidencia](documents.md#paso-5c-de-revisión-jurídica-y-estados).
+
+CU027 y CU028 (SCRUM-136/198) se cubren en 5D. El retiro es lógico y bloquea
+el acceso al documento y a sus versiones. La recuperación exige autorización
+operativa vigente, conservación y evidencia de todos los originales; el
+acceso posterior se calcula por los permisos actuales del expediente.
+[Contrato y evidencia](documents.md#paso-5d-de-retiro-y-recuperación).

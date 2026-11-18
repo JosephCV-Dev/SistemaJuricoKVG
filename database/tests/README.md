@@ -88,3 +88,9 @@ baseline y migraciones aplicadas a PostgreSQL efímero. Comprueba la
 privacidad de observaciones, correcciones, transiciones, evidencia por
 versión, revocación en sesión vigente y bloqueo técnico. Revierte los
 datos y usa referencias ficticias de Storage.
+
+`document-recovery-local.sql` verifica CU027/CU028 con el fixture de
+plataforma y el conjunto de migraciones en PostgreSQL efímero. Prueba
+retiro, conservación, revocación de descargas previas, evidencia de dos
+originales, denegaciones y recuperación idempotente. Revierte sus datos
+y usa referencias ficticias de Storage.

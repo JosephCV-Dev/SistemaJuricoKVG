@@ -584,3 +584,108 @@ test('revisión y estado documental conservan versión, guard, CSRF y evidencia 
   });
   assert(calls.every((call) => call.token.startsWith('local-private-aal2')));
 });
+
+test('retiro y recuperación separan permisos, CSRF y metadatos operativos', async (t) => {
+  const calls = [];
+  const { browser, state } = await application(t, {
+    uploadMode: 'beta',
+    rpc: {
+      execute: async (token, operation, input) => {
+        calls.push({ token, operation, input });
+        if (operation === 'documento.retirar')
+          return { documento_id: id, revision: 3 };
+        if (operation === 'documento.retirados')
+          return [
+            {
+              documento_id: id,
+              folio_interno: 'KVG-FICTICIO',
+              retirado_en: '2026-11-17T19:00:00Z',
+              revision: 3,
+              puede_recuperar: true,
+              trabajo_id: null,
+              estado_trabajo: null,
+              nombre: 'Dato jurídico excluido',
+            },
+          ];
+        if (
+          ['documento.recuperar', 'documento.estado_recuperacion'].includes(
+            operation,
+          )
+        )
+          return {
+            trabajo_id: id,
+            documento_id: id,
+            estado: 'EN_COLA',
+            resultado: null,
+            modo: null,
+          };
+        throw new Error('RPC inesperada');
+      },
+    },
+  });
+  const permission = (code, context) => ({
+    permission: code,
+    context,
+    requiresMfa: true,
+    requiresDecision: false,
+  });
+  const input = { revision: 2, reason: '  Motivo ficticio  ' };
+  const path = `documents/${id}`;
+  assert.equal((await browser.request('documents/retired')).status, 401);
+  await authenticated(browser);
+  state.capabilities = [permission('documento.retirar', 'EXPLICITO')];
+  assert.equal((await browser.request('documents/retired')).status, 403);
+  assert.equal(
+    (await browser.post(path + '/recover', { ...input, requestId: id })).status,
+    403,
+  );
+  assert.equal(
+    (
+      await browser.request(path + '/retire', {
+        method: 'POST',
+        body: input,
+        headers: { Origin: APP_ORIGIN },
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (await browser.post(path + '/retire', { ...input, reason: '  ' })).status,
+    400,
+  );
+  assert.equal((await browser.post(path + '/retire', input)).status, 200);
+  assert.deepEqual(calls.at(-1).input, {
+    documento_id: id,
+    revision: 2,
+    motivo: 'Motivo ficticio',
+  });
+  state.capabilities = [permission('documento.recuperar', 'GLOBAL_OPERATIVO')];
+  assert.equal((await browser.post(path + '/retire', input)).status, 403);
+  const result = await browser.request('documents/retired?text=KVG&limit=5');
+  assert.equal(result.status, 200);
+  assert(!JSON.stringify(await result.json()).includes('Dato jurídico'));
+  assert.equal(
+    (
+      await browser.post(path + '/recover', {
+        ...input,
+        requestId: id,
+        verified: true,
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (await browser.post(path + '/recover', { ...input, requestId: id })).status,
+    202,
+  );
+  assert.deepEqual(calls.at(-1).input, {
+    documento_id: id,
+    revision: 2,
+    motivo: 'Motivo ficticio',
+    clave_idempotencia: id,
+  });
+  const status = await browser.request(`documents/recoveries/${id}`);
+  assert.equal(status.status, 200);
+  assert.equal((await status.json()).state, 'EN_COLA');
+  assert(calls.every((entry) => entry.token.startsWith('local-private-aal2')));
+});

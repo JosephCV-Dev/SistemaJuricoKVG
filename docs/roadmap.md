@@ -51,7 +51,13 @@ jurídicas vinculadas a la versión examinada. Las transiciones autorizadas
 afectan a la vigente y validarla requiere una revisión apta de esa misma versión.
 [Contrato y pruebas](documents.md#paso-5c-de-revisión-jurídica-y-estados).
 
-El siguiente avance es **5D**, retiro y recuperación documental (CU027/CU028).
+**5D implementado.** CU027/CU028 (SCRUM-136/198) incorporan retiro lógico
+con motivo, denegación de consultas y descargas mientras dura el retiro y
+recuperación administrativa con comprobación de todos los originales.
+[Contrato y pruebas](documents.md#paso-5d-de-retiro-y-recuperación).
+
+El siguiente avance es **etapa 6**, comenzando por usuarios y permisos
+(CU018/CU019).
 La demo mantiene su modo beta local. El antimalware operativo y el despliegue
 separado siguen pendientes.
 
@@ -187,12 +193,12 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 > Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz con el estilo mínimo existente.
 
-**Siguiente petición recomendada para el paso 5D**
+**Siguiente petición recomendada para la etapa 6**
 
-> Implementa CU027/CU028. Aplica retiro lógico con motivo y auditoría y recupera
-> solo cuando el permiso, las restricciones vigentes y la integridad de los
-> originales lo permitan. Verifica la denegación de consulta y descarga durante
-> el retiro. Mantén la interfaz KVG y los pendientes acordados para la beta.
+> Implementa CU018/CU019. Integra invitaciones individuales, edición,
+> desactivación y gestión de roles y permisos con auditoría. Comprueba la
+> revocación con una sesión vigente y conserva la autoría histórica y el
+> relevo de responsables. Mantén la interfaz KVG.
 
 **Petición para retomar el prototipo y despliegue cuando haya recursos:**
 

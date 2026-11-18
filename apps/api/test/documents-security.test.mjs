@@ -400,3 +400,114 @@ test('el trabajador registra una cancelación de publicación sin reintentar ni 
   assert.equal(await worker.once(), 'cancelled');
   assert(!p.calls.includes('trabajo.fallar'));
 });
+
+test('recuperación beta comprueba cada original privado y conserva su marca técnica', async () => {
+  const calls = [];
+  const row = (suffix) => ({
+    version_id: `version-${suffix}`,
+    bucket: 'kvg-originales',
+    localizador: `versiones/${suffix}/original`,
+    nombre_original: `ficticio-${suffix}.pdf`,
+    sha256: sha,
+    tamano_bytes: bytes.length,
+    objeto_id: `objeto-${suffix}`,
+    objeto_revision: '15',
+    habilitado: true,
+  });
+  const files = {
+    async execute(operation, input) {
+      calls.push({ operation, input });
+      if (operation === 'trabajo.tomar_recuperacion')
+        return { trabajo_id: 'job', ejecutor_codigo: 'lease' };
+      if (operation === 'trabajo.datos')
+        return { autorizada: true, originales: [row('a'), row('b')] };
+      if (operation === 'documento.recuperar_beta')
+        return { estado: 'COMPLETADO' };
+      assert.equal(operation, 'trabajo.renovar');
+      return {};
+    },
+    async read(bucket, path) {
+      assert.equal(bucket, 'kvg-originales');
+      assert.match(path, /^versiones\/[ab]\/original$/);
+      calls.push({ operation: 'lectura', path });
+      return bytes;
+    },
+    async putImmutable() {
+      assert.fail('La recuperación debe conservar los objetos existentes');
+    },
+  };
+  const verifier = {
+    async verify(input, name) {
+      assert.equal(input, bytes);
+      assert.match(name, /^ficticio-[ab]\.pdf$/);
+      return {
+        size: bytes.length,
+        sha256: sha,
+        format: 'PDF',
+        mime: 'application/pdf',
+        engine: null,
+      };
+    },
+  };
+  const worker = new DocumentWorker(files, verifier, true);
+  assert.equal(await worker.recoverOnce(), 'recovered');
+  assert.equal(
+    calls.filter((entry) => entry.operation === 'lectura').length,
+    2,
+  );
+  assert.deepEqual(
+    calls.at(-1).input.verificaciones.map((evidence) => evidence.version_id),
+    ['version-a', 'version-b'],
+  );
+  assert(
+    calls
+      .at(-1)
+      .input.verificaciones.every(
+        (item) =>
+          item.sha256 === sha && !Object.hasOwn(item, 'antimalware_apto'),
+      ),
+  );
+});
+
+test('recuperación rechaza original alterado y reintenta un fallo temporal de Storage', async () => {
+  let available = false;
+  const calls = [];
+  const files = {
+    async execute(operation) {
+      calls.push(operation);
+      if (operation === 'trabajo.tomar_recuperacion')
+        return { trabajo_id: 'job', ejecutor_codigo: 'lease' };
+      if (operation === 'trabajo.datos')
+        return {
+          autorizada: true,
+          originales: [
+            {
+              bucket: 'kvg-originales',
+              localizador: 'versiones/a/original',
+              sha256: sha,
+              tamano_bytes: bytes.length,
+              objeto_id: 'objeto',
+              habilitado: true,
+            },
+          ],
+        };
+      if (operation === 'recuperacion.rechazar') return { estado: 'FALLIDO' };
+      assert.equal(operation, 'trabajo.fallar');
+      return {};
+    },
+    async read() {
+      if (!available) throw new Error('Transporte temporal');
+      return Buffer.alloc(bytes.length, 1);
+    },
+  };
+  const worker = new DocumentWorker(files, {
+    async verify() {
+      assert.fail('Primero debe comprobarse la integridad');
+    },
+  });
+  assert.equal(await worker.recoverOnce(), 'retry');
+  assert.equal(calls.at(-1), 'trabajo.fallar');
+  available = true;
+  assert.equal(await worker.recoverOnce(), 'rejected');
+  assert.equal(calls.at(-1), 'recuperacion.rechazar');
+});

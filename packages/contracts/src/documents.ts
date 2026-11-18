@@ -63,6 +63,7 @@ export interface DocumentDetail extends DocumentSummary {
   canEditName: boolean;
   canUploadVersion: boolean;
   canViewVersions: boolean;
+  canRetire: boolean;
   fileAvailable: boolean;
   classifications: DocumentClassification[];
   associations: DocumentAssociation[];
@@ -70,6 +71,35 @@ export interface DocumentDetail extends DocumentSummary {
   authorName: string;
   categoryName: string;
   version: DocumentVersion | null;
+}
+export interface RetireDocumentInput {
+  revision: number;
+  reason: string;
+}
+export interface RetireDocumentResult {
+  id: string;
+  revision: number;
+}
+export interface RecoverDocumentInput extends RetireDocumentInput {
+  requestId: string;
+}
+export type DocumentRecoveryState =
+  'EN_COLA' | 'EN_EJECUCION' | 'COMPLETADO' | 'FALLIDO' | 'CANCELADO';
+export interface DocumentRecoveryStatus {
+  id: string;
+  documentId: string;
+  state: DocumentRecoveryState;
+  result: string | null;
+  mode: 'BETA' | 'VERIFICADO' | null;
+}
+export interface RetiredDocument {
+  id: string;
+  caseFolio: string | null;
+  retiredAt: string;
+  revision: number;
+  canRecover: boolean;
+  jobId: string | null;
+  jobState: DocumentRecoveryState | null;
 }
 export interface DocumentVersion {
   id: string;

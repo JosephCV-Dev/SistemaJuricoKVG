@@ -354,6 +354,15 @@ export function CaseDocuments({
           run={run}
           {...(onOpenCase ? { onOpenCase } : {})}
           onDownload={() => setNotice('Descarga autorizada.')}
+          onRetired={async (id, signal) => {
+            setDetail(null);
+            setPage((previous) => ({
+              ...previous,
+              items: previous.items.filter((row) => row.id !== id),
+            }));
+            setNotice(`Documento retirado. ID para recuperación ${id}`);
+            setPage(await listDocuments(caseId, 0, signal));
+          }}
           onRefresh={() =>
             void run(async (signal) =>
               setDetail(await getDocument(detail.id, signal)),

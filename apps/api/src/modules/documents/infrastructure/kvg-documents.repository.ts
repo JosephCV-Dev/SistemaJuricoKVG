@@ -18,6 +18,10 @@ import type {
   DocumentStateChange,
   DocumentStateInput,
   DocumentStateResult,
+  RetireDocumentInput,
+  RecoverDocumentInput,
+  DocumentRecoveryState,
+  DocumentRecoveryStatus,
   DocumentOrganizationResult,
 } from '@kvg/contracts';
 import { KvgRpcService } from '../../../infrastructure/supabase/kvg-rpc.service';
@@ -111,6 +115,31 @@ function versionHistory(value: unknown): DocumentVersionHistoryEntry {
 }
 function flag(value: unknown): boolean {
   return typeof value === 'boolean' ? value : invalidRpcResult();
+}
+function recoveryState(value: unknown): DocumentRecoveryState {
+  switch (value) {
+    case 'EN_COLA':
+    case 'EN_EJECUCION':
+    case 'COMPLETADO':
+    case 'FALLIDO':
+    case 'CANCELADO':
+      return value;
+    default:
+      return invalidRpcResult();
+  }
+}
+function recoveryStatus(value: unknown): DocumentRecoveryStatus {
+  const row = obj(value);
+  const mode = row.modo;
+  if (mode !== null && mode !== 'BETA' && mode !== 'VERIFICADO')
+    return invalidRpcResult();
+  return {
+    id: text(row.trabajo_id),
+    documentId: text(row.documento_id),
+    state: recoveryState(row.estado),
+    result: nullable(row.resultado),
+    mode,
+  };
 }
 function documentState(value: unknown) {
   return DOCUMENT_STATES.find((state) => state === value) ?? invalidRpcResult();
@@ -413,6 +442,7 @@ export class KvgDocumentsRepository extends DocumentsRepository {
       canEditName: r.puede_editar_nombre === true,
       canUploadVersion: r.puede_subir_version === true,
       canViewVersions: r.puede_ver_versiones === true,
+      canRetire: r.puede_retirar === true,
       fileAvailable:
         typeof r.archivo_disponible === 'boolean'
           ? r.archivo_disponible
@@ -447,6 +477,66 @@ export class KvgDocumentsRepository extends DocumentsRepository {
       categoryName: text(r.nombre_categoria),
       version: v ? version(v) : null,
     };
+  }
+  async retire(token: string, id: string, input: RetireDocumentInput) {
+    const row = obj(
+      await this.rpc.execute(token, 'documento.retirar', {
+        documento_id: id,
+        revision: input.revision,
+        motivo: input.reason,
+      }),
+    );
+    return { id: text(row.documento_id), revision: integer(row.revision) };
+  }
+  async retired(
+    token: string,
+    {
+      text: filter,
+      limit,
+      offset,
+    }: { text?: string; limit: number; offset: number },
+  ) {
+    const rows = await this.rpc.execute(token, 'documento.retirados', {
+      texto: filter ?? '',
+      limite: limit + 1,
+      desplazamiento: offset,
+    });
+    return page(
+      array(rows, (value) => {
+        const row = obj(value);
+        return {
+          id: text(row.documento_id),
+          caseFolio: nullable(row.folio_interno),
+          retiredAt: date(row.retirado_en),
+          revision: integer(row.revision),
+          canRecover: flag(row.puede_recuperar),
+          jobId: nullable(row.trabajo_id),
+          jobState:
+            row.estado_trabajo === null
+              ? null
+              : recoveryState(row.estado_trabajo),
+        };
+      }),
+      limit,
+      offset,
+    );
+  }
+  async recover(token: string, id: string, input: RecoverDocumentInput) {
+    return recoveryStatus(
+      await this.rpc.execute(token, 'documento.recuperar', {
+        documento_id: id,
+        revision: input.revision,
+        motivo: input.reason,
+        clave_idempotencia: input.requestId,
+      }),
+    );
+  }
+  async recoveryStatus(token: string, id: string) {
+    return recoveryStatus(
+      await this.rpc.execute(token, 'documento.estado_recuperacion', {
+        trabajo_id: id,
+      }),
+    );
   }
   async authorizeDownload(token: string, id: string) {
     const r = obj(

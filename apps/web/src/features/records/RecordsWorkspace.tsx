@@ -2,6 +2,7 @@ import { DocumentSearch } from '../documents/DocumentSearch';
 import { AssignedCases } from './AssignedCases';
 import { CaseAssignmentPanel } from './CaseAssignmentPanel';
 import { CaseReassignmentWorkspace } from './CaseReassignmentWorkspace';
+import { DocumentRecovery } from '../documents/DocumentRecovery';
 import { CaseDetailView } from './CaseDetailView';
 import { showDate } from './record-format';
 import type { WorkspaceView } from '../../shared/navigation';
@@ -109,7 +110,8 @@ export function RecordsWorkspace({
           if (
             view === 'assigned' ||
             view === 'reassign' ||
-            view === 'documents'
+            view === 'documents' ||
+            view === 'retired-documents'
           )
             setAccessRevision((previous) => previous + 1);
           setClients(emptyPage());
@@ -613,6 +615,9 @@ export function RecordsWorkspace({
           onOpenCase={(id) => openCase(id, 'cases')}
           onNotice={setNotice}
         />
+      )}
+      {view === 'retired-documents' && can('documento.recuperar') && (
+        <DocumentRecovery key={accessRevision} busy={busy} run={run} />
       )}
       {['cases', 'case'].includes(view) && can('expediente.consultar') && (
         <section className="panel" aria-labelledby="cases-heading">

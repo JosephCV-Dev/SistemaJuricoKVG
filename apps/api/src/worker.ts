@@ -35,8 +35,19 @@ async function run() {
     const result = await worker.once();
     if (result !== 'idle' || process.argv.includes('--once'))
       console.log(JSON.stringify({ action: 'DOCUMENT_WORKER', result }));
+    const recovery = stopping ? 'idle' : await worker.recoverOnce();
+    if (recovery !== 'idle' || process.argv.includes('--once'))
+      console.log(
+        JSON.stringify({
+          action: 'DOCUMENT_RECOVERY_WORKER',
+          result: recovery,
+        }),
+      );
     if (process.argv.includes('--once')) break;
-    if (result === 'idle' || result === 'retry')
+    if (
+      (result === 'idle' || result === 'retry') &&
+      (recovery === 'idle' || recovery === 'retry')
+    )
       await new Promise((resolve) => setTimeout(resolve, 5000));
   } while (!stopping);
 }

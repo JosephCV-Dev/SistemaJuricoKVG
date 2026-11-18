@@ -71,8 +71,9 @@ con el alcance explícito de cada herramienta.
   nuevo, se relee y verifica. SQL revalida alcance, conservación, revisión,
   expediente editable y lease antes de publicar. El estado jurídico inicial es
   `RECIBIDO`: el análisis técnico no equivale a validación jurídica.
-- El trabajador reclama exclusivamente `VERIFICAR_CARGA`/`CONCILIAR_CARGA`, con
-  lease renovable. No toma invitaciones, respaldos o restauraciones. Conserva el
+- El trabajador reclama `VERIFICAR_CARGA`/`CONCILIAR_CARGA` y, en otra cola
+  documental, `VERIFICAR_RECUPERACION`, con lease renovable. No toma invitaciones,
+  respaldos o restauraciones. Conserva el
   reintento/backoff persistente original; agotarlo se presenta como error de análisis.
 - La cuarentena y originales huérfanos nunca se ofrecen por ruta directa. Se
   conservan para conciliación; no hay borrado automático ni política de purga nueva.
@@ -143,8 +144,7 @@ consulta, descarga original y vista móvil del panel documental.
 
 El ensayo acotado de copia y recuperación está en [recovery-rehearsal.md](recovery-rehearsal.md).
 La preparación local no completa el despliegue HTTPS separado (3C), administración
-de trabajos, gestión integral de respaldos, retiro ni recuperación de un
-documento desde la interfaz. No acredita una garantía RPO/RTO,
+de trabajos ni gestión integral de respaldos. No acredita una garantía RPO/RTO,
 seguridad absoluta de archivos o restauración completa de Supabase Auth/Storage.
 
 Referencias técnicas consultadas: [ClamAV Docker](https://docs.clamav.net/manual/Installing/Docker.html),
@@ -313,3 +313,55 @@ mientras se redactaba una revisión conservó la observación en la versión
 examinada y mostró un aviso. El servidor denegó cambiar el estado de esa
 versión anterior y usar su evidencia para validar la nueva. Las cargas de
 este ensayo usaron la beta de desarrollo.
+
+## Paso 5D de retiro y recuperación
+
+**Retirar documento** aparece en la ficha de un documento publicado dentro
+de un expediente editable cuando la sesión tiene el permiso, el alcance y
+la conservación lo permite. Confirmar exige la revisión del documento y un
+motivo. El retiro bloquea el listado, la consulta del historial y la descarga
+de todas las versiones. Se conservan los originales y el expediente. Una
+autorización de descarga emitida antes del retiro queda invalidada aunque
+el documento se recupere. La revocación protege las entregas nuevas y no
+retira bytes que el usuario ya recibió.
+
+**Documentos retirados** permite a administración buscar por folio o ID y
+solicitar recuperación con motivo. Se muestran únicamente datos operativos,
+sin nombre documental, cliente, contenido, rutas privadas ni hashes. La
+confirmación del administrador encola una solicitud idempotente. El trabajador
+revalida permiso, conservación y revisión, lee cada original privado y
+comprueba tamaño, SHA-256 y estructura. En modo verificado también vuelve
+a analizar con antimalware. PostgreSQL exige evidencia para todas las
+versiones y comprueba que los metadatos de Storage coincidan antes de
+habilitar otra vez el documento.
+
+Si algún original falta, cambió o no supera la comprobación, el documento
+sigue retirado. Los fallos temporales conservan el reintento de la cola. El
+resultado se consulta desde el listado. Las recuperaciones en beta quedan
+identificadas como tales y conservan la marca técnica de cada versión. El
+evento de recuperación y su trabajo verificado quedan vinculados. Los
+permisos de lectura y descarga siguen dependiendo del expediente y del
+alcance vigente de cada cuenta.
+
+| Ruta                                   | Control                                                       |
+| -------------------------------------- | ------------------------------------------------------------- |
+| `POST /api/v1/documents/:id/retire`    | Permiso y alcance, conservación, revisión, motivo y CSRF.     |
+| `GET /api/v1/documents/retired`        | Permiso global de recuperación y listado paginado.            |
+| `POST /api/v1/documents/:id/recover`   | Permiso global, motivo, revisión, CSRF y reserva idempotente. |
+| `GET /api/v1/documents/recoveries/:id` | Estado del trabajo y resultado operativo.                     |
+
+Se aplicó `202611170015_document_retirement_recovery.sql` al Supabase de
+desarrollo con `npm run setup:document-recovery:dev`. Pasaron 93 pruebas
+de `npm run check` y el diagnóstico de privilegios y buckets privados. El
+[ensayo SQL aislado](../database/tests/document-recovery-local.sql) comprobó
+conservación, bloqueo de una autorización previa, evidencia incompleta,
+revocación y reintento. Usa referencias ficticias de Storage. La restauración
+de respaldos de la etapa 6 y el ensayo con antimalware operativo siguen
+pendientes.
+
+En Chromium a 390 px con MFA real, Secretaría retiró un documento
+ficticio con dos versiones. La ficha, el historial y ambas descargas
+respondieron 403. Administración solicitó la recuperación desde el
+listado operativo y el trabajador la completó en beta. Secretaría descargó
+las dos versiones recuperadas y sus bytes coincidieron con los originales.
+La descarga desde la cuenta de administración permaneció denegada.

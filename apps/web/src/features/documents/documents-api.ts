@@ -14,6 +14,12 @@ import type {
   DocumentStateInput,
   DocumentStateResult,
   DocumentVersionReview,
+  RetireDocumentInput,
+  RetireDocumentResult,
+  RecoverDocumentInput,
+  DocumentRecoveryState,
+  DocumentRecoveryStatus,
+  RetiredDocument,
   DocumentDetail,
   DocumentMetadataInput,
   DocumentVersion,
@@ -209,6 +215,7 @@ export async function getDocument(
     canEditName: bool(r.canEditName),
     canUploadVersion: bool(r.canUploadVersion),
     canViewVersions: bool(r.canViewVersions),
+    canRetire: bool(r.canRetire),
     fileAvailable: bool(r.fileAvailable),
     classifications: array(r.classifications, (item) => {
       const row = obj(item);
@@ -468,4 +475,77 @@ export async function saveDocumentDownload(
   link.download = `${name}-v${version.number}.${version.format.toLowerCase()}`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function recoveryState(value: unknown): DocumentRecoveryState {
+  switch (value) {
+    case 'EN_COLA':
+    case 'EN_EJECUCION':
+    case 'COMPLETADO':
+    case 'FALLIDO':
+    case 'CANCELADO':
+      return value;
+    default:
+      return invalid();
+  }
+}
+function recoveryStatus(value: unknown): DocumentRecoveryStatus {
+  const row = obj(value);
+  const mode = row.mode;
+  if (mode !== null && mode !== 'BETA' && mode !== 'VERIFICADO')
+    return invalid();
+  return {
+    id: text(row.id),
+    documentId: text(row.documentId),
+    state: recoveryState(row.state),
+    result: nullable(row.result),
+    mode,
+  };
+}
+export async function retireDocument(
+  id: string,
+  input: RetireDocumentInput,
+  signal: AbortSignal,
+): Promise<RetireDocumentResult> {
+  const row = obj(
+    await readJson(
+      await mutate(`${base}/${encodeURIComponent(id)}/retire`, input, signal),
+    ),
+  );
+  return { id: text(row.id), revision: integer(row.revision) };
+}
+export async function retiredDocuments(
+  filter: string,
+  offset: number,
+  signal: AbortSignal,
+): Promise<RecordPage<RetiredDocument>> {
+  const query = new URLSearchParams({ text: filter, offset: String(offset) });
+  return page(await getJson(`${base}/retired?${query}`, signal), (value) => {
+    const row = obj(value);
+    return {
+      id: text(row.id),
+      caseFolio: nullable(row.caseFolio),
+      retiredAt: text(row.retiredAt),
+      revision: integer(row.revision),
+      canRecover: bool(row.canRecover),
+      jobId: nullable(row.jobId),
+      jobState: row.jobState === null ? null : recoveryState(row.jobState),
+    };
+  });
+}
+export async function recoverDocument(
+  id: string,
+  input: RecoverDocumentInput,
+  signal: AbortSignal,
+) {
+  return recoveryStatus(
+    await readJson(
+      await mutate(`${base}/${encodeURIComponent(id)}/recover`, input, signal),
+    ),
+  );
+}
+export async function documentRecoveryStatus(id: string, signal: AbortSignal) {
+  return recoveryStatus(
+    await getJson(`${base}/recoveries/${encodeURIComponent(id)}`, signal),
+  );
 }

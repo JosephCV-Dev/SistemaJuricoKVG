@@ -12,6 +12,7 @@ import {
   documentDestinations,
   documentVersionReview,
   organizeDocument,
+  retireDocument,
   saveDocumentDownload,
   updateDocumentMetadata,
 } from './documents-api';
@@ -43,6 +44,7 @@ export function DocumentDetails({
   onRefresh,
   onDownload,
   onOpenCase,
+  onRetired,
 }: {
   detail: DocumentDetail;
   busy: boolean;
@@ -52,9 +54,10 @@ export function DocumentDetails({
   onRefresh: () => void;
   onDownload: () => void;
   onOpenCase?: (id: string) => void;
+  onRetired: (id: string, signal: AbortSignal) => Promise<void>;
 }) {
   const [form, setForm] = useState<
-    'metadata' | 'category' | 'association' | null
+    'metadata' | 'category' | 'association' | 'retire' | null
   >(null);
   const [name, setName] = useState(detail.name);
   const [nameReason, setNameReason] = useState('');
@@ -69,6 +72,7 @@ export function DocumentDetails({
     useState<RecordPage<DocumentDestination> | null>(null);
   const [destinationId, setDestination] = useState('');
   const [reason, setReason] = useState('');
+  const [retirementReason, setRetirementReason] = useState('');
   const [review, setReview] = useState<DocumentVersionReview | null>(null);
   const original = detail.version;
   function openReview(versionId: string) {
@@ -191,8 +195,60 @@ export function DocumentDetails({
             Editar metadatos
           </button>
         )}
+        {detail.canRetire && !form && (
+          <button
+            className="button-secondary"
+            type="button"
+            disabled={busy}
+            onClick={() => setForm('retire')}
+          >
+            Retirar documento
+          </button>
+        )}
       </div>
 
+      {form === 'retire' && (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!retirementReason.trim()) return;
+            void run(async (signal) => {
+              const result = await retireDocument(
+                detail.id,
+                {
+                  revision: detail.revision,
+                  reason: retirementReason.trim(),
+                },
+                signal,
+              );
+              await onRetired(result.id, signal);
+            });
+          }}
+        >
+          <fieldset disabled={busy}>
+            <legend>Confirmar retiro del documento</legend>
+            <p>
+              Se bloquearán la consulta y la descarga de todas las versiones.
+              Los originales se conservarán.
+            </p>
+            <p>
+              <label htmlFor="document-retirement-reason">
+                Motivo del retiro
+              </label>
+              <textarea
+                id="document-retirement-reason"
+                required
+                maxLength={2000}
+                value={retirementReason}
+                onChange={(event) => setRetirementReason(event.target.value)}
+              />
+            </p>
+            <button type="submit" disabled={!retirementReason.trim()}>
+              Confirmar retiro
+            </button>
+          </fieldset>
+        </form>
+      )}
       {form === 'metadata' && (
         <form
           onSubmit={(event) => {

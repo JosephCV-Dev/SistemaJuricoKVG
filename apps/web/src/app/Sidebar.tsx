@@ -60,6 +60,12 @@ export function Sidebar({
           link('reassign', 'Reasignar expedientes', view === 'reassign')}
         {can('documento.consultar') &&
           link('documents', 'Documentos', view === 'documents')}
+        {can('documento.recuperar') &&
+          link(
+            'retired-documents',
+            'Documentos retirados',
+            view === 'retired-documents',
+          )}
         <p className="nav-group">Cuenta</p>
         {link('session', 'Mi sesión', view === 'session')}
       </nav>

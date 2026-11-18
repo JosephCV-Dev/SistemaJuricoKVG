@@ -8,6 +8,7 @@ import {
 import type {
   DocumentUploadInput,
   DocumentVersionUploadInput,
+  RecoverDocumentInput,
 } from '@kvg/contracts';
 import { DocumentsRepository } from './documents.repository';
 import { PrivateFiles } from './private-files.port';
@@ -31,6 +32,10 @@ export class DocumentsService {
   createVersion(token: string, id: string, input: DocumentVersionUploadInput) {
     this.uploads.assertEnabled();
     return this.repository.createVersion(token, id, input);
+  }
+  recover(token: string, id: string, input: RecoverDocumentInput) {
+    this.uploads.assertEnabled();
+    return this.repository.recover(token, id, input);
   }
   async receive(token: string, id: string, bytes: Buffer) {
     this.uploads.assertEnabled();

@@ -17,6 +17,11 @@ import type {
   DocumentReviewResult,
   DocumentStateInput,
   DocumentStateResult,
+  RetireDocumentInput,
+  RetireDocumentResult,
+  RecoverDocumentInput,
+  DocumentRecoveryStatus,
+  RetiredDocument,
   DocumentOrganizationResult,
   RecordPage,
 } from '@kvg/contracts';
@@ -79,6 +84,24 @@ export abstract class DocumentsRepository {
     input: DocumentAssociationInput,
   ): Promise<DocumentOrganizationResult>;
   abstract get(token: string, id: string): Promise<DocumentDetail>;
+  abstract retire(
+    token: string,
+    id: string,
+    input: RetireDocumentInput,
+  ): Promise<RetireDocumentResult>;
+  abstract retired(
+    token: string,
+    query: { text?: string; limit: number; offset: number },
+  ): Promise<RecordPage<RetiredDocument>>;
+  abstract recover(
+    token: string,
+    id: string,
+    input: RecoverDocumentInput,
+  ): Promise<DocumentRecoveryStatus>;
+  abstract recoveryStatus(
+    token: string,
+    id: string,
+  ): Promise<DocumentRecoveryStatus>;
   abstract categories(token: string): Promise<DocumentCategory[]>;
   abstract authorizeDownload(
     token: string,

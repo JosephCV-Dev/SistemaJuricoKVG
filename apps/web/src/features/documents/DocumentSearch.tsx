@@ -288,6 +288,18 @@ export function DocumentSearch({
             )
           }
           onDownload={() => onNotice('Descarga autorizada.')}
+          onRetired={async (id, signal) => {
+            setDetail(null);
+            setResults(
+              (previous) =>
+                previous && {
+                  ...previous,
+                  items: previous.items.filter((row) => row.id !== id),
+                },
+            );
+            onNotice(`Documento retirado. ID para recuperación ${id}`);
+            setResults(await searchDocuments(query, 0, signal));
+          }}
           onSaved={async (id, signal, message) => {
             setDetail(await getDocument(id, signal));
             setResults(await searchDocuments(query, 0, signal));

@@ -172,7 +172,7 @@ como versión compatible con la compilación de decoradores de Nest.
 
 ## Procesamiento y consistencia
 
-El trabajador de cargas procesa trabajos persistentes con leases, reintentos y
+El trabajador documental procesa cargas y recuperaciones persistentes con leases, reintentos y
 backoff del SQL. El sondeo local no sustituye la cola persistente y no reclama
 trabajos de identidad, respaldo o restauración. La conciliación automática de
 objetos huérfanos y recepción abandonada sigue pendiente.
@@ -290,3 +290,12 @@ La matriz SQL determina las transiciones que se muestran y las que se pueden
 confirmar con la autorización actual. Las observaciones y sus correcciones son
 inmutables y permanecen en la versión revisada aunque cambie la vigente. La
 bitácora referencia las operaciones sin copiar las observaciones jurídicas.
+
+CU027 registra el retiro y su restricción en una transacción. El broker
+rechaza autorizaciones de descarga anteriores al retiro, incluso después
+de recuperar el documento. CU028 reserva con el JWT administrativo y
+encola una tarea separada. El trabajador verifica existencia, tamaño,
+SHA-256 y condición técnica de cada original. PostgreSQL coteja la evidencia,
+los metadatos de Storage y la autorización vigente antes de restablecer
+disponibilidad. La recuperación conserva las asignaciones y concesiones
+actuales como fuente de autorización.

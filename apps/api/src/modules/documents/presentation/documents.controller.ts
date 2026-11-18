@@ -37,6 +37,8 @@ import {
   DocumentVersionIdDto,
   DocumentReviewDto,
   DocumentStateDto,
+  RecoverDocumentDto,
+  RetireDocumentDto,
 } from './documents.dto';
 const scope = ['PRINCIPAL', 'COLABORADOR', 'EXPLICITO'];
 @Controller('documents')
@@ -166,6 +168,42 @@ export class DocumentsController {
       p.id,
       q,
     );
+  }
+  @Get('retired')
+  @RequirePermission('documento.recuperar', 'GLOBAL_OPERATIVO')
+  retired(@Query() query: SearchRecordsDto, @Req() req: Request) {
+    if (query.text && query.text.length > 40)
+      throw new BadRequestException(
+        'Escribe un folio o ID de hasta 40 caracteres.',
+      );
+    return this.documents.repository.retired(userAccessToken(req), query);
+  }
+  @Get('recoveries/:id')
+  @RequirePermission('documento.recuperar', 'GLOBAL_OPERATIVO')
+  recoveryStatus(@Param() p: RecordIdDto, @Req() req: Request) {
+    return this.documents.repository.recoveryStatus(userAccessToken(req), p.id);
+  }
+  @Post(':id/retire')
+  @HttpCode(200)
+  @UseGuards(CsrfGuard)
+  @RequirePermission('documento.retirar', scope)
+  retire(
+    @Param() p: RecordIdDto,
+    @Body() input: RetireDocumentDto,
+    @Req() req: Request,
+  ) {
+    return this.documents.repository.retire(userAccessToken(req), p.id, input);
+  }
+  @Post(':id/recover')
+  @HttpCode(202)
+  @UseGuards(CsrfGuard)
+  @RequirePermission('documento.recuperar', 'GLOBAL_OPERATIVO')
+  recover(
+    @Param() p: RecordIdDto,
+    @Body() input: RecoverDocumentDto,
+    @Req() req: Request,
+  ) {
+    return this.documents.recover(userAccessToken(req), p.id, input);
   }
   @Get(':id/versions')
   @RequirePermission('documento.versiones', scope)
