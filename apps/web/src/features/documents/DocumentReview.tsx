@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/Icon';
 import { useId, useRef, useState } from 'react';
 import type {
   DocumentReviewOutcome,
@@ -19,6 +20,7 @@ import {
 export function DocumentReview({
   documentId,
   workspace,
+  reviewFirst,
   busy,
   run,
   onClose,
@@ -28,6 +30,7 @@ export function DocumentReview({
 }: {
   documentId: string;
   workspace: DocumentVersionReview;
+  reviewFirst: boolean;
   busy: boolean;
   run: RunDocumentAction;
   onClose: () => void;
@@ -74,7 +77,9 @@ export function DocumentReview({
 
   return (
     <section aria-labelledby={id + '-title'}>
-      <h5 id={id + '-title'}>Revisión y estado de la versión {number}</h5>
+      <h3 id={id + '-title'}>
+        {reviewFirst ? 'Revisión y estado' : 'Estado'} de la versión {number}
+      </h3>
       <p>
         <strong>{documentStateLabels[workspace.status]}</strong>
         {' · '}
@@ -92,6 +97,7 @@ export function DocumentReview({
             disabled={busy}
             onClick={() => startReview()}
           >
+            <Icon name="review" />
             Nueva revisión jurídica
           </button>
         )}
@@ -101,7 +107,7 @@ export function DocumentReview({
           disabled={busy}
           onClick={() => void run((signal) => refresh(0, signal))}
         >
-          Actualizar revisión y estado
+          {reviewFirst ? 'Actualizar revisión y estado' : 'Actualizar estado'}
         </button>
         {!current && (
           <button
@@ -119,7 +125,7 @@ export function DocumentReview({
           disabled={busy}
           onClick={onClose}
         >
-          Cerrar revisión
+          Volver a la ficha
         </button>
       </div>
       {editing && canReview && (

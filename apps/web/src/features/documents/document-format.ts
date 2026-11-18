@@ -21,3 +21,17 @@ const timestamp = new Intl.DateTimeFormat('es-MX', {
 
 export const documentTimestamp = (value: string) =>
   timestamp.format(new Date(value));
+
+export function documentStateLabel(value: string): string {
+  return Object.hasOwn(documentStateLabels, value)
+    ? documentStateLabels[value as DocumentState]
+    : value.replaceAll('_', ' ');
+}
+
+const fileSize = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 });
+export function fileSizeLabel(bytes: number): string {
+  if (bytes >= 1024 * 1024)
+    return fileSize.format(bytes / (1024 * 1024)) + ' MB';
+  if (bytes >= 1024) return fileSize.format(bytes / 1024) + ' KB';
+  return fileSize.format(bytes) + ' bytes';
+}

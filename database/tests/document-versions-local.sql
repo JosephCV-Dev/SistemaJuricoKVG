@@ -91,7 +91,7 @@ BEGIN
   r:=public.kvg_operar('documento.actualizar',datos);
   IF r->>'codigo' IS DISTINCT FROM '40001' THEN RAISE EXCEPTION 'Aceptó revisión obsoleta: %',r; END IF;
   r:=public.kvg_operar('documento.versiones',jsonb_build_object('documento_id',doc));
-  IF jsonb_array_length(r->'datos') IS DISTINCT FROM 1 OR r#>>'{datos,0,sha256}' IS DISTINCT FROM hash1
+  IF jsonb_array_length(r->'datos') IS DISTINCT FROM 1 OR r#>'{datos,0}' ?| ARRAY['sha256','huella_sha256']
     OR r#>>'{datos,0,vigente}' IS DISTINCT FROM 'true' THEN RAISE EXCEPTION 'Renombrar alteró la versión: %',r; END IF;
   rev:=rev+1;
   PERFORM set_config('kvg_test.claims',abogado,true);
@@ -176,9 +176,16 @@ BEGIN
     OR r#>>'{datos,1,version_id}' IS DISTINCT FROM v1::text OR r#>>'{datos,1,vigente}' IS DISTINCT FROM 'false'
     OR r#>>'{datos,1,estado_documento_codigo}' IS DISTINCT FROM 'VALIDADO'
     OR r#>>'{datos,1,revisiones,0,id}' IS DISTINCT FROM revision_juridica::text
-    OR r#>>'{datos,1,sha256}' IS DISTINCT FROM hash1 OR (r->'datos')::text LIKE '%localizador%' THEN
+    OR r#>'{datos,1}' ?| ARRAY['sha256','huella_sha256'] OR (r->'datos')::text LIKE '%localizador%' THEN
     RAISE EXCEPTION 'Historial incorrecto: %',r;
   END IF;
+  PERFORM set_config('kvg_test.claims',abogado,true);
+  r:=public.kvg_operar('documento.versiones',jsonb_build_object('documento_id',doc));
+  IF r#>>'{datos,0,huella_sha256}' IS DISTINCT FROM hash2
+    OR r#>>'{datos,1,huella_sha256}' IS DISTINCT FROM hash1 THEN
+    RAISE EXCEPTION 'La revisión jurídica perdió el acceso al dato de integridad: %',r;
+  END IF;
+  PERFORM set_config('kvg_test.claims',secretario,true);
   r:=public.kvg_operar('documento.descargar',jsonb_build_object('version_id',v1));
   IF r#>>'{datos,sha256}' IS DISTINCT FROM hash1 THEN RAISE EXCEPTION 'Original anterior inaccesible: %',r; END IF;
   r:=public.kvg_operar('documento.cargar',datos||jsonb_build_object('revision',rev+1,'clave_idempotencia',gen_random_uuid()));

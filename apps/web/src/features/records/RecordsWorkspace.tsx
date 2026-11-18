@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/Icon';
 import { AuditWorkspace } from '../administration/AuditWorkspace';
 import { ConfigurationWorkspace } from '../administration/ConfigurationWorkspace';
 import { DocumentSearch } from '../documents/DocumentSearch';
@@ -11,6 +12,7 @@ import { CaseDetailView } from './CaseDetailView';
 import { showDate } from './record-format';
 import type { WorkspaceView } from '../../shared/navigation';
 import { ClientEditor } from './ClientEditor';
+import { ClientOverview } from './ClientOverview';
 import { ClientRegistration } from './ClientRegistration';
 import { CaseCreation } from './CaseCreation';
 import { useEffect, useRef, useState } from 'react';
@@ -75,9 +77,12 @@ export function RecordsWorkspace({
   const [clients, setClients] = useState(emptyPage<ClientSummary>);
   const [cases, setCases] = useState(emptyPage<CaseSummary>);
   const [client, setClient] = useState<ClientDetail | null>(null);
+  const [clientCaseId, setClientCaseId] = useState<string | null>(null);
   const [caseDetail, setCaseDetail] = useState<CaseDetail | null>(null);
   const [showAssignment, setShowAssignment] = useState(false);
-  const [caseReturn, setCaseReturn] = useState<'cases' | 'assigned'>('cases');
+  const [caseReturn, setCaseReturn] = useState<
+    'cases' | 'assigned' | 'documents'
+  >('cases');
   const [accessRevision, setAccessRevision] = useState(0);
   const [deniedAdministration, setDeniedAdministration] =
     useState<WorkspaceView | null>(null);
@@ -93,6 +98,8 @@ export function RecordsWorkspace({
   const [caseClient, setCaseClient] = useState('');
   const [caseResponsible, setCaseResponsible] = useState('');
   const [caseQuery, setCaseQuery] = useState(emptyCaseQuery);
+  const inCaseFlow =
+    view === 'case' || (view === 'client' && clientCaseId !== null);
   const can = (permission: string) =>
     capabilities.some((item) => item.permission === permission);
 
@@ -120,6 +127,7 @@ export function RecordsWorkspace({
             view === 'assigned' ||
             view === 'reassign' ||
             view === 'documents' ||
+            (inCaseFlow && caseReturn !== 'cases') ||
             view === 'retired-documents' ||
             view === 'staff' ||
             view === 'audit' ||
@@ -179,6 +187,7 @@ export function RecordsWorkspace({
 
   async function onClientCreated(created: ClientSummary, signal: AbortSignal) {
     setNotice(`Cliente registrado: ${created.name}.`);
+    setClientCaseId(null);
     setClient(await getClient(created.id, signal));
     setClients(await searchClients('', 0, signal));
     setClientText('');
@@ -217,11 +226,12 @@ export function RecordsWorkspace({
       setCaseQuery(query);
     });
   }
-  function openClient(id: string) {
+  function openClient(id: string, originCaseId: string | null = null) {
     void run(async (signal) => {
       setClient(null);
       setEditTypes(null);
       setClient(await getClient(id, signal));
+      setClientCaseId(originCaseId);
       onNavigate('client');
     });
   }
@@ -280,6 +290,16 @@ export function RecordsWorkspace({
     });
   }
 
+  const reviewFirst =
+    isLawyer || can('documento.revisar') || can('documento.validar');
+  const hasQuickActions = [
+    'cliente.registrar',
+    'cliente.consultar',
+    'expediente.consultar',
+    'documento.consultar',
+    'auditoria.consultar',
+  ].some(can);
+
   return (
     <section aria-labelledby="records-heading" aria-busy={busy}>
       <h2 id="records-heading" className="sr-only">
@@ -287,52 +307,75 @@ export function RecordsWorkspace({
       </h2>
       {view === 'home' && (
         <section className="home-grid">
-          <div className="panel">
-            <h2>Acciones rápidas</h2>
-            <p className="sub">Selecciona una tarea para comenzar.</p>
-            <div className="actions">
-              {can('cliente.registrar') && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={openClientRegistration}
-                >
-                  Nuevo cliente
-                </button>
-              )}
-              {can('cliente.consultar') && (
-                <button
-                  className="button-secondary"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onNavigate('clients')}
-                >
-                  Consultar clientes
-                </button>
-              )}
-              {can('expediente.consultar') && (
-                <button
-                  className="button-secondary"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onNavigate('cases')}
-                >
-                  Consultar expedientes
-                </button>
-              )}
+          {hasQuickActions && (
+            <div className="panel">
+              <h2>Acciones rápidas</h2>
+              <div className="actions">
+                {can('cliente.registrar') && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={openClientRegistration}
+                  >
+                    <Icon name="add" />
+                    Nuevo cliente
+                  </button>
+                )}
+                {can('cliente.consultar') && (
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onNavigate('clients')}
+                  >
+                    <Icon name="people" />
+                    Consultar clientes
+                  </button>
+                )}
+                {can('expediente.consultar') && (
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onNavigate(isLawyer ? 'assigned' : 'cases')}
+                  >
+                    <Icon name={isLawyer ? 'briefcase' : 'folder'} />
+                    {isLawyer ? 'Ver mis expedientes' : 'Consultar expedientes'}
+                  </button>
+                )}
+                {can('documento.consultar') && (
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onNavigate('documents')}
+                  >
+                    <Icon name="search" />
+                    Buscar documentos
+                  </button>
+                )}
+                {can('auditoria.consultar') && (
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onNavigate('audit')}
+                  >
+                    <Icon name="audit" />
+                    Consultar bitácora
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
           <div className="panel">
-            <h2>Tu espacio de trabajo</h2>
-            <p>
-              Los clientes y expedientes disponibles dependen de tus permisos y
-              asignaciones vigentes.
-            </p>
+            <h2>Mi cuenta</h2>
             <button
               className="button-secondary"
               type="button"
               onClick={() => onNavigate('session')}
             >
+              <Icon name="account" />
               Consultar mi sesión
             </button>
           </div>
@@ -340,25 +383,9 @@ export function RecordsWorkspace({
       )}
       <div role="status" aria-live="polite" aria-atomic="true">
         {busy && <p>Procesando solicitud…</p>}
-        {notice && <p>{notice}</p>}
+        {notice && <p className="notice">{notice}</p>}
       </div>
       {error && <p role="alert">{error}</p>}
-      {!busy &&
-        !capabilities.some((item) =>
-          [
-            'cliente.consultar',
-            'cliente.registrar',
-            'expediente.consultar',
-            'expediente.reasignar',
-            'documento.consultar',
-          ].includes(item.permission),
-        ) && (
-          <p>
-            Tu cuenta no tiene permisos para gestionar o consultar clientes y
-            expedientes.
-          </p>
-        )}
-
       {view === 'new-client' && can('cliente.registrar') && (
         <>
           <button
@@ -379,50 +406,75 @@ export function RecordsWorkspace({
       )}
 
       {['clients', 'client'].includes(view) && can('cliente.consultar') && (
-        <section className="panel" aria-labelledby="clients-heading">
-          <div className="section-header">
-            <h2 id="clients-heading">
-              {view === 'client'
-                ? (client?.name ?? 'Detalle del cliente')
-                : 'Clientes'}
-            </h2>
-            <div className="actions">
-              {view === 'clients' && can('cliente.registrar') && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={openClientRegistration}
-                >
-                  Nuevo cliente
-                </button>
-              )}
-              {view === 'client' && (
+        <section className="panel" aria-label="Consulta de clientes">
+          {view === 'client' ? (
+            <header className="page-header section-header">
+              <div className="client-title">
+                {clientCaseId && caseDetail?.id === clientCaseId && (
+                  <p className="sub document-context">
+                    Cliente del expediente {caseDetail.folio}
+                  </p>
+                )}
+                <h1 id="page-heading" className="visual-heading" tabIndex={-1}>
+                  <Icon name="person" />
+                  <span>{client?.name ?? 'Detalle del cliente'}</span>
+                </h1>
+              </div>
+              <div className="actions">
                 <button
                   className="button-secondary"
                   type="button"
                   disabled={busy}
                   onClick={() => {
                     setEditTypes(null);
-                    onNavigate('clients');
+                    if (clientCaseId) openCase(clientCaseId);
+                    else onNavigate('clients');
                   }}
                 >
-                  Volver a clientes
+                  <Icon name="back" />
+                  {clientCaseId ? 'Volver al expediente' : 'Volver a clientes'}
                 </button>
-              )}
-              {view === 'client' &&
-                client &&
-                !editTypes &&
-                can('expediente.crear') && (
+                {client &&
+                  !editTypes &&
+                  client.canEdit &&
+                  can('cliente.actualizar') && (
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => openClientEditor(client)}
+                    >
+                      <Icon name="edit" />
+                      Editar cliente
+                    </button>
+                  )}
+                {client && !editTypes && can('expediente.crear') && (
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => onNavigate('new-case')}
                   >
+                    <Icon name="folder" />
                     Crear expediente
                   </button>
                 )}
+              </div>
+            </header>
+          ) : (
+            <div className="section-header">
+              <h2>Buscar clientes</h2>
+              {can('cliente.registrar') && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={openClientRegistration}
+                >
+                  <Icon name="add" />
+                  Nuevo cliente
+                </button>
+              )}
             </div>
-          </div>
+          )}
           <div hidden={view !== 'clients'}>
             <form
               onSubmit={(event) => {
@@ -434,7 +486,7 @@ export function RecordsWorkspace({
               }}
             >
               <fieldset disabled={busy}>
-                <legend>Filtros de clientes</legend>
+                <legend className="sr-only">Filtros de clientes</legend>
                 <p>
                   <label htmlFor="client-search">Nombre del cliente</label>
                   <input
@@ -457,14 +509,22 @@ export function RecordsWorkspace({
                     maxLength={100}
                   />
                 </p>
-                <button type="submit">Buscar clientes</button>
+                <button type="submit">
+                  <Icon name="search" />
+                  Buscar clientes
+                </button>
               </fieldset>
             </form>
             {!busy && clients.items.length === 0 && (
               <p>No hay clientes visibles que coincidan con la búsqueda.</p>
             )}
             {clients.items.length > 0 && (
-              <div className="table-wrap">
+              <div
+                className="table-wrap"
+                role="region"
+                aria-label="Resultados de clientes"
+                tabIndex={0}
+              >
                 <table>
                   <caption className="sr-only">Clientes disponibles</caption>
                   <thead>
@@ -478,7 +538,12 @@ export function RecordsWorkspace({
                   <tbody>
                     {clients.items.map((item) => (
                       <tr key={item.id}>
-                        <td>{item.name}</td>
+                        <td>
+                          <span className="entity-label">
+                            <Icon name="person" />
+                            <span>{item.name}</span>
+                          </span>
+                        </td>
                         <td>
                           {item.type === 'PERSONA_FISICA'
                             ? 'Persona física'
@@ -494,6 +559,7 @@ export function RecordsWorkspace({
                             aria-label={`Consultar cliente ${item.name}`}
                           >
                             Consultar
+                            <Icon name="forward" />
                           </button>
                         </td>
                       </tr>
@@ -531,54 +597,11 @@ export function RecordsWorkspace({
               busy={busy}
               onCancel={() => setEditTypes(null)}
               onSave={(input) => saveClient(client, input)}
-              onReload={() => openClient(client.id)}
+              onReload={() => openClient(client.id, clientCaseId)}
             />
           )}
           {view === 'client' && client && !editTypes && (
-            <div className="record-detail">
-              <h4>Cliente: {client.name}</h4>
-              <dl>
-                <dt>Identificador</dt>
-                <dd>{client.id}</dd>
-                <dt>Registrado</dt>
-                <dd>{showDate(client.createdAt)}</dd>
-              </dl>
-              {client.canEdit && can('cliente.actualizar') && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => openClientEditor(client)}
-                >
-                  Editar cliente
-                </button>
-              )}
-              <h4>Identificaciones</h4>
-              {client.identifications.length ? (
-                <ul>
-                  {client.identifications.map((item, index) => (
-                    <li key={index}>
-                      {item.type}: {item.value}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>Sin identificaciones registradas.</p>
-              )}
-              <h4>Contactos</h4>
-              {client.contacts.length ? (
-                <ul>
-                  {client.contacts.map((item, index) => (
-                    <li key={index}>
-                      {item.type}: {item.value}
-                      {item.label ? ` · ${item.label}` : ''}
-                      {item.preferred ? ' · Preferente' : ''}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>Sin contactos registrados.</p>
-              )}
-            </div>
+            <ClientOverview client={client} />
           )}
         </section>
       )}
@@ -604,14 +627,18 @@ export function RecordsWorkspace({
         </>
       )}
 
-      {view === 'assigned' && isLawyer && can('expediente.consultar') && (
-        <AssignedCases
-          accessRevision={accessRevision}
-          busy={busy}
-          run={run}
-          onOpen={(id) => openCase(id, 'assigned')}
-        />
-      )}
+      {(view === 'assigned' || (inCaseFlow && caseReturn === 'assigned')) &&
+        isLawyer &&
+        can('expediente.consultar') && (
+          <div hidden={view !== 'assigned'}>
+            <AssignedCases
+              accessRevision={accessRevision}
+              busy={busy}
+              run={run}
+              onOpen={(id) => openCase(id, 'assigned')}
+            />
+          </div>
+        )}
       {view === 'reassign' && can('expediente.reasignar') && (
         <CaseReassignmentWorkspace
           key={accessRevision}
@@ -621,16 +648,20 @@ export function RecordsWorkspace({
         />
       )}
 
-      {view === 'documents' && can('documento.consultar') && (
-        <DocumentSearch
-          busy={busy}
-          run={run}
-          accessRevision={accessRevision}
-          canDownload={can('documento.descargar')}
-          onOpenCase={(id) => openCase(id, 'cases')}
-          onNotice={setNotice}
-        />
-      )}
+      {(view === 'documents' || (inCaseFlow && caseReturn === 'documents')) &&
+        can('documento.consultar') && (
+          <div hidden={view !== 'documents'}>
+            <DocumentSearch
+              busy={busy}
+              run={run}
+              accessRevision={accessRevision}
+              canDownload={can('documento.descargar')}
+              reviewFirst={reviewFirst}
+              onOpenCase={(id) => openCase(id, 'documents')}
+              onNotice={setNotice}
+            />
+          </div>
+        )}
       {view === 'retired-documents' && can('documento.recuperar') && (
         <DocumentRecovery key={accessRevision} busy={busy} run={run} />
       )}
@@ -664,30 +695,40 @@ export function RecordsWorkspace({
           />
         )}
       {['cases', 'case'].includes(view) && can('expediente.consultar') && (
-        <section className="panel" aria-labelledby="cases-heading">
-          <div className="section-header">
-            <h2 id="cases-heading">
-              {view === 'case'
-                ? (caseDetail?.folio ?? 'Detalle del expediente')
-                : 'Expedientes'}
-            </h2>
-            <div className="actions">
-              {view === 'case' && (
-                <button
-                  className="button-secondary"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    setShowAssignment(false);
-                    onNavigate(caseReturn);
-                  }}
-                >
-                  {caseReturn === 'assigned'
-                    ? 'Volver a mis expedientes'
-                    : 'Volver a expedientes'}
-                </button>
-              )}
-              {view === 'cases' && can('expediente.crear') && (
+        <section className="panel" aria-label="Consulta de expedientes">
+          {view === 'case' ? (
+            <header className="page-header section-header">
+              <h1 id="page-heading" className="visual-heading" tabIndex={-1}>
+                <Icon name="folder" />
+                <span>
+                  {caseDetail
+                    ? `Expediente ${caseDetail.folio}`
+                    : 'Detalle del expediente'}
+                </span>
+              </h1>
+              <button
+                className="button-secondary"
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setShowAssignment(false);
+                  onNavigate(caseReturn);
+                }}
+              >
+                <Icon name="back" />
+                {
+                  {
+                    cases: 'Volver a expedientes',
+                    assigned: 'Volver a mis expedientes',
+                    documents: 'Volver a documentos',
+                  }[caseReturn]
+                }
+              </button>
+            </header>
+          ) : (
+            <div className="section-header">
+              <h2>Buscar expedientes</h2>
+              {can('expediente.crear') && (
                 <button
                   type="button"
                   disabled={busy}
@@ -698,11 +739,12 @@ export function RecordsWorkspace({
                     );
                   }}
                 >
+                  <Icon name="add" />
                   Nuevo expediente
                 </button>
               )}
             </div>
-          </div>
+          )}
           <div hidden={view !== 'cases'}>
             <form
               onSubmit={(event) => {
@@ -767,14 +809,22 @@ export function RecordsWorkspace({
                     maxLength={200}
                   />
                 </p>
-                <button type="submit">Buscar expedientes</button>
+                <button type="submit">
+                  <Icon name="search" />
+                  Buscar expedientes
+                </button>
               </fieldset>
             </form>
             {!busy && cases.items.length === 0 && (
               <p>No hay expedientes visibles que coincidan con la búsqueda.</p>
             )}
             {cases.items.length > 0 && (
-              <div className="table-wrap">
+              <div
+                className="table-wrap"
+                role="region"
+                aria-label="Resultados de expedientes"
+                tabIndex={0}
+              >
                 <table>
                   <caption className="sr-only">Expedientes disponibles</caption>
                   <thead>
@@ -795,6 +845,7 @@ export function RecordsWorkspace({
                             onClick={() => openCase(item.id, 'cases')}
                             aria-label={`Consultar expediente ${item.folio}`}
                           >
+                            <Icon name="folder" />
                             {item.folio}
                           </button>
                         </td>
@@ -853,6 +904,26 @@ export function RecordsWorkspace({
             <CaseDetailView
               key={`${caseDetail.id}:${caseDetail.revision}`}
               caseDetail={caseDetail}
+              isLawyer={isLawyer}
+              reviewFirst={reviewFirst}
+              staffAccess={
+                can('expediente.conceder') &&
+                caseDetail.assignments.some(
+                  (assignment) =>
+                    assignment.active &&
+                    assignment.function === 'PRINCIPAL' &&
+                    assignment.userId === currentUserId,
+                ) && (
+                  <CaseStaffAccessPanel
+                    key={caseDetail.id}
+                    caseId={caseDetail.id}
+                    busy={busy}
+                    run={run}
+                    onNotice={setNotice}
+                  />
+                )
+              }
+
               busy={busy}
               canAssign={caseDetail.canAssign && can('expediente.asignar')}
               onAssign={() => setShowAssignment(true)}
@@ -871,7 +942,7 @@ export function RecordsWorkspace({
               canConsultClient={
                 can('cliente.consultar') && caseDetail.clientName !== null
               }
-              onOpenClient={openClient}
+              onOpenClient={(id) => openClient(id, caseDetail.id)}
               onOpenCase={(id) => openCase(id, caseReturn)}
               canConsultDocuments={can('documento.consultar')}
               canUploadDocuments={can('documento.cargar')}
@@ -879,6 +950,8 @@ export function RecordsWorkspace({
               onAccessFailure={(status) => {
                 setClient(null);
                 setCaseDetail(null);
+                if (caseReturn !== 'cases')
+                  setAccessRevision((current) => current + 1);
                 setClients(emptyPage());
                 setCases(emptyPage());
                 if (status === 401) onSessionExpired();
@@ -889,24 +962,6 @@ export function RecordsWorkspace({
               }}
             />
           )}
-          {view === 'case' &&
-            caseDetail &&
-            !showAssignment &&
-            can('expediente.conceder') &&
-            caseDetail.assignments.some(
-              (assignment) =>
-                assignment.active &&
-                assignment.function === 'PRINCIPAL' &&
-                assignment.userId === currentUserId,
-            ) && (
-              <CaseStaffAccessPanel
-                key={caseDetail.id}
-                caseId={caseDetail.id}
-                busy={busy}
-                run={run}
-                onNotice={setNotice}
-              />
-            )}
         </section>
       )}
     </section>

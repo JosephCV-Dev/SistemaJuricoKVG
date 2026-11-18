@@ -23,11 +23,15 @@ const migrations = {
   documentRecovery: ['202611170015_document_retirement_recovery.sql'],
   staff: ['202611170016_staff_administration.sql'],
   auditConfiguration: ['202611180017_audit_configuration.sql'],
+  documentReadProjection: [
+    '202611180018_document_read_projection.sql',
+    '202611180019_version_integrity_for_review.sql',
+  ],
 };
 try {
   if (!Object.hasOwn(migrations, scope))
     throw new DevelopmentSetupError(
-      'Indica la preparación de clientes, expedientes, asignaciones, seguimiento, organización documental, versiones, revisión jurídica, recuperación, personal o bitácora y configuración.',
+      'Indica la preparación de clientes, expedientes, asignaciones, seguimiento, organización documental, versiones, revisión jurídica, recuperación, personal, bitácora y configuración o proyección documental.',
     );
   const config = await developmentConfig();
   const fixture = await readDevelopmentFixture(config);

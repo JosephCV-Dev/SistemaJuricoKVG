@@ -1,3 +1,5 @@
+import type { IconName } from './ui/Icon';
+
 export type WorkspaceView =
   | 'home'
   | 'clients'
@@ -31,4 +33,22 @@ export const viewTitles: Record<WorkspaceView, string> = {
   audit: 'Bitácora',
   configuration: 'Configuración',
   session: 'Mi sesión',
+};
+
+export const viewIcons: Record<WorkspaceView, IconName> = {
+  home: 'home',
+  clients: 'people',
+  'new-client': 'person',
+  client: 'person',
+  assigned: 'briefcase',
+  reassign: 'transfer',
+  cases: 'folder',
+  case: 'folder',
+  'new-case': 'folder',
+  documents: 'file',
+  'retired-documents': 'archive',
+  staff: 'staff',
+  audit: 'audit',
+  configuration: 'settings',
+  session: 'account',
 };

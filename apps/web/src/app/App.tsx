@@ -2,8 +2,9 @@ import type { AuthState, SessionCapabilities } from '@kvg/contracts';
 import { useState } from 'react';
 import { IdentitySection } from '../features/identity/IdentitySection';
 import { RecordsWorkspace } from '../features/records/RecordsWorkspace';
+import { Icon } from '../shared/ui/Icon';
 import { Sidebar } from './Sidebar';
-import { viewTitles } from '../shared/navigation';
+import { viewIcons, viewTitles } from '../shared/navigation';
 import type { WorkspaceView } from '../shared/navigation';
 
 export function App() {
@@ -27,7 +28,7 @@ export function App() {
     setView(next);
     window.scrollTo(0, 0);
     requestAnimationFrame(() =>
-      document.getElementById('page-heading')?.focus(),
+      document.getElementById('page-heading')?.focus({ preventScroll: true }),
     );
   }
   const authenticated = auth.status === 'authenticated';
@@ -47,6 +48,7 @@ export function App() {
       )}
       <main
         id="main-content"
+        tabIndex={-1}
         className={authenticated ? 'workspace-main' : 'access-main'}
       >
         {!authenticated && (
@@ -60,16 +62,15 @@ export function App() {
             <p>Gestión documental del despacho</p>
           </div>
         )}
-        {authenticated && (
+        {authenticated && view !== 'case' && view !== 'client' && (
           <header className="page-header">
-            <h1 id="page-heading" tabIndex={-1}>
-              {viewTitles[view]}
+            <h1 id="page-heading" className="visual-heading" tabIndex={-1}>
+              <Icon name={viewIcons[view]} />
+              <span>{viewTitles[view]}</span>
             </h1>
-            <p className="sub">
-              {view === 'home'
-                ? `Bienvenido, ${auth.user.name}.`
-                : 'Consulta y gestiona la información dentro de tu alcance.'}
-            </p>
+            {view === 'home' && (
+              <p className="sub">Bienvenido, {auth.user.name}.</p>
+            )}
           </header>
         )}
         <div hidden={authenticated && view !== 'session'}>

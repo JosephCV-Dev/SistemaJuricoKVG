@@ -168,7 +168,10 @@ concesiones por expediente. **6B** añade la consulta de bitácora y la gestión
 de parámetros de sesión y catálogos autorizados. **6C local** añade copia
 cifrada, historial y restauración por ID mediante `npm run backup:dev`.
 El cierre operativo de respaldos y restauración requiere infraestructura separada.
+**7** completa la revisión visual y adaptable de las pantallas disponibles.
+Sigue **8**, configuración de producción, revisión de seguridad y lanzamiento.
 
+- [Diseño KVG y verificación de la interfaz](docs/interface.md#paso-7).
 - [Bitácora y configuración](docs/audit-and-configuration.md).
 - [Documentos privados, trabajador y verificación](docs/documents.md).
 - [Copias y restauración aislada de desarrollo](docs/recovery-rehearsal.md).

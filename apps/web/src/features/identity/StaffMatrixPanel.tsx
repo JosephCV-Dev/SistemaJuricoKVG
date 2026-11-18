@@ -66,7 +66,12 @@ export function StaffMatrixPanel({
           )}
           {!matrix.items.length && <p>No hay permisos en esta página.</p>}
           {matrix.items.length > 0 && (
-            <div className="table-wrap">
+            <div
+              className="table-wrap"
+              role="region"
+              aria-label="Matriz de permisos"
+              tabIndex={0}
+            >
               <table>
                 <thead>
                   <tr>

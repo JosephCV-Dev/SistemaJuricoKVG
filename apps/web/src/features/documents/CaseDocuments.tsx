@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/Icon';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import type {
@@ -8,6 +9,7 @@ import type {
   UploadStatus,
 } from '@kvg/contracts';
 import { DocumentDetails } from './DocumentDetails';
+import { documentStateLabel } from './document-format';
 import { AuthRequestError } from '../../shared/api/session-http';
 import {
   categories,
@@ -31,12 +33,14 @@ export function CaseDocuments({
   caseId,
   canUpload,
   canDownload,
+  reviewFirst,
   onAccessFailure,
   onOpenCase,
 }: {
   caseId: string;
   canUpload: boolean;
   canDownload: boolean;
+  reviewFirst: boolean;
   onAccessFailure: (status: number) => void;
   onOpenCase?: (id: string) => void;
 }) {
@@ -50,6 +54,12 @@ export function CaseDocuments({
   const [uploadsEnabled, setUploadsEnabled] = useState<boolean | null>(null);
   const [beta, setBeta] = useState(false);
   const [detail, setDetail] = useState<DocumentDetail | null>(null);
+  const listHeading = useRef<HTMLHeadingElement>(null);
+  function showList() {
+    setDetail(null);
+    requestAnimationFrame(() => listHeading.current?.focus());
+  }
+
   const [file, setFile] = useState<File | null>(null),
     [name, setName] = useState(''),
     [categoryId, setCategory] = useState(''),
@@ -139,23 +149,6 @@ export function CaseDocuments({
   }
   return (
     <section aria-label="Documentos del expediente" aria-busy={busy}>
-      <div className="section-header">
-        <h4>Documentos</h4>
-        <button
-          className="button-secondary"
-          type="button"
-          disabled={busy}
-          onClick={() =>
-            void run(async (signal) => {
-              if (status) setStatus(await uploadStatus(status.id, signal));
-              setPage(await listDocuments(caseId, page.offset, signal));
-              if (detail) setDetail(await getDocument(detail.id, signal));
-            })
-          }
-        >
-          Actualizar documentos
-        </button>
-      </div>
       <div role="status" aria-live="polite">
         {busy && <p>Procesando documento…</p>}
         {notice && <p>{notice}</p>}
@@ -170,192 +163,231 @@ export function CaseDocuments({
         )}
       </div>
       {error && <p role="alert">{error}</p>}
-      {canUpload && uploadsEnabled === false && (
-        <p role="status">
-          Las cargas nuevas están pausadas hasta habilitar la verificación de
-          archivos. Puedes consultar los documentos ya disponibles según tus
-          permisos.
-        </p>
-      )}
-      {canUpload && uploadsEnabled === true && (
-        <details className="upload-panel">
-          <summary>Subir documento</summary>
-          <p>
-            PDF, DOCX, JPG o PNG hasta 20 MB.{' '}
-            {beta
-              ? 'Beta sin análisis antimalware. Usa archivos ficticios.'
-              : 'El archivo se analiza antes de quedar disponible.'}
-          </p>
-          <form onSubmit={submit}>
-            <fieldset disabled={busy || locked}>
-              <legend>Archivo y clasificación</legend>
-              <p>
-                <label htmlFor="document-file">Archivo</label>
-                <input
-                  ref={fileInput}
-                  id="document-file"
-                  type="file"
-                  accept=".pdf,.docx,.jpg,.jpeg,.png"
-                  required
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                />
-              </p>
-              <p>
-                <label htmlFor="document-name">Nombre del documento</label>
-                <input
-                  id="document-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  maxLength={200}
-                  pattern=".*\S.*"
-                />
-              </p>
-              <p>
-                <label htmlFor="document-category">Categoría</label>
-                <select
-                  id="document-category"
-                  value={categoryId}
-                  onChange={(e) => setCategory(e.target.value)}
-                  required
-                >
-                  <option value="">Selecciona una categoría</option>
-                  {catalog.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </p>
-              <p>
-                <label htmlFor="document-reason">Motivo de incorporación</label>
-                <input
-                  id="document-reason"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  maxLength={2000}
-                  required
-                  pattern=".*\S.*"
-                />
-              </p>
-              {!locked && (
-                <button type="submit">
-                  {beta ? 'Subir archivo' : 'Enviar a análisis'}
-                </button>
-              )}
-            </fieldset>
-            {locked && (
-              <div className="actions">
-                <button type="submit" disabled={busy}>
-                  Reintentar el mismo archivo
-                </button>
-                <button
-                  className="button-secondary"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    setLocked(false);
-                    setStatus(null);
-                    setRequest(crypto.randomUUID());
-                    setFile(null);
-                    if (fileInput.current) fileInput.current.value = '';
-                  }}
-                >
-                  Preparar otra carga
-                </button>
-              </div>
-            )}
-          </form>
-        </details>
-      )}
-      {!busy && !page.items.length && (
-        <p>Este expediente no tiene documentos visibles.</p>
-      )}
-      {page.items.length > 0 && (
-        <div className="table-wrap">
-          <table>
-            <caption className="sr-only">
-              Documentos autorizados del expediente
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Documento</th>
-                <th scope="col">Versión</th>
-                <th scope="col">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {page.items.map((d) => (
-                <tr key={d.id}>
-                  <td>
-                    <button
-                      className="table-link"
-                      type="button"
-                      disabled={busy}
-                      onClick={() =>
-                        void run(async (signal) =>
-                          setDetail(await getDocument(d.id, signal)),
-                        )
-                      }
-                    >
-                      {d.name}
-                    </button>
-                  </td>
-                  <td>{d.number === null ? 'Sin publicar' : `v${d.number}`}</td>
-                  <td>
-                    <span className="badge">{d.status ?? 'No disponible'}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div hidden={detail !== null}>
+        <div className="section-header">
+          <h2 className="workspace-title" tabIndex={-1} ref={listHeading}>
+            Documentos del expediente
+          </h2>
+          <button
+            className="button-secondary"
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              void run(async (signal) => {
+                if (status) setStatus(await uploadStatus(status.id, signal));
+                setPage(await listDocuments(caseId, page.offset, signal));
+              })
+            }
+          >
+            Actualizar documentos
+          </button>
         </div>
-      )}
-      <p className="actions">
-        <button
-          className="button-secondary"
-          type="button"
-          disabled={busy || !page.offset}
-          onClick={() =>
-            void run(async (signal) =>
-              setPage(
-                await listDocuments(
-                  caseId,
-                  Math.max(0, page.offset - page.limit),
-                  signal,
+        {canUpload && uploadsEnabled === false && (
+          <p role="status">
+            Las cargas nuevas están pausadas hasta habilitar la verificación de
+            archivos. Puedes consultar los documentos ya disponibles según tus
+            permisos.
+          </p>
+        )}
+        {canUpload && uploadsEnabled === true && (
+          <details className="upload-panel">
+            <summary>
+              <Icon name="upload" />
+              Subir documento
+            </summary>
+            <p>
+              PDF, DOCX, JPG o PNG hasta 20 MB.{' '}
+              {beta
+                ? 'Beta sin análisis antimalware. Usa archivos ficticios.'
+                : 'El archivo se analiza antes de quedar disponible.'}
+            </p>
+            <form onSubmit={submit}>
+              <fieldset disabled={busy || locked}>
+                <legend>Archivo y clasificación</legend>
+                <p>
+                  <label htmlFor="document-file">Archivo</label>
+                  <input
+                    ref={fileInput}
+                    id="document-file"
+                    type="file"
+                    accept=".pdf,.docx,.jpg,.jpeg,.png"
+                    required
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  />
+                </p>
+                <p>
+                  <label htmlFor="document-name">Nombre del documento</label>
+                  <input
+                    id="document-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    maxLength={200}
+                    pattern=".*\S.*"
+                  />
+                </p>
+                <p>
+                  <label htmlFor="document-category">Categoría</label>
+                  <select
+                    id="document-category"
+                    value={categoryId}
+                    onChange={(e) => setCategory(e.target.value)}
+                    required
+                  >
+                    <option value="">Selecciona una categoría</option>
+                    {catalog.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </p>
+                <p>
+                  <label htmlFor="document-reason">
+                    Motivo de incorporación
+                  </label>
+                  <input
+                    id="document-reason"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    maxLength={2000}
+                    required
+                    pattern=".*\S.*"
+                  />
+                </p>
+                {!locked && (
+                  <button type="submit">
+                    {beta ? 'Subir archivo' : 'Enviar a análisis'}
+                  </button>
+                )}
+              </fieldset>
+              {locked && (
+                <div className="actions">
+                  <button type="submit" disabled={busy}>
+                    Reintentar el mismo archivo
+                  </button>
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setLocked(false);
+                      setStatus(null);
+                      setRequest(crypto.randomUUID());
+                      setFile(null);
+                      if (fileInput.current) fileInput.current.value = '';
+                    }}
+                  >
+                    Preparar otra carga
+                  </button>
+                </div>
+              )}
+            </form>
+          </details>
+        )}
+        {!busy && !page.items.length && (
+          <p>Este expediente no tiene documentos visibles.</p>
+        )}
+        {page.items.length > 0 && (
+          <div
+            className="table-wrap"
+            role="region"
+            aria-label="Documentos del expediente"
+            tabIndex={0}
+          >
+            <table>
+              <caption className="sr-only">
+                Documentos autorizados del expediente
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Documento</th>
+                  <th scope="col">Versión</th>
+                  <th scope="col">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {page.items.map((d) => (
+                  <tr key={d.id}>
+                    <td>
+                      <button
+                        className="table-link"
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          void run(async (signal) =>
+                            setDetail(await getDocument(d.id, signal)),
+                          )
+                        }
+                      >
+                        <Icon name="file" />
+                        {d.name}
+                      </button>
+                    </td>
+                    <td>
+                      {d.number === null ? 'Sin publicar' : `v${d.number}`}
+                    </td>
+                    <td>
+                      <span className="badge">
+                        {d.status
+                          ? documentStateLabel(d.status)
+                          : 'No disponible'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="actions">
+          <button
+            className="button-secondary"
+            type="button"
+            disabled={busy || !page.offset}
+            onClick={() =>
+              void run(async (signal) =>
+                setPage(
+                  await listDocuments(
+                    caseId,
+                    Math.max(0, page.offset - page.limit),
+                    signal,
+                  ),
                 ),
-              ),
-            )
-          }
-        >
-          Documentos anteriores
-        </button>
-        <button
-          className="button-secondary"
-          type="button"
-          disabled={busy || !page.hasMore}
-          onClick={() =>
-            void run(async (signal) =>
-              setPage(
-                await listDocuments(caseId, page.offset + page.limit, signal),
-              ),
-            )
-          }
-        >
-          Documentos siguientes
-        </button>
-      </p>
+              )
+            }
+          >
+            Documentos anteriores
+          </button>
+          <button
+            className="button-secondary"
+            type="button"
+            disabled={busy || !page.hasMore}
+            onClick={() =>
+              void run(async (signal) =>
+                setPage(
+                  await listDocuments(caseId, page.offset + page.limit, signal),
+                ),
+              )
+            }
+          >
+            Documentos siguientes
+          </button>
+        </p>
+      </div>
       {detail && (
         <DocumentDetails
           key={`${detail.id}:${detail.revision}`}
           detail={detail}
           busy={busy}
           canDownload={canDownload}
+          reviewFirst={reviewFirst}
+          onBack={showList}
           run={run}
-          {...(onOpenCase ? { onOpenCase } : {})}
+          {...(onOpenCase && detail.caseId !== caseId ? { onOpenCase } : {})}
           onDownload={() => setNotice('Descarga autorizada.')}
           onRetired={async (id, signal) => {
-            setDetail(null);
+            showList();
             setPage((previous) => ({
               ...previous,
               items: previous.items.filter((row) => row.id !== id),

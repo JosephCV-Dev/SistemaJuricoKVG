@@ -1,5 +1,7 @@
+import { useRef, useState } from 'react';
 import type { SessionCapabilities } from '@kvg/contracts';
-import type { WorkspaceView } from '../shared/navigation';
+import { viewIcons, type WorkspaceView } from '../shared/navigation';
+import { Icon } from '../shared/ui/Icon';
 
 export function Sidebar({
   view,
@@ -14,6 +16,8 @@ export function Sidebar({
   name: string;
   roles: string[];
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const toggle = useRef<HTMLButtonElement>(null);
   const can = (permission: string) =>
     capabilities.some((item) => item.permission === permission);
   const link = (target: WorkspaceView, label: string, active: boolean) => (
@@ -21,13 +25,30 @@ export function Sidebar({
       type="button"
       className="nav-link"
       aria-current={active ? 'page' : undefined}
-      onClick={() => onNavigate(target)}
+      onClick={() => {
+        setExpanded(false);
+        onNavigate(target);
+      }}
     >
+      <Icon name={viewIcons[target]} />
       {label}
     </button>
   );
   return (
-    <aside className="sidebar" aria-label="Menú del sistema">
+    <aside
+      className="sidebar"
+      aria-label="Menú del sistema"
+      onKeyDown={(event) => {
+        if (
+          event.key === 'Escape' &&
+          expanded &&
+          toggle.current?.getClientRects().length
+        ) {
+          setExpanded(false);
+          toggle.current.focus();
+        }
+      }}
+    >
       <div className="brand">
         <img
           src="/kvg-logo.jpg"
@@ -40,7 +61,22 @@ export function Sidebar({
           <small>Gestión documental</small>
         </div>
       </div>
-      <nav aria-label="Navegación principal">
+      <button
+        ref={toggle}
+        type="button"
+        className="menu-toggle button-secondary"
+        aria-expanded={expanded}
+        aria-controls="workspace-navigation"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <Icon name={expanded ? 'close' : 'menu'} />
+        {expanded ? 'Cerrar menú' : 'Abrir menú'}
+      </button>
+      <nav
+        id="workspace-navigation"
+        aria-label="Navegación principal"
+        data-open={expanded}
+      >
         {link('home', 'Inicio', view === 'home')}
         {(can('cliente.consultar') || can('expediente.consultar')) && (
           <p className="nav-group">Clientes y casos</p>
@@ -49,10 +85,14 @@ export function Sidebar({
           link(
             'clients',
             'Clientes',
-            ['clients', 'client', 'new-client', 'new-case'].includes(view),
+            ['clients', 'client', 'new-client'].includes(view),
           )}
         {can('expediente.consultar') &&
-          link('cases', 'Expedientes', ['cases', 'case'].includes(view))}
+          link(
+            'cases',
+            'Expedientes',
+            ['cases', 'case', 'new-case'].includes(view),
+          )}
         {roles.includes('ABOGADO') &&
           can('expediente.consultar') &&
           link('assigned', 'Mis expedientes', view === 'assigned')}
@@ -82,8 +122,13 @@ export function Sidebar({
         {link('session', 'Mi sesión', view === 'session')}
       </nav>
       <div className="sidebar-user">
-        <strong>{name}</strong>
-        <small>{roles.join(' · ') || 'Sin roles asignados'}</small>
+        <div className="entity-label">
+          <Icon name="person" />
+          <span>
+            <strong>{name}</strong>
+            <small>{roles.join(' · ') || 'Sin roles asignados'}</small>
+          </span>
+        </div>
       </div>
     </aside>
   );

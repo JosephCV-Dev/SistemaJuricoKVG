@@ -1,4 +1,5 @@
-import { useId, useState } from 'react';
+import { Icon } from '../../shared/ui/Icon';
+import { useEffect, useId, useRef, useState } from 'react';
 import type {
   DocumentDetail,
   DocumentUploadAvailability,
@@ -17,7 +18,11 @@ import {
   uploadStatus,
 } from './documents-api';
 
-import { documentTimestamp } from './document-format';
+import {
+  documentStateLabel,
+  documentTimestamp,
+  fileSizeLabel,
+} from './document-format';
 
 function uploadMessage(status: UploadStatus): string {
   switch (status.state) {
@@ -38,6 +43,8 @@ function uploadMessage(status: UploadStatus): string {
 
 export function DocumentVersions({
   detail,
+  active,
+  reviewFirst,
   busy,
   run,
   onPublished,
@@ -46,6 +53,8 @@ export function DocumentVersions({
   onOpenReview,
 }: {
   detail: DocumentDetail;
+  active: boolean;
+  reviewFirst: boolean;
   busy: boolean;
   run: RunDocumentAction;
   onPublished: (signal: AbortSignal) => Promise<void>;
@@ -54,7 +63,7 @@ export function DocumentVersions({
   onOpenReview: (versionId: string) => void;
 }) {
   const formId = useId();
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const historyRequested = useRef(false);
   const [history, setHistory] =
     useState<RecordPage<DocumentVersionHistoryEntry> | null>(null);
   const [availability, setAvailability] =
@@ -67,12 +76,16 @@ export function DocumentVersions({
   const [status, setStatus] = useState<UploadStatus | null>(null);
 
   function loadHistory(offset: number) {
-    setHistoryOpen(true);
-    setHistory(null);
+    historyRequested.current = true;
     void run(async (signal) => {
       setHistory(await documentVersions(detail.id, offset, signal));
     });
   }
+
+  useEffect(() => {
+    if (active && !busy && detail.canViewVersions && !historyRequested.current)
+      loadHistory(0);
+  }, [active, busy, detail.canViewVersions]);
 
   function resetUpload() {
     setAvailability(null);
@@ -85,16 +98,6 @@ export function DocumentVersions({
   return (
     <>
       <div className="actions">
-        {detail.canViewVersions && !historyOpen && (
-          <button
-            type="button"
-            className="button-secondary"
-            disabled={busy}
-            onClick={() => loadHistory(0)}
-          >
-            Ver historial de versiones
-          </button>
-        )}
         {detail.canUploadVersion && !availability && (
           <button
             type="button"
@@ -106,6 +109,7 @@ export function DocumentVersions({
               )
             }
           >
+            <Icon name="upload" />
             Cargar nueva versión
           </button>
         )}
@@ -225,9 +229,9 @@ export function DocumentVersions({
           </fieldset>
         </form>
       )}
-      {detail.canViewVersions && historyOpen && (
+      {detail.canViewVersions && (
         <section aria-labelledby={`${formId}-history`}>
-          <h5 id={`${formId}-history`}>Historial de versiones</h5>
+          <h3 id={`${formId}-history`}>Historial de versiones</h3>
           <div className="actions">
             <button
               type="button"
@@ -236,14 +240,6 @@ export function DocumentVersions({
               onClick={() => loadHistory(0)}
             >
               Actualizar historial
-            </button>
-            <button
-              type="button"
-              className="button-secondary"
-              disabled={busy}
-              onClick={() => setHistoryOpen(false)}
-            >
-              Cerrar historial
             </button>
           </div>
           {!history && busy && <p role="status">Consultando versiones…</p>}
@@ -260,16 +256,15 @@ export function DocumentVersions({
                       {item.current ? ' · Vigente' : ''}
                     </strong>
                     {' · '}
-                    {item.status.replaceAll('_', ' ')}
+                    {documentStateLabel(item.status)}
                   </p>
                   <p>
                     {item.author} · {documentTimestamp(item.publishedAt)}
                   </p>
                   <p>Motivo: {item.reason}</p>
                   <p>
-                    {item.format} · {item.size} bytes
+                    {item.format} · {fileSizeLabel(item.size)}
                   </p>
-                  <p>SHA-256: {item.sha256}</p>
                   {item.beta && <p>Archivo beta sin análisis antimalware.</p>}
                   {item.reviews.length > 0 && (
                     <ul
@@ -283,29 +278,44 @@ export function DocumentVersions({
                       ))}
                     </ul>
                   )}
-                  {item.canDownload && (
+                  {item.integrityHash && (
+                    <details className="version-integrity">
+                      <summary>Datos de integridad</summary>
+                      <p>
+                        SHA-256 <code>{item.integrityHash}</code>
+                      </p>
+                    </details>
+                  )}
+                  <div className="actions">
+                    {item.canDownload && (
+                      <button
+                        type="button"
+                        className="button-secondary"
+                        disabled={busy}
+                        onClick={() =>
+                          void run(async (signal) => {
+                            await saveDocumentDownload(
+                              detail.name,
+                              item,
+                              signal,
+                            );
+                            onDownload();
+                          })
+                        }
+                      >
+                        Descargar versión {item.number}
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="button-secondary"
                       disabled={busy}
-                      onClick={() =>
-                        void run(async (signal) => {
-                          await saveDocumentDownload(detail.name, item, signal);
-                          onDownload();
-                        })
-                      }
+                      onClick={() => onOpenReview(item.id)}
                     >
-                      Descargar versión {item.number}
+                      {reviewFirst ? 'Revisión y estado' : 'Estado'} de la
+                      versión {item.number}
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    disabled={busy}
-                    onClick={() => onOpenReview(item.id)}
-                  >
-                    Revisión y estado de la versión {item.number}
-                  </button>
+                  </div>
                 </li>
               ))}
             </ol>

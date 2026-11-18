@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/Icon';
 import { useEffect, useRef, useState } from 'react';
 import type { RecordPage, StaffAccount, StaffDetail } from '@kvg/contracts';
 import type { RunDocumentAction } from '../documents/DocumentDetails';
@@ -69,6 +70,7 @@ export function StaffWorkspace({
               setMode('invite');
             }}
           >
+            <Icon name="add" />
             Nueva invitación
           </button>
         )}
@@ -182,12 +184,20 @@ export function StaffWorkspace({
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)}
               />
-              <button type="submit">Buscar usuarios</button>
+              <button type="submit">
+                <Icon name="search" />
+                Buscar usuarios
+              </button>
             </fieldset>
           </form>
           {page?.items.length === 0 && <p>No se encontraron usuarios.</p>}
           {page && page.items.length > 0 && (
-            <div className="table-wrap">
+            <div
+              className="table-wrap"
+              role="region"
+              aria-label="Directorio de personal"
+              tabIndex={0}
+            >
               <table>
                 <thead>
                   <tr>
@@ -210,6 +220,7 @@ export function StaffWorkspace({
                             )
                           }
                         >
+                          <Icon name="person" />
                           {item.name}
                         </button>
                       </td>

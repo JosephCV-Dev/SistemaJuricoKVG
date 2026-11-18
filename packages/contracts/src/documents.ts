@@ -67,7 +67,6 @@ export interface DocumentDetail extends DocumentSummary {
   fileAvailable: boolean;
   classifications: DocumentClassification[];
   associations: DocumentAssociation[];
-  authorId: string;
   authorName: string;
   categoryName: string;
   version: DocumentVersion | null;
@@ -104,7 +103,6 @@ export interface RetiredDocument {
 export interface DocumentVersion {
   id: string;
   number: number;
-  sha256: string;
   size: number;
   format: string;
   status: string;
@@ -112,6 +110,7 @@ export interface DocumentVersion {
   beta?: true;
 }
 export interface DocumentVersionHistoryEntry extends DocumentVersion {
+  integrityHash?: string;
   author: string;
   reason: string;
   current: boolean;

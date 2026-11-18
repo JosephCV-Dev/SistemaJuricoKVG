@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/Icon';
 import { useEffect, useRef, useState } from 'react';
 import type {
   DocumentRecoveryState,
@@ -81,7 +82,10 @@ export function DocumentRecovery({
               onChange={(event) => setFilter(event.target.value)}
             />
           </p>
-          <button type="submit">Buscar retirados</button>
+          <button type="submit">
+            <Icon name="search" />
+            Buscar retirados
+          </button>
         </fieldset>
       </form>
       {!page && busy && <p role="status">Consultando documentos retirados…</p>}
@@ -89,7 +93,12 @@ export function DocumentRecovery({
         <p>No hay documentos retirados en esta página.</p>
       )}
       {page && page.items.length > 0 && (
-        <div className="table-wrap">
+        <div
+          className="table-wrap"
+          role="region"
+          aria-label="Resultados de documentos retirados"
+          tabIndex={0}
+        >
           <table>
             <thead>
               <tr>
@@ -130,6 +139,7 @@ export function DocumentRecovery({
                               setStatus(null);
                             }}
                           >
+                            <Icon name="restore" />
                             Recuperar documento
                           </button>
                         )}

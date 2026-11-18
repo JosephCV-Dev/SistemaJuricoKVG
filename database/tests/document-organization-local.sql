@@ -145,7 +145,7 @@ BEGIN
   r:=public.kvg_operar('documento.consultar',jsonb_build_object('documento_id',doc));
   IF r#>>'{datos,folio_expediente}' IS DISTINCT FROM target_folio OR r#>>'{datos,asociaciones,0,origen}' IS DISTINCT FROM source_folio
     OR r#>>'{datos,clasificaciones,0,motivo}' IS DISTINCT FROM 'CORREGIR_CLASIFICACION'
-    OR r#>>'{datos,version,version_id}' IS DISTINCT FROM ver::text OR r#>>'{datos,version,sha256}' IS DISTINCT FROM hash THEN
+    OR r#>>'{datos,version,version_id}' IS DISTINCT FROM ver::text OR r#>'{datos,version}' ?| ARRAY['sha256','carga_id','localizador_objeto'] THEN
     RAISE EXCEPTION 'Ficha, historial u original alterados: %',r;
   END IF;
   PERFORM set_config('kvg_test.claims',principal,true);

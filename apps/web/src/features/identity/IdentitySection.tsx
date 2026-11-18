@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/Icon';
 import type { AuthState, MfaEnrollmentResponse } from '@kvg/contracts';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -174,10 +175,17 @@ export function IdentitySection({
       aria-labelledby="identity-heading"
       aria-busy={busy}
     >
-      <h2 id="identity-heading">Acceso al sistema</h2>
+      <h2 id="identity-heading" className="visual-heading">
+        <Icon name={auth.status === 'authenticated' ? 'account' : 'shield'} />
+        <span>
+          {auth.status === 'authenticated'
+            ? 'Datos de la sesión'
+            : 'Acceso al sistema'}
+        </span>
+      </h2>
       <div role="status" aria-live="polite" aria-atomic="true">
         {pending && <p>{pendingMessages[pending]}</p>}
-        {notice && <p>{notice}</p>}
+        {notice && <p className="notice">{notice}</p>}
       </div>
       {error && <p role="alert">{error}</p>}
 
@@ -212,7 +220,10 @@ export function IdentitySection({
                 required
               />
             </p>
-            <button type="submit">Iniciar sesión</button>
+            <button type="submit">
+              <Icon name="signIn" />
+              Iniciar sesión
+            </button>
           </fieldset>
         </form>
       )}
@@ -332,6 +343,7 @@ export function IdentitySection({
               onClick={closeSession}
               disabled={busy}
             >
+              <Icon name="signOut" />
               Cerrar sesión
             </button>
           </p>

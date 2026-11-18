@@ -106,9 +106,7 @@ try {
   await page
     .getByRole('button', { name: 'Confirmar registro de cliente', exact: true })
     .click();
-  await page
-    .getByRole('heading', { name: `Cliente: ${name}`, exact: true })
-    .waitFor();
+  await page.getByRole('heading', { name, level: 1, exact: true }).waitFor();
   check(true, 'alta_cliente_con_revision_confirmacion_y_detalle');
   await page
     .getByRole('button', { name: 'Crear expediente', exact: true })
@@ -278,6 +276,7 @@ try {
   const screenshot = `${localDirectory}/records-browser-mobile.png`;
   await page.screenshot({ path: screenshot, fullPage: true });
   await chmod(screenshot, 0o600);
+  await page.getByRole('button', { name: 'Abrir menú', exact: true }).click();
   await page.getByRole('button', { name: 'Mi sesión', exact: true }).click();
   await page
     .getByRole('button', { name: 'Cerrar sesión', exact: true })
@@ -297,10 +296,8 @@ try {
   stage = 'ADMINISTRACION_SIN_ACCESO_JURIDICO';
   const admin = await login('ADMINISTRADOR');
   await admin.page
-    .getByText(
-      'Tu cuenta no tiene permisos para gestionar o consultar clientes y expedientes.',
-      { exact: true },
-    )
+    .getByRole('navigation')
+    .getByRole('button', { name: 'Usuarios y permisos', exact: true })
     .waitFor();
   check(
     (await admin.page

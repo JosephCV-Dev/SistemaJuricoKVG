@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/Icon';
 import { useState } from 'react';
 import type { CaseAssignmentSummary, RecordPage } from '@kvg/contracts';
 import {
@@ -65,7 +66,10 @@ export function CaseReassignmentWorkspace({
                   onChange={(event) => setFolio(event.target.value)}
                 />
               </p>
-              <button type="submit">Buscar expediente para reasignar</button>
+              <button type="submit">
+                <Icon name="search" />
+                Buscar expediente para reasignar
+              </button>
             </fieldset>
           </form>
           {results &&

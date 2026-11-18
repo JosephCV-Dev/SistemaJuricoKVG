@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/Icon';
 import { useEffect, useRef, useState } from 'react';
 import type {
   ConfigurationCategory,
@@ -312,7 +313,12 @@ export function ConfigurationWorkspace({
       {snapshot && (
         <>
           <h3>Parámetros del sistema</h3>
-          <div className="table-wrap">
+          <div
+            className="table-wrap"
+            role="region"
+            aria-label="Parámetros del sistema"
+            tabIndex={0}
+          >
             <table>
               <thead>
                 <tr>
@@ -363,10 +369,16 @@ export function ConfigurationWorkspace({
               disabled={busy}
               onClick={() => setEditor({ kind: 'category' })}
             >
+              <Icon name="add" />
               Nueva categoría
             </button>
           </div>
-          <div className="table-wrap">
+          <div
+            className="table-wrap"
+            role="region"
+            aria-label="Categorías documentales"
+            tabIndex={0}
+          >
             <table>
               <thead>
                 <tr>
@@ -407,10 +419,16 @@ export function ConfigurationWorkspace({
               disabled={busy}
               onClick={() => setEditor({ kind: 'identification' })}
             >
+              <Icon name="add" />
               Nuevo tipo
             </button>
           </div>
-          <div className="table-wrap">
+          <div
+            className="table-wrap"
+            role="region"
+            aria-label="Tipos de identificación"
+            tabIndex={0}
+          >
             <table>
               <thead>
                 <tr>

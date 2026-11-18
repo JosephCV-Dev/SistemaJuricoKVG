@@ -1,9 +1,11 @@
+import { Icon } from '../../shared/ui/Icon';
 import { useEffect, useRef, useState } from 'react';
 import type { AssignedCase, RecordPage } from '@kvg/contracts';
 import type { AssignedFilters } from './records-api';
 import { searchAssigned } from './records-api';
 import type { RunRecordAction } from './CaseAssignmentPanel';
 import { showDate } from './record-format';
+import { statusLabel } from './CaseStatusEditor';
 
 const empty = { text: '', status: '', participation: '', from: '', to: '' };
 const labels = {
@@ -46,7 +48,7 @@ export function AssignedCases({
 
   return (
     <section className="panel" aria-labelledby="assigned-cases">
-      <h2 id="assigned-cases">Mis expedientes</h2>
+      <h2 id="assigned-cases">Buscar expedientes asignados</h2>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -110,36 +112,52 @@ export function AssignedCases({
               ))}
             </select>
           </p>
-          <p>
-            <label htmlFor="assigned-from">Alta desde (UTC)</label>
-            <input
-              id="assigned-from"
-              type="date"
-              value={filters.from}
-              max={filters.to || undefined}
-              onChange={(event) =>
-                setFilters({ ...filters, from: event.target.value })
-              }
-            />
-          </p>
-          <p>
-            <label htmlFor="assigned-to">Alta hasta (UTC)</label>
-            <input
-              id="assigned-to"
-              type="date"
-              value={filters.to}
-              min={filters.from || undefined}
-              onChange={(event) =>
-                setFilters({ ...filters, to: event.target.value })
-              }
-            />
-          </p>
-          <button type="submit">Buscar mis expedientes</button>
+          <details className="search-options">
+            <summary>
+              Fechas de alta
+              {filters.from || filters.to ? ' (filtro activo)' : ''}
+            </summary>
+            <div className="filter-grid">
+              <p>
+                <label htmlFor="assigned-from">Alta desde (UTC)</label>
+                <input
+                  id="assigned-from"
+                  type="date"
+                  value={filters.from}
+                  max={filters.to || undefined}
+                  onChange={(event) =>
+                    setFilters({ ...filters, from: event.target.value })
+                  }
+                />
+              </p>
+              <p>
+                <label htmlFor="assigned-to">Alta hasta (UTC)</label>
+                <input
+                  id="assigned-to"
+                  type="date"
+                  value={filters.to}
+                  min={filters.from || undefined}
+                  onChange={(event) =>
+                    setFilters({ ...filters, to: event.target.value })
+                  }
+                />
+              </p>
+            </div>
+          </details>
+          <button type="submit">
+            <Icon name="search" />
+            Buscar mis expedientes
+          </button>
         </fieldset>
       </form>
       {results &&
         (results.items.length ? (
-          <div className="table-wrap">
+          <div
+            className="table-wrap"
+            role="region"
+            aria-label="Expedientes asignados"
+            tabIndex={0}
+          >
             <table>
               <caption className="sr-only">
                 Expedientes asignados o con acceso explícito
@@ -147,6 +165,7 @@ export function AssignedCases({
               <thead>
                 <tr>
                   <th scope="col">Folio</th>
+                  <th scope="col">Asunto</th>
                   <th scope="col">Estado</th>
                   <th scope="col">Participación</th>
                   <th scope="col">Alta</th>
@@ -162,10 +181,14 @@ export function AssignedCases({
                         disabled={busy}
                         onClick={() => onOpen(item.id)}
                       >
+                        <Icon name="folder" />
                         {item.folio}
                       </button>
                     </td>
-                    <td>{item.status.replaceAll('_', ' ')}</td>
+                    <td>{item.description.slice(0, 120)}</td>
+                    <td>
+                      <span className="badge">{statusLabel[item.status]}</span>
+                    </td>
                     <td>
                       {item.participation
                         .map((part) => labels[part])

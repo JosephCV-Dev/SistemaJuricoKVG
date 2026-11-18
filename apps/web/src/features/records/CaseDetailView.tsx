@@ -1,5 +1,6 @@
+import { Icon } from '../../shared/ui/Icon';
 import { CaseDocuments } from '../documents/CaseDocuments';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import type {
   CaseDetail,
   CaseUpdateInput,
@@ -15,6 +16,9 @@ import { showDate } from './record-format';
 
 export function CaseDetailView({
   caseDetail,
+  isLawyer,
+  reviewFirst,
+  staffAccess,
   busy,
   canEdit,
   canAssign,
@@ -33,6 +37,9 @@ export function CaseDetailView({
   canDownloadDocuments,
   onAccessFailure,
 }: {
+  isLawyer: boolean;
+  reviewFirst: boolean;
+  staffAccess?: ReactNode;
   canConsultDocuments: boolean;
   canUploadDocuments: boolean;
   canDownloadDocuments: boolean;
@@ -57,12 +64,34 @@ export function CaseDetailView({
 }) {
   const [editing, setEditing] = useState(false);
   const [changingState, setChangingState] = useState(false);
+  const [documentsOpened, setDocumentsOpened] = useState(false);
   const [progressDraft, setProgressDraft] = useState<{
     original: CaseProgress | null;
   } | null>(null);
   const [section, setSection] = useState<
-    'summary' | 'history' | 'progress' | 'documents'
+    'summary' | 'history' | 'progress' | 'documents' | 'staff'
   >('summary');
+  const sections = [
+    'summary',
+    ...(isLawyer ? ['progress' as const] : []),
+    ...(canConsultDocuments ? ['documents' as const] : []),
+    'staff',
+    ...(!isLawyer ? ['progress' as const] : []),
+    'history',
+  ] as const;
+  const sectionDetails = {
+    summary: { label: 'Resumen', icon: 'summary' },
+    history: { label: 'Historial', icon: 'history' },
+    progress: { label: 'Avances', icon: 'progress' },
+    documents: { label: 'Documentos', icon: 'file' },
+    staff: { label: 'Responsables', icon: 'people' },
+  } as const;
+  const activeAssignments = caseDetail.assignments.filter(
+    (item) => item.active,
+  );
+  const principal = activeAssignments.find(
+    (item) => item.function === 'PRINCIPAL',
+  );
   if (changingState && caseDetail.transitions.length) {
     return (
       <CaseStatusEditor
@@ -86,32 +115,25 @@ export function CaseDetailView({
     );
   }
   return (
-    <div className="record-detail">
-      <h4>Expediente {caseDetail.folio}</h4>
-      <div className="detail-tabs" aria-label="Secciones del expediente">
-        {(
-          [
-            'summary',
-            ...(canConsultDocuments ? ['documents' as const] : []),
-            'history',
-            'progress',
-          ] as const
-        ).map((item) => (
+    <div>
+      <div
+        className="detail-tabs"
+        role="group"
+        aria-label="Secciones del expediente"
+      >
+        {sections.map((item) => (
           <button
             className="button-secondary"
             type="button"
             key={item}
             aria-pressed={section === item}
-            onClick={() => setSection(item)}
+            onClick={() => {
+              setSection(item);
+              if (item === 'documents') setDocumentsOpened(true);
+            }}
           >
-            {
-              {
-                summary: 'Resumen',
-                history: 'Historial',
-                progress: 'Avances',
-                documents: 'Documentos',
-              }[item]
-            }
+            <Icon name={sectionDetails[item].icon} />
+            {sectionDetails[item].label}
           </button>
         ))}
       </div>
@@ -125,6 +147,8 @@ export function CaseDetailView({
               <dd>{caseDetail.clientName}</dd>
             </>
           )}
+          <dt>Abogado principal</dt>
+          <dd>{principal?.name ?? 'Sin abogado principal asignado'}</dd>
           <dt>Descripción</dt>
           <dd>{caseDetail.description}</dd>
           <dt>Creado</dt>
@@ -134,86 +158,102 @@ export function CaseDetailView({
           <dt>Autoridad</dt>
           <dd>{caseDetail.externalAuthority ?? 'Sin autoridad externa'}</dd>
         </dl>
-        {canConsultClient && (
-          <p>
+        <div className="actions case-summary-actions">
+          {canAssign && !caseDetail.hasActivePrincipal && (
+            <button type="button" disabled={busy} onClick={onAssign}>
+              <Icon name="people" />
+              Asignar abogado
+            </button>
+          )}
+          {caseDetail.transitions.length > 0 && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setChangingState(true)}
+            >
+              <Icon name="progress" />
+              Cambiar estado
+            </button>
+          )}
+          {canEdit && (
+            <button
+              className="button-secondary"
+              type="button"
+              disabled={busy}
+              onClick={() => setEditing(true)}
+            >
+              <Icon name="edit" />
+              Editar expediente
+            </button>
+          )}
+          {canConsultClient && (
             <button
               className="button-secondary"
               type="button"
               disabled={busy}
               onClick={() => onOpenClient(caseDetail.clientId)}
             >
-              Consultar cliente asociado
+              <Icon name="person" />
+              Consultar cliente
             </button>
+          )}
+        </div>
+        {caseDetail.status === 'NUEVO' && !caseDetail.hasActivePrincipal && (
+          <p className="file-note">
+            Para pasar a En proceso, asigna un abogado principal activo.
           </p>
         )}
-        {canEdit && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setEditing(true)}
-          >
-            Editar expediente
-          </button>
-        )}
-        {canAssign && (
-          <button type="button" disabled={busy} onClick={onAssign}>
-            Asignar abogado
-          </button>
-        )}
-        {caseDetail.transitions.length > 0 && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setChangingState(true)}
-          >
-            Cambiar estado
-          </button>
-        )}
-        {caseDetail.status === 'NUEVO' && !caseDetail.hasActivePrincipal && (
-          <p>Para pasar a En proceso, asigna un abogado principal activo.</p>
-        )}
-        <h4>Responsables vigentes</h4>
-        {caseDetail.assignments.filter((item) => item.active).length ? (
+      </div>
+      <section
+        hidden={section !== 'staff'}
+        aria-label="Responsables del expediente"
+      >
+        <div className="section-header">
+          <h2>Responsables vigentes</h2>
+          {canAssign && (
+            <button
+              className="button-secondary"
+              type="button"
+              disabled={busy}
+              onClick={onAssign}
+            >
+              <Icon name="people" />
+              Asignar abogado
+            </button>
+          )}
+        </div>
+        {activeAssignments.length > 0 ? (
           <ul>
-            {caseDetail.assignments
-              .filter((item) => item.active)
-              .map((item, index) => (
-                <li key={index}>
-                  {item.function}: {item.name}
-                </li>
-              ))}
+            {activeAssignments.map((item) => (
+              <li key={item.userId + item.startsAt}>
+                {item.function === 'PRINCIPAL' ? 'Principal' : 'Colaborador'} ·{' '}
+                {item.name}
+              </li>
+            ))}
           </ul>
         ) : (
           <p>Sin abogado asignado.</p>
         )}
-        {caseDetail.assignments.some((item) => !item.active) && (
-          <details>
-            <summary>Historial de asignaciones</summary>
-            <ul>
-              {caseDetail.assignments
-                .filter((item) => !item.active)
-                .map((item, index) => (
-                  <li key={index}>
-                    {item.name} · {item.function} · {showDate(item.startsAt)}
-                    {item.endsAt ? ` a ${showDate(item.endsAt)}` : ''}
-                  </li>
-                ))}
-            </ul>
-          </details>
-        )}
-      </div>
-      {section === 'documents' && canConsultDocuments && (
-        <CaseDocuments
-          key={caseDetail.id}
-          caseId={caseDetail.id}
-          canUpload={canUploadDocuments}
-          canDownload={canDownloadDocuments}
-          onAccessFailure={onAccessFailure}
-          onOpenCase={onOpenCase}
-        />
+        {staffAccess}
+      </section>
+      {documentsOpened && canConsultDocuments && (
+        <div hidden={section !== 'documents'}>
+          <CaseDocuments
+            key={caseDetail.id}
+            caseId={caseDetail.id}
+            canUpload={canUploadDocuments}
+            canDownload={canDownloadDocuments}
+            reviewFirst={reviewFirst}
+            onAccessFailure={onAccessFailure}
+            onOpenCase={onOpenCase}
+          />
+        </div>
       )}
       <div hidden={section !== 'history'}>
-        <h4>Historial de estados</h4>
+        <h2>Historial de estados</h2>
+        {!caseDetail.history.length && (
+          <p>Sin cambios de estado registrados.</p>
+        )}
         <ul>
           {caseDetail.history.map((item, index) => (
             <li key={index}>
@@ -230,18 +270,40 @@ export function CaseDetailView({
             </li>
           ))}
         </ul>
+        {caseDetail.assignments.some((item) => !item.active) && (
+          <details>
+            <summary>Historial de asignaciones</summary>
+            <ul>
+              {caseDetail.assignments
+                .filter((item) => !item.active)
+                .map((item) => (
+                  <li key={item.userId + item.startsAt}>
+                    {item.name} ·{' '}
+                    {item.function === 'PRINCIPAL'
+                      ? 'Principal'
+                      : 'Colaborador'}{' '}
+                    · {showDate(item.startsAt)}
+                    {item.endsAt ? ` a ${showDate(item.endsAt)}` : ''}
+                  </li>
+                ))}
+            </ul>
+          </details>
+        )}
       </div>
       <div hidden={section !== 'progress'}>
-        <h4>Avances</h4>
-        {caseDetail.canAddProgress && !progressDraft && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setProgressDraft({ original: null })}
-          >
-            Nuevo avance
-          </button>
-        )}
+        <div className="section-header">
+          <h2>Avances del expediente</h2>
+          {caseDetail.canAddProgress && !progressDraft && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setProgressDraft({ original: null })}
+            >
+              <Icon name="add" />
+              Nuevo avance
+            </button>
+          )}
+        </div>
         {section === 'progress' &&
           caseDetail.canAddProgress &&
           progressDraft && (

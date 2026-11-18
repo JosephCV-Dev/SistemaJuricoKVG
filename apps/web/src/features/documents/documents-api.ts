@@ -177,7 +177,6 @@ function version(r: Record<string, unknown>): DocumentVersion {
     id: text(r.id),
     number: integer(r.number),
     size: integer(r.size),
-    sha256: text(r.sha256),
     format: text(r.format),
     status: text(r.status),
     publishedAt: text(r.publishedAt),
@@ -241,7 +240,6 @@ export async function getDocument(
       };
     }),
     createdAt: text(r.createdAt),
-    authorId: text(r.authorId),
     authorName: text(r.authorName),
     categoryName: text(r.categoryName),
     version: v ? version(v) : null,
@@ -276,6 +274,9 @@ export async function documentVersions(
       const row = obj(value);
       return {
         ...version(row),
+        ...(row.integrityHash !== undefined
+          ? { integrityHash: text(row.integrityHash) }
+          : {}),
         author: text(row.author),
         reason: text(row.reason),
         current: bool(row.current),

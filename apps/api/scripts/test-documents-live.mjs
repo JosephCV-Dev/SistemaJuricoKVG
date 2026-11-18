@@ -3,7 +3,7 @@ import { ServerSessions } from '../dist/modules/identity/presentation/server-ses
 import { KvgRpcService } from '../dist/infrastructure/supabase/kvg-rpc.service.js';
 import 'reflect-metadata';
 import { writeFile } from 'node:fs/promises';
-import { randomUUID, createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import sharp from 'sharp';
@@ -192,8 +192,9 @@ try {
   check((await worker.once()) === 'idle', 'trabajo_publicado_no_se_duplica');
   const detail = (await secretary.request(`documents/${documentId}`)).data;
   check(
-    detail.version?.sha256 === createHash('sha256').update(bytes).digest('hex'),
-    'sha256_confiable',
+    detail.version?.id === status.versionId &&
+      !Object.hasOwn(detail.version, 'sha256'),
+    'detalle_operativo_sin_hash',
   );
   check(
     !/localizador|secret|token|bucket/.test(JSON.stringify(detail)),

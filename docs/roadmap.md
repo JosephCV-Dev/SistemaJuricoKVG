@@ -70,6 +70,12 @@ confirmación e historial. [Contrato y pruebas](audit-and-configuration.md).
 historial y restauración por ID en Docker aislado. Continúa pendiente el cierre
 operativo, con destino independiente, programación, alertas y reapertura
 autorizada. [Procedimiento y evidencia](recovery-rehearsal.md).
+
+**7 implementado.** Las pantallas disponibles usan el diseño KVG con navegación
+plegable en móvil, controles de formulario consistentes, foco de teclado y
+tablas desplazables. El siguiente bloque es **8**, configuración de producción,
+revisión de seguridad y lanzamiento. [Verificación visual](interface.md#paso-7).
+
 La demo mantiene su modo beta local. El antimalware operativo y el despliegue
 separado siguen pendientes.
 
@@ -162,7 +168,11 @@ Terminado cuando la administración respete las facultades y metadatos mínimos 
 
 ### 7. Diseño del frontend
 
-La base visual se adelantó por petición del usuario el 4 de noviembre de 2026, usando su maqueta y logo. Con los recorridos funcionales y sus contratos estables, completar las pantallas futuras sobre esa base y revisar la consistencia visual y las mejoras que se acuerden. Mantener las reglas y verificaciones de los pasos anteriores. La claridad de los mensajes, el uso por teclado, las etiquetas de formularios y los estados funcionales de carga/error se verifican desde cada avance anterior.
+La base visual se adelantó por petición del usuario el 4 de noviembre de 2026,
+usando su maqueta y logo. Se completó la revisión de las pantallas disponibles
+en desarrollo con énfasis en navegación móvil, teclado, formularios, tablas y
+mensajes. Las pantallas de funciones operativas pendientes acompañarán a sus
+casos de uso. [Cambios y verificación](interface.md#paso-7).
 
 ### 8. Configuración de producción, revisión de seguridad y lanzamiento
 

@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/Icon';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { CaseAssignmentRole, CaseTeam } from '@kvg/contracts';
@@ -121,7 +122,10 @@ export function CaseAssignmentPanel({
                   onChange={(event) => setSearch(event.target.value)}
                 />
               </p>
-              <button type="submit">Buscar abogados</button>
+              <button type="submit">
+                <Icon name="search" />
+                Buscar abogados
+              </button>
             </fieldset>
           </form>
           <div className="actions">

@@ -211,7 +211,7 @@ origen recibió 403 al consultar y descargar el documento trasladado.
 ## Paso 5B de metadatos y versiones
 
 CU014/CU029 (SCRUM-133/137) se usan desde la ficha de un documento, en la
-búsqueda general o en el expediente. **Editar metadatos** cambia el nombre
+búsqueda general o en el expediente. **Cambiar nombre** cambia el título
 con un motivo obligatorio y revisión vigente. Aplica a documentos en Recibido
 o En revisión dentro de expedientes editables. La categoría conserva
 **Clasificar documento** y el expediente conserva **Cambiar expediente**.
@@ -228,8 +228,9 @@ nuevo. Cada publicación confirmada inicia en `RECIBIDO` y conserva los original
 previos con sus propias revisiones. Si se quiere volver a unos bytes anteriores,
 se puede descargar ese original autorizado y enviarlo como una versión nueva.
 
-**Ver historial de versiones** identifica la secuencia, la vigente y el hash
-SHA-256, autor, motivo y fecha de cada publicación. Muestra el resultado, autor y
+**Versiones** identifica la secuencia, la vigente, el autor, el motivo y la
+fecha de cada publicación. La huella se presenta en **Datos de integridad**
+solo con facultad jurídica sobre esa versión. Muestra el resultado, autor y
 fecha de las revisiones jurídicas registradas en la versión correspondiente.
 Cada descarga requiere el permiso específico y vuelve a verificar alcance e
 integridad. Los archivos beta restringidos se filtran del historial cuando la
@@ -365,3 +366,22 @@ respondieron 403. Administración solicitó la recuperación desde el
 listado operativo y el trabajador la completó en beta. Secretaría descargó
 las dos versiones recuperadas y sus bytes coincidieron con los originales.
 La descarga desde la cuenta de administración permaneció denegada.
+
+## Visualización documental por rol
+
+Las migraciones `202611180018_document_read_projection.sql` y
+`202611180019_version_integrity_for_review.sql` se aplican con
+`npm run setup:document-read-projection:dev`. La ficha ordinaria de CU012
+omite SHA-256 e identificadores de carga. El historial de CU029 conserva la
+evidencia de integridad como detalle desplegable con la facultad jurídica
+vigente de la versión. Para esta presentación, Secretaría recibe el historial
+operativo y el abogado con permiso de revisión o validación puede desplegar la
+huella. PostgreSQL proyecta los campos según el alcance de la sesión. La API
+también limita la respuesta a los metadatos del contrato web.
+La autorización de descarga y la verificación privada conservan el SHA-256.
+
+Los ensayos SQL de organización, versiones, revisión y retiro/recuperación
+verifican la ausencia de hashes en la consulta operativa, su disponibilidad
+para el abogado autorizado, la descarga y las denegaciones por alcance. La
+prueba de interfaz comprueba la navegación y los campos visibles con cuentas
+ficticias de Secretaría y Abogado. [Procedimiento](interface.md#paso-7).

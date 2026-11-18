@@ -80,7 +80,6 @@ function version(r: Record<string, unknown>): DocumentVersion {
   return {
     id: text(r.version_id),
     number: integer(r.numero_version),
-    sha256: text(r.sha256),
     size: integer(r.tamano_bytes),
     format: text(r.formato),
     status: text(r.estado_documento_codigo),
@@ -98,6 +97,9 @@ function versionHistory(value: unknown): DocumentVersionHistoryEntry {
     return invalidRpcResult();
   return {
     ...version(row),
+    ...(row.huella_sha256 !== undefined
+      ? { integrityHash: text(row.huella_sha256) }
+      : {}),
     author: text(row.autor),
     reason: text(row.motivo),
     current: row.vigente,
@@ -472,7 +474,6 @@ export class KvgDocumentsRepository extends DocumentsRepository {
         };
       }),
       createdAt: date(r.creado_en),
-      authorId: text(r.creado_por),
       authorName: text(r.nombre_autor),
       categoryName: text(r.nombre_categoria),
       version: v ? version(v) : null,

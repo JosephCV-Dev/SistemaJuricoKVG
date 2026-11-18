@@ -331,6 +331,30 @@ test('metadatos, carga nueva e historial mantienen contratos y permisos separado
           return { documento_id: id, expediente_id: id, revision: 4 };
         if (operation === 'documento.cargar')
           return { carga_id: id, documento_id: id, estado: 'RECIBIENDO' };
+        if (operation === 'documento.consultar')
+          return {
+            documento_id: id,
+            expediente_id: id,
+            categoria_id: id,
+            nombre: 'Documento ficticio',
+            version_vigente_id: versionId,
+            creado_en: '2026-11-17T12:00:00Z',
+            creado_por: id,
+            nombre_autor: 'Autor ficticio',
+            nombre_categoria: 'Demandas',
+            revision: 3,
+            version: {
+              version_id: versionId,
+              numero_version: 1,
+              estado_documento_codigo: 'RECIBIDO',
+              sha256: 'b'.repeat(64),
+              carga_id: id,
+              localizador_objeto: 'interno',
+              formato: 'PNG',
+              tamano_bytes: 500,
+              publicado_en: '2026-11-17T12:00:00Z',
+            },
+          };
         if (operation === 'documento.versiones')
           return [
             {
@@ -403,6 +427,15 @@ test('metadatos, carga nueva e historial mantienen contratos y permisos separado
     400,
   );
   assert.deepEqual(calls, []);
+  const consultation = await browser.request(path);
+  assert.equal(consultation.status, 200);
+  const detail = await consultation.json();
+  assert.equal(detail.version.id, versionId);
+  assert.equal(detail.authorName, 'Autor ficticio');
+  assert.doesNotMatch(
+    JSON.stringify(detail),
+    /sha256|authorId|localizador|carga_id/,
+  );
   assert.equal((await patch(metadata)).status, 200);
   assert.deepEqual(calls.at(-1).input, {
     documento_id: id,
@@ -427,7 +460,7 @@ test('metadatos, carga nueva e historial mantienen contratos y permisos separado
   assert.equal(items[0].canDownload, false);
   assert.equal(items[0].current, true);
   assert.equal(items[0].beta, true);
-  assert(!JSON.stringify(items).includes('localizador'));
+  assert.doesNotMatch(JSON.stringify(items), /localizador|sha256/);
   assert.equal(
     (await browser.request(`documents/versions/${versionId}/download`)).status,
     403,

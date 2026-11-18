@@ -1,3 +1,4 @@
+import { Icon } from '../../shared/ui/Icon';
 import { useEffect, useRef, useState } from 'react';
 import type {
   AuditCursor,
@@ -114,12 +115,20 @@ export function AuditWorkspace({
               ))}
             </select>
           </p>
-          <button type="submit">Consultar bitácora</button>
+          <button type="submit">
+            <Icon name="search" />
+            Consultar bitácora
+          </button>
         </fieldset>
       </form>
       {page?.items.length === 0 && <p>No se encontraron eventos.</p>}
       {page && page.items.length > 0 && (
-        <div className="table-wrap">
+        <div
+          className="table-wrap"
+          role="region"
+          aria-label="Resultados de bitácora"
+          tabIndex={0}
+        >
           <table>
             <thead>
               <tr>

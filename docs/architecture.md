@@ -48,9 +48,9 @@ verificación de identidad en desarrollo no acredita todavía el prototipo compl
 tablas, formularios en columnas y secciones de detalle. `App` compone el acceso y
 la navegación en memoria; `Sidebar` muestra destinos según capacidades vigentes.
 Los componentes de negocio permanecen en `features`; los tipos de navegación
-compartidos están en `shared/navigation.ts`. Se usa CSS sin dependencias nuevas,
-con foco visible, salto al contenido y adaptación móvil. El logo se sirve desde
-`public/kvg-logo.jpg`; no se cargan fuentes ni scripts de terceros. Véase
+compartidos están en `shared/navigation.ts`. El CSS conserva el foco visible,
+el salto al contenido y la adaptación móvil. Se sirven el logo local y la
+fuente WOFF2 de Bootstrap Icons desde el mismo origen. Véase
 [el alcance de la adaptación visual](interface.md).
 
 `apps/api/src/modules` delimita identidad, clientes, expedientes, documentos,
