@@ -1,16 +1,21 @@
 import { spawn } from 'node:child_process';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { join } from 'node:path';
 import {
-  randomBytes,
-  randomUUID,
-  createCipheriv,
-  createDecipheriv,
-  createHash,
-} from 'node:crypto';
+  archiveLimit,
+  backupIdPattern,
+  hash,
+  loadBackup,
+  recordRecovery,
+  recoveryDirectories,
+  storeBackup,
+} from './lib/development-recovery-archive.mjs';
 import { ConfigService } from '@nestjs/config';
 import { PrivateFileGateway } from '../dist/modules/documents/infrastructure/private-file-gateway.js';
 import {
   developmentConfig,
+  envPath,
   ownerConnection,
   localDirectory,
   DevelopmentSetupError,
@@ -24,7 +29,18 @@ import {
 const IMAGE =
   'postgres@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab';
 const root = new URL('../../../', import.meta.url);
-const hash = (b) => createHash('sha256').update(b).digest('hex');
+const migrationsDirectory = new URL('database/migrations/', root);
+const privateTables = [
+  'solicitud_creacion',
+  'decision_personal',
+  'cambio_catalogo',
+];
+const tablePattern =
+  /^(?:kvg\.[a-z_]+|kvg_privado\.(?:solicitud_creacion|decision_personal|cambio_catalogo))$/;
+const baselinePath = new URL(
+  'database/baseline/Modelo_Fisico_KVG_PostgreSQL.sql',
+  root,
+);
 const container = `kvg-recovery-${randomUUID()}`;
 let owner,
   created = false,
@@ -47,8 +63,9 @@ function docker(args, input) {
       clearTimeout(timeout);
       reject(new Error());
     });
+    p.stdout.setEncoding('utf8');
     p.stdout.on('data', (b) => {
-      size += b.length;
+      size += Buffer.byteLength(b);
       if (size > 16_000_000) p.kill();
       else output += b.toString();
     });
@@ -81,9 +98,7 @@ const sql = (source) =>
     source,
   );
 const literal = (v) => `'${String(v).replaceAll("'", "''")}'`;
-try {
-  const started = Date.now();
-  const config = await developmentConfig();
+async function captureBackup(config) {
   const fixture = await readDevelopmentFixture(config);
   owner = await ownerConnection(config);
   await owner.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -95,19 +110,28 @@ try {
       users.rows.every((r) => isDevelopmentEmail(fixture, r.correo_operativo)),
     'solo_entorno_ficticio_conocido',
   );
+  const migrations = (
+    await owner.query(
+      'SELECT nombre, sha256 FROM kvg_servidor.migracion ORDER BY nombre',
+    )
+  ).rows;
+  await migrationSources(migrations);
   const tables = (
     await owner.query(
-      "SELECT tablename FROM pg_tables WHERE schemaname='kvg' ORDER BY tablename",
+      `SELECT schemaname || '.' || tablename AS name FROM pg_tables
+       WHERE schemaname='kvg' OR (schemaname='kvg_privado' AND tablename=ANY($1::text[]))
+       ORDER BY 1`,
+      [privateTables],
     )
-  ).rows.map((r) => r.tablename);
+  ).rows.map((row) => row.name);
   check(
-    tables.length === 37 && tables.every((t) => /^[a-z_]+$/.test(t)),
-    '37_tablas_modelo',
+    tables.length >= 37 && tables.every((table) => tablePattern.test(table)),
+    'tablas_modelo',
   );
   const rows = {};
   for (const table of tables)
     rows[table] = (
-      await owner.query(`SELECT to_jsonb(t) AS row FROM kvg.${table} t`)
+      await owner.query(`SELECT to_jsonb(t) AS row FROM ${table} t`)
     ).rows.map((r) => r.row);
   const sequence = (
     await owner.query(
@@ -119,7 +143,10 @@ try {
   ).rows[0].time.toISOString();
   const files = new PrivateFileGateway(new ConfigService(process.env));
   const objects = [];
-  for (const version of rows.version_documento) {
+  let objectBytes = 0;
+  for (const version of rows['kvg.version_documento']) {
+    objectBytes += Number(version.tamano_bytes);
+    check(objectBytes <= archiveLimit * 0.7, 'limite_de_originales_del_ensayo');
     const bytes = await files.read(
       'kvg-originales',
       version.localizador_objeto,
@@ -137,62 +164,69 @@ try {
       base64: bytes.toString('base64'),
     });
   }
-  check(objects.length > 0, 'originales_presentes_en_ensayo');
   await owner.query('ROLLBACK');
-  const baseline = await readFile(
-    new URL('database/baseline/Modelo_Fisico_KVG_PostgreSQL.sql', root),
-    'utf8',
-  );
-  const snapshot = Buffer.from(
-    JSON.stringify({
-      rows,
-      sequence,
-      objects,
-      baselineSha256: hash(baseline),
-      snapshotTime,
-    }),
-  );
-  const key = randomBytes(32),
-    iv = randomBytes(12),
-    cipher = createCipheriv('aes-256-gcm', key, iv);
-  cipher.setAAD(Buffer.from('KVG-development-rehearsal-v1'));
-  const encrypted = Buffer.concat([
-    iv,
-    cipher.update(snapshot),
-    cipher.final(),
-    cipher.getAuthTag(),
-  ]);
-  const archive = `${localDirectory}/recovery-${randomUUID()}`;
-  await writeFile(archive + '.enc', encrypted, { mode: 0o600 });
-  await writeFile(archive + '.key', key, { mode: 0o600 });
-  const fromDisk = await readFile(archive + '.enc');
-  const decipher = createDecipheriv(
-    'aes-256-gcm',
-    await readFile(archive + '.key'),
-    fromDisk.subarray(0, 12),
-  );
-  decipher.setAAD(Buffer.from('KVG-development-rehearsal-v1'));
-  decipher.setAuthTag(fromDisk.subarray(-16));
-  const restored = JSON.parse(
-    Buffer.concat([
-      decipher.update(fromDisk.subarray(12, -16)),
-      decipher.final(),
-    ]).toString(),
-  );
-  check(restored.baselineSha256 === hash(baseline), 'baseline_verificada');
-  const damaged = Buffer.from(fromDisk);
-  damaged[15] ^= 1;
-  try {
-    const d = createDecipheriv('aes-256-gcm', key, damaged.subarray(0, 12));
-    d.setAAD(Buffer.from('KVG-development-rehearsal-v1'));
-    d.setAuthTag(damaged.subarray(-16));
-    d.update(damaged.subarray(12, -16));
-    d.final();
-    throw new DevelopmentSetupError('Cifrado no detectó corrupción.');
-  } catch (e) {
-    if (e instanceof DevelopmentSetupError) throw e;
-    checks.push('copia_corrupta_rechazada');
+  return {
+    rows,
+    sequence,
+    objects,
+    migrations,
+    baselineSha256: hash(await readFile(baselinePath)),
+    snapshotTime,
+  };
+}
+
+async function migrationSources(migrations) {
+  const available = new Set(await readdir(migrationsDirectory));
+  const sources = [];
+  let previous = '';
+  for (const migration of migrations) {
+    const { nombre, sha256 } = migration;
+    check(
+      /^\d{12}_[a-z0-9_]+\.sql$/.test(nombre) &&
+        available.has(nombre) &&
+        nombre > previous,
+      'migracion_registrada',
+    );
+    const source = await readFile(new URL(nombre, migrationsDirectory), 'utf8');
+    check(hash(source) === sha256, 'compatibilidad_de_migracion');
+    sources.push(source);
+    previous = nombre;
   }
+  return sources;
+}
+
+async function restoreIsolated(restored) {
+  const baseline = await readFile(baselinePath, 'utf8');
+  check(restored.baselineSha256 === hash(baseline), 'baseline_verificada');
+  const migrations = await migrationSources(restored.migrations);
+  const tables = Object.keys(restored.rows);
+  check(
+    tables.every((table) => tablePattern.test(table)),
+    'tablas_permitidas',
+  );
+  check(
+    restored.objects.length === restored.rows['kvg.version_documento'].length,
+    'cobertura_versiones',
+  );
+  const inventory = new Map(
+    restored.rows['kvg.version_documento'].map((version) => [
+      version.version_id,
+      version,
+    ]),
+  );
+  for (const object of restored.objects) {
+    const version = inventory.get(object.versionId);
+    check(
+      version &&
+        version.localizador_objeto === object.path &&
+        version.sha256 === object.sha256 &&
+        Number(version.tamano_bytes) === object.size,
+      'manifiesto_de_originales',
+    );
+    inventory.delete(object.versionId);
+  }
+  check(!inventory.size, 'inventario_completo');
+  check(/^\d+$/.test(restored.sequence.last_value), 'secuencia_valida');
   stage = 'RESTAURACION_AISLADA';
   await docker([
     'run',
@@ -230,50 +264,44 @@ try {
     ),
   );
   await sql(baseline);
-  if (
-    restored.rows.carga_archivo.some(
-      (row) => row.resultado_tecnico_codigo === 'BETA_SIN_ANTIMALWARE',
+  for (const migration of migrations) await sql(migration);
+  const restoredTables = (
+    await sql(
+      `SELECT schemaname || '.' || tablename FROM pg_tables WHERE schemaname='kvg' OR
+      (schemaname='kvg_privado' AND tablename IN (${privateTables.map(literal).join(',')})) ORDER BY 1;`,
     )
-  ) {
-    // Solo dentro del contenedor: restituye el contrato de los datos sin habilitar la beta.
-    for (const name of [
-      '202610280001_server_sessions.sql',
-      '202611040005_document_upload_workflow.sql',
-      '202611040006_document_detail_and_failed_jobs.sql',
-      '202611170008_document_beta.sql',
-    ]) {
-      await sql(
-        await readFile(new URL(`database/migrations/${name}`, root), 'utf8'),
-      );
-    }
-  }
+  )
+    .trim()
+    .split('\n');
+  check(
+    JSON.stringify(restoredTables) === JSON.stringify(tables.slice().sort()),
+    'cobertura_del_esquema',
+  );
   // Restauración exclusiva del PostgreSQL efímero. Nunca DML en el origen remoto.
   // Triggers se omiten durante importación histórica y todas las FK se recrean y validan después.
   let restoreSql = 'BEGIN; SET LOCAL session_replication_role=replica;\n';
   for (const table of tables) {
-    restoreSql += `DELETE FROM kvg.${table};\n`;
+    restoreSql += `DELETE FROM ${table};\n`;
   }
   for (const table of tables)
     if (restored.rows[table].length)
-      restoreSql += `INSERT INTO kvg.${table} SELECT * FROM jsonb_populate_recordset(NULL::kvg.${table},${literal(JSON.stringify(restored.rows[table]))}::jsonb);\n`;
-  restoreSql += `SELECT setval('kvg.folio_expediente_seq',${Number(restored.sequence.last_value)},${restored.sequence.is_called ? 'true' : 'false'});\nSET LOCAL session_replication_role=origin;\n`;
-  restoreSql += `DO $validate$ DECLARE r record; BEGIN FOR r IN SELECT conname,conrelid::regclass AS tbl,pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE contype='f' AND connamespace='kvg'::regnamespace LOOP EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I',r.tbl,r.conname);EXECUTE format('ALTER TABLE %s ADD CONSTRAINT %I %s',r.tbl,r.conname,r.def);END LOOP;END;$validate$;COMMIT;`;
+      restoreSql += `INSERT INTO ${table} SELECT * FROM jsonb_populate_recordset(NULL::${table},${literal(JSON.stringify(restored.rows[table]))}::jsonb);\n`;
+  restoreSql += `SELECT setval('kvg.folio_expediente_seq',${restored.sequence.last_value},${restored.sequence.is_called ? 'true' : 'false'});\nSET LOCAL session_replication_role=origin;\n`;
+  restoreSql += `DO $validate$ DECLARE r record; BEGIN FOR r IN SELECT conname,conrelid::regclass AS tbl,pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE contype='f' AND connamespace IN ('kvg'::regnamespace,'kvg_privado'::regnamespace) LOOP EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I',r.tbl,r.conname);EXECUTE format('ALTER TABLE %s ADD CONSTRAINT %I %s',r.tbl,r.conname,r.def);END LOOP;END;$validate$;COMMIT;`;
   // Auth externo se representa únicamente por referencias ficticias; no credenciales ni sesiones.
   await sql(
-    `INSERT INTO auth.users(id,email,email_confirmed_at) SELECT * FROM jsonb_to_recordset(${literal(JSON.stringify(rows.usuario.filter((u) => u.auth_usuario_id).map((u) => ({ id: u.auth_usuario_id, email: u.correo_operativo, email_confirmed_at: snapshotTime }))))}::jsonb) AS x(id uuid,email text,email_confirmed_at timestamptz);`,
+    `INSERT INTO auth.users(id,email,email_confirmed_at) SELECT * FROM jsonb_to_recordset(${literal(JSON.stringify(restored.rows['kvg.usuario'].filter((u) => u.auth_usuario_id).map((u) => ({ id: u.auth_usuario_id, email: u.correo_operativo, email_confirmed_at: restored.snapshotTime }))))}::jsonb) AS x(id uuid,email text,email_confirmed_at timestamptz);`,
   );
   await sql(restoreSql);
   check(true, 'datos_restaurados_con_todas_las_claves_foraneas_validadas');
   for (const table of tables) {
     const output = await sql(
-      `SELECT coalesce(jsonb_agg(to_jsonb(t)),'[]') FROM kvg.${table} t;`,
+      `SELECT coalesce(jsonb_agg(to_jsonb(t)),'[]') FROM ${table} t;`,
     );
     const actual = JSON.parse(output);
     check(actual.length === restored.rows[table].length, `recuento_${table}`);
     const canonical = (arr) =>
-      JSON.stringify(
-        arr.map((r) => JSON.stringify(r, Object.keys(r).sort())).sort(),
-      );
+      JSON.stringify(arr.map((row) => JSON.stringify(sortedJson(row))).sort());
     check(
       canonical(actual) === canonical(restored.rows[table]),
       `contenido_${table}`,
@@ -317,53 +345,142 @@ try {
     ).trim() === 'none',
     'restauracion_sin_red',
   );
-  const manifest = {
-    date: '2026-11-04',
-    purpose: 'development-prototype-rehearsal',
-    snapshotTime,
-    baselineSha256: hash(baseline),
-    encryptedSha256: hash(fromDisk),
-    objects: objects.map(({ base64, ...o }) => o),
-    tables: Object.fromEntries(tables.map((t) => [t, rows[t].length])),
-    checks,
-    elapsedSeconds: Math.ceil((Date.now() - started) / 1000),
-    productionRestore: false,
-    authProviderRestored: false,
-  };
-  await writeFile(
-    archive + '.manifest.json',
-    JSON.stringify(manifest, null, 2) + '\n',
-    { mode: 0o600 },
-  );
-  await writeFile(
-    `${localDirectory}/recovery-verification.json`,
-    JSON.stringify(
-      {
-        date: manifest.date,
-        result: 'passed',
-        checks: checks.length,
-        objects: objects.length,
-        tables: tables.length,
-        elapsedSeconds: manifest.elapsedSeconds,
-        productionRestore: false,
-        authProviderRestored: false,
-      },
-      null,
-      2,
-    ) + '\n',
-    { mode: 0o600 },
-  );
-  console.log(
-    JSON.stringify({
-      resultado: 'correcto',
-      comprobaciones: checks.length,
-      tablas: tables.length,
-      objetos: objects.length,
-      restauracion_produccion: false,
-      auth_real_restaurado: false,
-    }),
-  );
+}
+
+function sortedJson(value) {
+  if (Array.isArray(value)) return value.map(sortedJson);
+  if (value && typeof value === 'object')
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, sortedJson(value[key])]),
+    );
+  return value;
+}
+
+let reportPath;
+let report;
+try {
+  const [command = 'rehearse', selected, confirmation, ...rest] =
+    process.argv.slice(2);
+  if (
+    rest.length ||
+    !['create', 'list', 'restore', 'rehearse'].includes(command) ||
+    (command === 'restore'
+      ? !backupIdPattern.test(selected ?? '') || confirmation !== '--confirmar'
+      : selected !== undefined)
+  ) {
+    throw new DevelopmentSetupError(
+      'Usa create, list, rehearse o restore ID --confirmar.',
+    );
+  }
+  if (command === 'list' || command === 'restore') {
+    try {
+      process.loadEnvFile(envPath);
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+  }
+  if ((process.env.NODE_ENV ?? 'development') !== 'development')
+    throw new DevelopmentSetupError(
+      'Este procedimiento solo se permite en desarrollo.',
+    );
+
+  const config =
+    command === 'create' || command === 'rehearse'
+      ? await developmentConfig()
+      : null;
+  const directories = await recoveryDirectories();
+  if (command === 'list') {
+    const names = await readdir(directories.copies);
+    const reports = [];
+    for (const name of names.filter((entry) =>
+      /^(?:copia|ensayo)-[a-f0-9-]{36}\.json$/.test(entry),
+    )) {
+      reports.push(
+        JSON.parse(await readFile(join(directories.copies, name), 'utf8')),
+      );
+    }
+    console.log(
+      JSON.stringify(
+        reports.sort((a, b) => b.fecha.localeCompare(a.fecha)),
+        null,
+        2,
+      ),
+    );
+  } else {
+    const id = selected ?? randomUUID();
+    if (command !== 'restore') {
+      reportPath = join(directories.copies, 'copia-' + id + '.json');
+      report = {
+        id,
+        tipo: 'copia_desarrollo',
+        fecha: new Date().toISOString(),
+        estado: 'EN_PROCESO',
+      };
+      await recordRecovery(reportPath, report);
+      stage = 'CAPTURA';
+      const snapshot = await captureBackup(config);
+      const stored = await storeBackup(directories, id, snapshot);
+      const restored = await loadBackup(directories, id);
+      check(hash(restored.data) === stored.sha256, 'copia_cifrada_releida');
+      report = {
+        ...report,
+        estado: 'COPIA_LOCAL_COMPROBADA',
+        punto_recuperacion: snapshot.snapshotTime,
+        bytes: stored.bytes,
+        sha256: stored.sha256,
+        objetos: snapshot.objects.length,
+        tablas: Object.keys(snapshot.rows).length,
+      };
+      await recordRecovery(reportPath, report);
+      console.log(JSON.stringify(report));
+    }
+    if (command !== 'create') {
+      const attempt = randomUUID();
+      reportPath = join(directories.copies, 'ensayo-' + attempt + '.json');
+      report = {
+        id: attempt,
+        respaldo: id,
+        tipo: 'ensayo_aislado',
+        fecha: new Date().toISOString(),
+        estado: 'EN_PROCESO',
+      };
+      await recordRecovery(reportPath, report);
+      stage = 'VALIDAR_COPIA';
+      const resumeStart = Date.now();
+      const { snapshot } = await loadBackup(directories, id);
+      await restoreIsolated(snapshot);
+      report = {
+        ...report,
+        estado: 'ENSAYO_LOCAL_SUPERADO',
+        comprobaciones: checks.length,
+        tablas: Object.keys(snapshot.rows).length,
+        objetos: snapshot.objects.length,
+        duracion_restauracion_segundos: Math.ceil(
+          (Date.now() - resumeStart) / 1000,
+        ),
+        antiguedad_copia_segundos: Math.max(
+          0,
+          Math.ceil((resumeStart - Date.parse(snapshot.snapshotTime)) / 1000),
+        ),
+      };
+      await recordRecovery(reportPath, report);
+      console.log(JSON.stringify(report));
+      if (command === 'rehearse')
+        await recordRecovery(
+          join(localDirectory, 'recovery-verification.json'),
+          report,
+        );
+    }
+  }
 } catch (error) {
+  if (reportPath && report)
+    await recordRecovery(reportPath, {
+      ...report,
+      estado: 'FALLIDO',
+      etapa: stage,
+    }).catch(() => undefined);
   reportSetupFailure(stage, error);
   process.exitCode = 1;
 } finally {

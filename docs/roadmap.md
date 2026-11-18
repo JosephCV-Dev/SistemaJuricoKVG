@@ -66,8 +66,10 @@ plantilla y el servicio de correo del proyecto Supabase.
 bitácora y gestión de catálogos y parámetros permitidos con motivo,
 confirmación e historial. [Contrato y pruebas](audit-and-configuration.md).
 
-El siguiente avance es **6C**, gestión de respaldos y restauración
-(CU022/CU030).
+**6C local implementado.** CU022/CU030 (SCRUM-196/197) tienen copia cifrada,
+historial y restauración por ID en Docker aislado. Continúa pendiente el cierre
+operativo, con destino independiente, programación, alertas y reapertura
+autorizada. [Procedimiento y evidencia](recovery-rehearsal.md).
 La demo mantiene su modo beta local. El antimalware operativo y el despliegue
 separado siguen pendientes.
 
@@ -210,12 +212,13 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 > motivo. Verifica los límites y los permisos de cada operación y mantiene la
 > interfaz KVG.
 
-**Siguiente petición recomendada para el paso 6C**
+**Petición para cerrar el paso 6C cuando exista infraestructura operativa**
 
-> Implementa CU022/CU030 (SCRUM-196/197) para gestionar respaldos y
-> restauración a partir del ensayo acotado. Conserva la verificación de datos,
-> objetos y manifiesto, la autenticación reforzada y las restricciones actuales
-> al restaurar. Documenta los requisitos y resultados verificables de PT04.
+> Completa CU022/CU030 (SCRUM-196/197) a partir de la copia y restauración
+> por ID de desarrollo. Integra destino independiente, programación y alertas.
+> Conserva la verificación de datos, objetos y manifiesto, la autenticación
+> reforzada y las restricciones actuales al restaurar. Documenta los resultados
+> verificables de PT04.
 
 **Petición para retomar el prototipo y despliegue cuando haya recursos:**
 

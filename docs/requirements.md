@@ -93,6 +93,11 @@ autorización de descarga de la evidencia de transferencia. CU021 limita los cam
 a parámetros de sesión y catálogos habilitados, exige un motivo y conserva las
 referencias al desactivar entradas. [Contrato y pruebas de CU020/CU021](audit-and-configuration.md).
 
+CU022 y CU030 tienen un recorrido de desarrollo de copia cifrada y restauración
+por ID, con historial local y comprobación de datos y originales. La operación
+con destino independiente y reapertura autorizada sigue pendiente.
+[Procedimiento y verificación](recovery-rehearsal.md).
+
 ## Reglas que condicionan la implementación
 
 | Reglas RUP | Comportamiento requerido                                                                                                                                                                                                                                                                                                      |

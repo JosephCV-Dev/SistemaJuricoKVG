@@ -165,12 +165,13 @@ revisión jurídica por versión y el historial de estados. **5D** añade retiro
 lógico y recuperación documental tras comprobar todos los originales.
 **6A** añade el directorio de personal, invitaciones, roles, permisos y
 concesiones por expediente. **6B** añade la consulta de bitácora y la gestión
-de parámetros de sesión y catálogos autorizados. El siguiente avance es
-**6C**, respaldos y restauración.
+de parámetros de sesión y catálogos autorizados. **6C local** añade copia
+cifrada, historial y restauración por ID mediante `npm run backup:dev`.
+El cierre operativo de respaldos y restauración requiere infraestructura separada.
 
 - [Bitácora y configuración](docs/audit-and-configuration.md).
 - [Documentos privados, trabajador y verificación](docs/documents.md).
-- [Ensayo acotado de copia y recuperación](docs/recovery-rehearsal.md).
+- [Copias y restauración aislada de desarrollo](docs/recovery-rehearsal.md).
 
 Para usar documentos en el desarrollo actual, ejecuta `npm run dev:beta` si la
 API y la web están detenidas. Si ya usas `npm run dev`, añade el trabajador en

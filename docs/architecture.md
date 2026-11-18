@@ -185,8 +185,11 @@ hash confiable. Una verificación técnica apta no equivale a validación juríd
 Las versiones conservan objetos distintos e historial; los retiros son recuperables.
 
 PostgreSQL y Storage no comparten transacción. La carga coordina estados, objetos inmutables y reintentos; faltan los barridos
-automáticos y la gestión operativa completa. Los respaldos deberán incluir datos, objetos y manifiestos, con
-restauración aislada y aplicación de las restricciones vigentes. Las propuestas
+automáticos y la gestión operativa completa. El recorrido de desarrollo captura un snapshot de datos, objetos y manifiesto
+cifrado y permite restaurarlo por ID en un contenedor aislado. El trabajador,
+la custodia independiente y la aplicación de las restricciones vigentes antes
+de reabrir el servicio corresponden al cierre operativo.
+[Copias y restauración aislada de desarrollo](recovery-rehearsal.md). Las propuestas
 pendientes PT01–PT08 están registradas en [requirements.md](requirements.md).
 
 ## Verificación
