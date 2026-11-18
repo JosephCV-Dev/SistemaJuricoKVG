@@ -80,6 +80,7 @@ export function App() {
             key={auth.user.id}
             view={view}
             isLawyer={auth.user.roles.includes('ABOGADO')}
+            currentUserId={auth.user.id}
             onNavigate={navigate}
             onCapabilities={setCapabilities}
             onSessionExpired={() => changeAuth({ status: 'anonymous' })}

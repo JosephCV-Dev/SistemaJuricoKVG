@@ -35,7 +35,7 @@ export interface MfaVerifyRequest {
 
 export interface MfaEnrollmentResponse {
   factorId: string;
-  qrCode: string;
+  qrCode: string | null;
   secret: string;
 }
 

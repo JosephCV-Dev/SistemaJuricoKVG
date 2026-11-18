@@ -56,8 +56,14 @@ con motivo, denegación de consultas y descargas mientras dura el retiro y
 recuperación administrativa con comprobación de todos los originales.
 [Contrato y pruebas](documents.md#paso-5d-de-retiro-y-recuperación).
 
-El siguiente avance es **etapa 6**, comenzando por usuarios y permisos
-(CU018/CU019).
+**6A implementado.** CU018/CU019 (SCRUM-138/139) añaden el directorio,
+invitación individual, edición y desactivación, roles y matriz autorizada,
+además de concesiones por expediente. La entrega de correos depende de la
+plantilla y el servicio de correo del proyecto Supabase.
+[Contrato y pruebas](identity.md#paso-6a-de-usuarios-y-permisos).
+
+El siguiente avance es **6B**, consulta de bitácora y configuración
+(CU020/CU021).
 La demo mantiene su modo beta local. El antimalware operativo y el despliegue
 separado siguen pendientes.
 
@@ -193,12 +199,12 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 > Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz con el estilo mínimo existente.
 
-**Siguiente petición recomendada para la etapa 6**
+**Siguiente petición recomendada para el paso 6B**
 
-> Implementa CU018/CU019. Integra invitaciones individuales, edición,
-> desactivación y gestión de roles y permisos con auditoría. Comprueba la
-> revocación con una sesión vigente y conserva la autoría histórica y el
-> relevo de responsables. Mantén la interfaz KVG.
+> Implementa CU020/CU021. Permite consultar la bitácora con filtros y
+> paginación, y administrar catálogos y parámetros permitidos con revisión y
+> motivo. Verifica los límites y los permisos de cada operación y mantiene la
+> interfaz KVG.
 
 **Petición para retomar el prototipo y despliegue cuando haya recursos:**
 

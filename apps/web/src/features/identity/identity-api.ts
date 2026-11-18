@@ -122,13 +122,16 @@ export async function enrollMfa(
   if (
     !isRecord(body) ||
     !isText(body.factorId, 128) ||
-    !isText(body.qrCode, 200_000) ||
     !isText(body.secret, 512)
   ) {
     return invalidResponse();
   }
 
-  return { factorId: body.factorId, qrCode: body.qrCode, secret: body.secret };
+  return {
+    factorId: body.factorId,
+    qrCode: isText(body.qrCode, 512_000) ? body.qrCode : null,
+    secret: body.secret,
+  };
 }
 
 export async function verifyMfa(

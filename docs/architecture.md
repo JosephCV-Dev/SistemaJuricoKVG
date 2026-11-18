@@ -299,3 +299,13 @@ SHA-256 y condición técnica de cada original. PostgreSQL coteja la evidencia,
 los metadatos de Storage y la autorización vigente antes de restablecer
 disponibilidad. La recuperación conserva las asignaciones y concesiones
 actuales como fuente de autorización.
+
+CU018/CU019 reutilizan la sesión operativa AAL2 y el RPC con JWT del usuario
+para reservar y consultar perfiles, editar cuentas, administrar roles y
+autorizar accesos. El adaptador técnico usa la clave de servidor solo para
+enviar invitaciones y bloquear al usuario correspondiente en Auth. La
+aceptación usa el token del proveedor en una sesión cifrada breve. La
+activación del perfil se confirma junto con la primera sesión AAL2 y el
+trabajo de identidad. Las mutaciones serializan cambios de seguridad,
+comprueban revisión, protegen el relevo de principales y mantienen una
+cuenta capaz de administrar usuarios y permisos.

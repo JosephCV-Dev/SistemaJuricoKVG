@@ -4,7 +4,10 @@ import {
   DevelopmentSetupError,
   reportSetupFailure,
 } from './lib/development-database.mjs';
-import { readDevelopmentFixture } from './lib/development-identities.mjs';
+import {
+  isDevelopmentEmail,
+  readDevelopmentFixture,
+} from './lib/development-identities.mjs';
 import { applyDevelopmentMigrations } from './lib/development-migrations.mjs';
 
 let owner;
@@ -18,11 +21,12 @@ const migrations = {
   documentVersions: ['202611170013_document_versions.sql'],
   documentReview: ['202611170014_document_legal_review.sql'],
   documentRecovery: ['202611170015_document_retirement_recovery.sql'],
+  staff: ['202611170016_staff_administration.sql'],
 };
 try {
   if (!Object.hasOwn(migrations, scope))
     throw new DevelopmentSetupError(
-      'Indica la preparación de clientes, expedientes, asignaciones, seguimiento, organización documental, versiones, revisión jurídica o recuperación.',
+      'Indica la preparación de clientes, expedientes, asignaciones, seguimiento, organización documental, versiones, revisión jurídica, recuperación o personal.',
     );
   const config = await developmentConfig();
   const fixture = await readDevelopmentFixture(config);
@@ -32,15 +36,10 @@ try {
   );
   if (
     !rows.length ||
-    rows.some(
-      (row) =>
-        !fixture.accounts.some(
-          (account) => account.email === row.correo_operativo,
-        ),
-    )
+    rows.some((row) => !isDevelopmentEmail(fixture, row.correo_operativo))
   ) {
     throw new DevelopmentSetupError(
-      'Usa el entorno de desarrollo con sus identidades ficticias conocidas.',
+      'Usa el entorno de desarrollo con las identidades del fixture o correos reservados example.test.',
     );
   }
   await applyDevelopmentMigrations(owner, migrations[scope]);

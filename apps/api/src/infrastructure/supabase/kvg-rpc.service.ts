@@ -69,6 +69,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function throwRpcError(code: string): never {
   switch (code) {
+    case 'KVG01':
+      throw new ConflictException(
+        'Reasigna primero los expedientes a su cargo.',
+      );
+    case 'KVG02':
+      throw new ConflictException(
+        'Debe quedar una cuenta con administración y gestión de permisos.',
+      );
     case '42501':
       throw new ForbiddenException('Operación no autorizada.');
     case '40001':

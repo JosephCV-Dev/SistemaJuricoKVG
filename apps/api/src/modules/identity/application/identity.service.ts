@@ -114,7 +114,12 @@ export class IdentityService {
       },
       enrollment: {
         factorId: enrollment.factorId,
-        qrCode: enrollment.qrCode,
+        qrCode:
+          typeof enrollment.qrCode === 'string' &&
+          enrollment.qrCode.length > 0 &&
+          enrollment.qrCode.length <= 512_000
+            ? enrollment.qrCode
+            : null,
         secret: enrollment.secret,
       },
     };

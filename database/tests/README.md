@@ -94,3 +94,9 @@ plataforma y el conjunto de migraciones en PostgreSQL efímero. Prueba
 retiro, conservación, revocación de descargas previas, evidencia de dos
 originales, denegaciones y recuperación idempotente. Revierte sus datos
 y usa referencias ficticias de Storage.
+
+`staff-administration-local.sql` verifica CU018/CU019 con el fixture y
+las migraciones en PostgreSQL efímero. Comprueba activación por invitación y
+MFA, edición, roles, matriz, último administrador, relevo y pérdida de
+acceso con la misma sesión. El fixture representa Auth con filas de prueba
+y la transacción se revierte.

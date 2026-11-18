@@ -16,7 +16,10 @@ import {
   DevelopmentSetupError,
   reportSetupFailure,
 } from './lib/development-database.mjs';
-import { readDevelopmentFixture } from './lib/development-identities.mjs';
+import {
+  isDevelopmentEmail,
+  readDevelopmentFixture,
+} from './lib/development-identities.mjs';
 
 const IMAGE =
   'postgres@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab';
@@ -86,10 +89,10 @@ try {
   await owner.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   const users = await owner.query('SELECT correo_operativo FROM kvg.usuario');
   check(
-    users.rows.length === fixture.accounts.length &&
-      users.rows.every((r) =>
-        fixture.accounts.some((a) => a.email === r.correo_operativo),
-      ),
+    fixture.accounts.every((account) =>
+      users.rows.some((row) => row.correo_operativo === account.email),
+    ) &&
+      users.rows.every((r) => isDevelopmentEmail(fixture, r.correo_operativo)),
     'solo_entorno_ficticio_conocido',
   );
   const tables = (

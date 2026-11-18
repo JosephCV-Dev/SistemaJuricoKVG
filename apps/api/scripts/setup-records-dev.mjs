@@ -155,13 +155,23 @@ try {
     "SELECT count(*)::integer AS count FROM kvg.usuario_rol ur JOIN kvg.rol r USING(rol_id) WHERE ur.usuario_id=$1 AND r.codigo='SECRETARIA' AND ur.finaliza_en IS NULL",
     [secretary.userId],
   );
-  if (!role.rows[0].count)
+  if (!role.rows[0].count) {
+    const current = (
+      await owner.query(
+        'SELECT revision FROM kvg.usuario WHERE usuario_id=$1',
+        [secretary.userId],
+      )
+    ).rows[0];
     await ordinary('seguridad.otorgar_rol', {
       usuario_id: secretary.userId,
       rol: 'SECRETARIA',
       motivo:
         'Preparación autorizada del recorrido ficticio CU001/CU002/CU004/CU005.',
+      revision: current.revision,
+      referencia_autorizacion:
+        'Preparación ficticia de desarrollo CU001/CU002/CU004/CU005.',
     });
+  }
 
   stage = 'CATALOGO_FICTICIO';
   const catalogs = await ordinary('catalogos.consultar', {});

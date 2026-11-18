@@ -10,7 +10,9 @@ El **28 de octubre de 2026** se aplicaron las dos migraciones de identidad en de
 
 Las pruebas locales de API y cliente HTTP usan puertos o respuestas simuladas y complementan esa evidencia real. La última ejecución real pasó 39 comprobaciones, incluidas renovación concurrente, respuesta antigua sin sobrescritura del token nuevo y registro público deshabilitado. **El acceso se comprobó después en Chromium local durante el paso 3A; producción sigue pendiente.** La revisión previa del catálogo está documentada por separado en [supabase-verification.md](supabase-verification.md).
 
-CU018/CU019 completos —administrar usuarios y roles/permisos— no forman parte de esta entrega. El aprovisionamiento de prueba y la consulta de capacidades actuales son las bases necesarias para CU023/CU024, no una interfaz administrativa terminada. El recorrido mínimo de clientes/expedientes está implementado; su preparación y evidencia están en [clients-and-cases.md](clients-and-cases.md).
+El recorrido mínimo de clientes y expedientes se describe en
+[clients-and-cases.md](clients-and-cases.md). La administración de personal,
+roles y permisos se incorpora en el [paso 6A](#paso-6a-de-usuarios-y-permisos).
 
 ## Identidades que deben distinguirse
 
@@ -155,3 +157,85 @@ Nombre sugerido para el commit cuando el incremento esté verificado:
 ```text
 feat(identity): implementar inicio y cierre de sesion con MFA
 ```
+
+## Paso 6A de usuarios y permisos
+
+**Usuarios y permisos** permite buscar personal por nombre o correo, reservar
+una invitación, editar el nombre y desactivar el perfil. La reserva normaliza
+el correo, comprueba duplicados en KVG y Auth y admite reintentar la misma
+solicitud sin crear un perfil adicional. Desde la ficha se asigna el rol y
+se solicita el envío por separado. El proveedor confirma la aceptación del
+envío; el estado Invitado permanece hasta activar el perfil.
+
+La persona invitada abre **Activar cuenta KVG**, define su contraseña y
+completa MFA en el primer inicio de sesión. El correo, la antigüedad de la
+invitación y la identidad confirmada se comprueban contra Auth. La sesión
+operativa AAL2 activa y vincula el perfil una sola vez. La operación de
+contraseña usa una sesión cifrada breve para reintentar en el mismo navegador
+si el proveedor falla después de validar el enlace. El enlace se quita de
+la barra de direcciones al cargar la pantalla.
+El alta TOTP acepta el QR del proveedor dentro del límite de tamaño.
+La clave manual sigue disponible si el QR no puede mostrarse.
+
+Asignar o retirar roles exige motivo, revisión vigente y referencia de
+autorización. La matriz muestra los permisos existentes y sus contextos.
+Modificarla conserva la facultad jurídica adicional y la referencia que
+exige el modelo. La administración técnica por sí sola conserva su alcance
+operativo. El abogado principal autorizado puede conceder accesos
+individuales desde **Accesos explícitos del expediente**, seleccionando
+permisos admitidos para la persona y registrando la autorización.
+Administración puede revocar esas concesiones desde la ficha del usuario.
+Los cambios se aplican a las nuevas peticiones aunque la sesión siga abierta.
+
+La baja conserva la autoría y cierra sesiones de KVG. Antes de desactivar o
+retirar el rol jurídico de un principal se exige reasignar sus expedientes
+editables. PostgreSQL protege a la última cuenta con administración y
+gestión de permisos. El bloqueo de Auth se realiza después de desactivar
+el perfil. Si el proveedor falla, la interfaz informa el estado y permite
+reintentar el bloqueo desde la ficha.
+
+### Configuración del correo en Supabase
+
+Para entregar correos, agrega el origen HTTPS del frontend con la ruta
+`/activar-cuenta` a la lista de redirecciones de Auth. En la plantilla
+**Invite user**, establece el enlace de aceptación así:
+
+```html
+<a href="{{ .RedirectTo }}#invitacion={{ .TokenHash }}">Activar cuenta KVG</a>
+```
+
+La misma ruta funciona bajo el origen de desarrollo documentado cuando
+está incluido en esa lista. El servicio de correo predeterminado de
+Supabase limita los destinatarios al equipo del proyecto. La entrega a
+personal externo al equipo depende del SMTP que se configure al preparar
+ese entorno. [Plantillas de Auth](https://supabase.com/docs/guides/auth/auth-email-templates) ·
+[Restricciones de correo de Supabase](https://supabase.com/docs/guides/auth/auth-smtp)
+
+### Contrato y verificación
+
+| Ruta                                                                                   | Alcance                                                                       |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `GET /api/v1/staff/users` y `GET /api/v1/staff/users/:id`                              | Directorio y ficha con permiso operativo de cuentas o permisos.               |
+| `POST /api/v1/staff/users`                                                             | Reserva idempotente con JWT administrativo y CSRF.                            |
+| `POST /api/v1/staff/users/:id/invite`                                                  | Envío solicitado por el administrador a la dirección ya reservada.            |
+| `POST /api/v1/auth/invitation/complete`                                                | Configuración de contraseña con invitación válida, CSRF y límite de intentos. |
+| `PATCH /api/v1/staff/users/:id` y `POST /api/v1/staff/users/:id/deactivate`            | Motivo, revisión y facultad de administrar usuarios.                          |
+| `PATCH /api/v1/staff/users/:id/roles` y `GET/PATCH /api/v1/staff/matrix`               | Roles y capacidades con las facultades y referencias correspondientes.        |
+| `GET/POST /api/v1/staff/cases/:id/accesses` y `POST /api/v1/staff/accesses/:id/revoke` | Concesión jurídica por expediente y revocación autorizada.                    |
+
+Se aplicó `202611170016_staff_administration.sql` en Supabase de desarrollo
+con `npm run setup:staff:dev`. Los diagnósticos de identidad y documentos
+pasaron. El [ensayo aislado](../database/tests/staff-administration-local.sql)
+cubrió reserva duplicada, vinculación por invitación, MFA, relevo, matriz,
+permisos de alcance y revocación con una sesión existente. `npm run check`
+pasó 96 pruebas. Las pruebas HTTP comprueban CSRF, campos, el reintento de
+contraseña y el manejo de un fallo en el bloqueo del proveedor.
+
+En Chromium a 390 px, el administrador reservó una cuenta ficticia y asignó
+su rol. El token de invitación se generó en Supabase Auth para la prueba,
+sin enviar correo. La persona invitada definió su contraseña y activó
+su perfil con un factor TOTP real. Al retirar su rol, una petición de alta
+de cliente con la misma cookie recibió 403. Al desactivar la cuenta,
+la sesión anterior recibió 401 y Supabase confirmó el bloqueo de Auth.
+Queda pendiente comprobar la entrega de correo con la plantilla y el
+servicio del entorno acordado.

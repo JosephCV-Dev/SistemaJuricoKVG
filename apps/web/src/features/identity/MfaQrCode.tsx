@@ -18,7 +18,7 @@ const allowedAttributes = new Set([
 ]);
 
 function safeQrSource(value: string): string | null {
-  if (value.length > 200_000) return null;
+  if (value.length > 512_000) return null;
 
   if (/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value)) {
     return value;
@@ -72,8 +72,8 @@ function safeQrSource(value: string): string | null {
   }
 }
 
-export function MfaQrCode({ qrCode }: { qrCode: string }) {
-  const source = safeQrSource(qrCode);
+export function MfaQrCode({ qrCode }: { qrCode: string | null }) {
+  const source = qrCode ? safeQrSource(qrCode) : null;
 
   return source ? (
     <img

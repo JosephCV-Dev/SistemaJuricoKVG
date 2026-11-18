@@ -187,6 +187,19 @@ test('logout acepta 204 sin intentar leer una respuesta JSON', async () => {
   assert.equal(calls[1].options.headers['X-CSRF-Token'], 'csrf-cierre');
 });
 
+test('el enrolamiento conserva el factor y la clave manual cuando el QR es demasiado grande', async () => {
+  const factor = { factorId: 'factor-1', secret: 'CLAVE-FICTICIA' };
+  queueResponses([
+    json({ csrfToken: 'csrf-alta' }),
+    json({ ...factor, qrCode: 'x'.repeat(406_153) }),
+    json({ csrfToken: 'csrf-alta' }),
+    json({ ...factor, qrCode: 'x'.repeat(512_001) }),
+  ]);
+  const signal = new AbortController().signal;
+  assert.equal((await enrollMfa(signal)).qrCode.length, 406_153);
+  assert.deepEqual(await enrollMfa(signal), { ...factor, qrCode: null });
+});
+
 test('los fallos sin JSON muestran un error público genérico', async () => {
   queueResponses([new Response('Fallo interno sensible', { status: 500 })]);
 

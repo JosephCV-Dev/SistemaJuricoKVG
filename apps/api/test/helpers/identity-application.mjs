@@ -1,5 +1,6 @@
 import { PrivateFiles } from '../../dist/modules/documents/application/private-files.port.js';
 import { KvgRpcService } from '../../dist/infrastructure/supabase/kvg-rpc.service.js';
+import { StaffAuth } from '../../dist/modules/identity/application/staff.ports.js';
 import 'reflect-metadata';
 import assert from 'node:assert/strict';
 import {
@@ -261,6 +262,8 @@ export async function application(t, options = {}) {
     builder.overrideProvider(KvgRpcService).useValue(options.rpc);
   if (options.files)
     builder.overrideProvider(PrivateFiles).useValue(options.files);
+  if (options.staffAuth)
+    builder.overrideProvider(StaffAuth).useValue(options.staffAuth);
   const module = await builder.compile();
   const app = module.createNestApplication({
     logger: false,

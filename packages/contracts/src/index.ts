@@ -55,3 +55,5 @@ export type {
 } from './records';
 
 export type * from './documents';
+
+export type * from './staff';

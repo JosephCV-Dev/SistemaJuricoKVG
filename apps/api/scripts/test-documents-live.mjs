@@ -19,7 +19,10 @@ import {
   DevelopmentSetupError,
   reportSetupFailure,
 } from './lib/development-database.mjs';
-import { readDevelopmentFixture } from './lib/development-identities.mjs';
+import {
+  isDevelopmentEmail,
+  readDevelopmentFixture,
+} from './lib/development-identities.mjs';
 import { DevelopmentBrowser } from './lib/development-http.mjs';
 let app, owner;
 const browsers = [];
@@ -39,9 +42,7 @@ try {
   owner = await ownerConnection(config);
   const users = await owner.query('SELECT correo_operativo FROM kvg.usuario');
   check(
-    users.rows.every((r) =>
-      fixture.accounts.some((a) => a.email === r.correo_operativo),
-    ),
+    users.rows.every((r) => isDevelopmentEmail(fixture, r.correo_operativo)),
     'entorno_solo_identidades_ficticias_conocidas',
   );
   app = await NestFactory.create(AppModule, { logger: false });

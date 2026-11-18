@@ -163,7 +163,9 @@ autorizados. **5B** incorpora edición del nombre con motivo, publicación de
 versiones y descarga autorizada de originales históricos. **5C** registra la
 revisión jurídica por versión y el historial de estados. **5D** añade retiro
 lógico y recuperación documental tras comprobar todos los originales.
-El siguiente avance es la administración de usuarios y permisos de la etapa 6.
+**6A** añade el directorio de personal, invitaciones, roles, permisos y
+concesiones por expediente. El siguiente avance es la consulta de bitácora
+y configuración operativa.
 
 - [Documentos privados, trabajador y verificación](docs/documents.md).
 - [Ensayo acotado de copia y recuperación](docs/recovery-rehearsal.md).

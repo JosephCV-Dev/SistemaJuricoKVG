@@ -5,7 +5,10 @@ import {
   DevelopmentSetupError,
   reportSetupFailure,
 } from './lib/development-database.mjs';
-import { readDevelopmentFixture } from './lib/development-identities.mjs';
+import {
+  isDevelopmentEmail,
+  readDevelopmentFixture,
+} from './lib/development-identities.mjs';
 import { applyDevelopmentMigrations } from './lib/development-migrations.mjs';
 
 let owner;
@@ -23,12 +26,7 @@ try {
   );
   if (
     !rows.length ||
-    rows.some(
-      (user) =>
-        !fixture.accounts.some(
-          (account) => account.email === user.correo_operativo,
-        ),
-    )
+    rows.some((user) => !isDevelopmentEmail(fixture, user.correo_operativo))
   )
     throw new DevelopmentSetupError(
       'Usa únicamente el proyecto con las cuentas ficticias conocidas.',

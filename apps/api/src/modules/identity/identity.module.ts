@@ -19,10 +19,16 @@ import {
 import { CsrfGuard } from './presentation/csrf.guard';
 import { AuthRateLimitGuard } from './presentation/auth-rate-limit.guard';
 import { AuthenticationGuard } from './presentation/authentication.guard';
+import { StaffController } from './presentation/staff.controller';
+import { InvitationController } from './presentation/invitation.controller';
+import { KvgStaffRepository } from './infrastructure/kvg-staff.repository';
+import { SupabaseStaffAuth } from './infrastructure/supabase-staff-auth';
+import { StaffService } from './application/staff.service';
+import { StaffAuth, StaffRepository } from './application/staff.ports';
 
 @Module({
   imports: [ConfigModule, SupabaseModule],
-  controllers: [AuthController],
+  controllers: [AuthController, StaffController, InvitationController],
   providers: [
     {
       provide: SERVER_SESSION_RUNTIME,
@@ -39,6 +45,9 @@ import { AuthenticationGuard } from './presentation/authentication.guard';
     { provide: IdentityProvider, useClass: SupabaseIdentityProvider },
     { provide: OperationalSession, useClass: KvgOperationalSession },
     IdentityService,
+    { provide: StaffRepository, useClass: KvgStaffRepository },
+    { provide: StaffAuth, useClass: SupabaseStaffAuth },
+    StaffService,
     ServerSessions,
     CsrfGuard,
     AuthRateLimitGuard,

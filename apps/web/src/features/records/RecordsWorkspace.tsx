@@ -3,6 +3,8 @@ import { AssignedCases } from './AssignedCases';
 import { CaseAssignmentPanel } from './CaseAssignmentPanel';
 import { CaseReassignmentWorkspace } from './CaseReassignmentWorkspace';
 import { DocumentRecovery } from '../documents/DocumentRecovery';
+import { CaseStaffAccessPanel } from '../identity/CaseStaffAccessPanel';
+import { StaffWorkspace } from '../identity/StaffWorkspace';
 import { CaseDetailView } from './CaseDetailView';
 import { showDate } from './record-format';
 import type { WorkspaceView } from '../../shared/navigation';
@@ -51,9 +53,11 @@ export function RecordsWorkspace({
   onNavigate,
   onCapabilities,
   isLawyer,
+  currentUserId,
 }: {
   view: WorkspaceView;
   isLawyer: boolean;
+  currentUserId: string;
   onNavigate: (view: WorkspaceView) => void;
   onCapabilities: (capabilities: SessionCapabilities['capabilities']) => void;
   onSessionExpired: () => void;
@@ -111,7 +115,8 @@ export function RecordsWorkspace({
             view === 'assigned' ||
             view === 'reassign' ||
             view === 'documents' ||
-            view === 'retired-documents'
+            view === 'retired-documents' ||
+            view === 'staff'
           )
             setAccessRevision((previous) => previous + 1);
           setClients(emptyPage());
@@ -619,6 +624,18 @@ export function RecordsWorkspace({
       {view === 'retired-documents' && can('documento.recuperar') && (
         <DocumentRecovery key={accessRevision} busy={busy} run={run} />
       )}
+      {view === 'staff' &&
+        (can('usuario.administrar') || can('usuario.permisos')) && (
+          <StaffWorkspace
+            key={accessRevision}
+            currentUserId={currentUserId}
+            canManage={can('usuario.administrar')}
+            canPermissions={can('usuario.permisos')}
+            busy={busy}
+            run={run}
+            onNotice={setNotice}
+          />
+        )}
       {['cases', 'case'].includes(view) && can('expediente.consultar') && (
         <section className="panel" aria-labelledby="cases-heading">
           <div className="section-header">
@@ -845,6 +862,24 @@ export function RecordsWorkspace({
               }}
             />
           )}
+          {view === 'case' &&
+            caseDetail &&
+            !showAssignment &&
+            can('expediente.conceder') &&
+            caseDetail.assignments.some(
+              (assignment) =>
+                assignment.active &&
+                assignment.function === 'PRINCIPAL' &&
+                assignment.userId === currentUserId,
+            ) && (
+              <CaseStaffAccessPanel
+                key={caseDetail.id}
+                caseId={caseDetail.id}
+                busy={busy}
+                run={run}
+                onNotice={setNotice}
+              />
+            )}
         </section>
       )}
     </section>

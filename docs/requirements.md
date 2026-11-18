@@ -12,7 +12,7 @@ La instalación Supabase existente está verificada sin reinstalar la baseline. 
 
 CU023/CU024 están implementados y verificados en desarrollo: contraseña, MFA del proveedor, sesión KVG, cookie protegida, CSRF, renovación, cierre, permisos por defecto denegados y auditoría base. Se aplicaron explícitamente ambas migraciones de sesión y el bootstrap con dos identidades Auth ficticias distintas. Las pruebas reales comprobaron el proveedor y RPC permitida/denegada, revocación y expiración. Las pruebas HTTP con puertos simulados cubren también cuenta inactiva y comprobación de capacidades/contextos. El paso 3A añade verificación de acceso en Chromium local; la evidencia de identidad y sus límites están en [identity.md](identity.md).
 
-El paso 3A implementa el recorrido mínimo CU001/CU002 y CU004/CU005, verificado con identidades reales y datos ficticios: captura y consulta, duplicados normalizados, reintentos sin duplicación, folio/estado de servidor, alcance y auditoría. El contrato, las pruebas locales/remotas y Chromium están en [clients-and-cases.md](clients-and-cases.md). La administración completa CU018/CU019 sigue pendiente. El recorrido mínimo CU008/CU012/CU013 ya incorpora carga
+El paso 3A implementa el recorrido mínimo CU001/CU002 y CU004/CU005, verificado con identidades reales y datos ficticios: captura y consulta, duplicados normalizados, reintentos sin duplicación, folio/estado de servidor, alcance y auditoría. El contrato, las pruebas locales/remotas y Chromium están en [clients-and-cases.md](clients-and-cases.md). El recorrido mínimo CU008/CU012/CU013 ya incorpora carga
 privada, análisis real y descarga autorizada; existe un ensayo acotado de
 recuperación local con los límites de [documents.md](documents.md) y
 [recovery-rehearsal.md](recovery-rehearsal.md). Se continuará el prototipo RUP 16.6 y su despliegue temprano antes de ampliar todos los módulos. El usuario autorizó estilos mínimos para legibilidad y orden de los formularios; la base visual ahora sigue la maqueta y logo entregados por el usuario y la usabilidad funcional se comprueba en cada avance.
@@ -103,7 +103,7 @@ CU018 agrupa alta, actualización y desactivación de usuarios. CU014 distingue 
 | RN19–RN20  | El respaldo abarca datos, objetos y manifiestos; requiere copia cifrada independiente y prueba de recuperación. Los datos relacionados se modifican mediante transacciones y revisiones para concurrencia. PostgreSQL y Storage no forman una sola transacción: hacen falta estados, reintentos, compensación y conciliación. |
 | RN21–RN23  | Recabar únicamente información necesaria y respetar conservación/restricciones jurídicas. Desactivar catálogos usados sin romper referencias. Restaurar con permiso específico, autenticación reforzada, autorización operativa y verificación aislada antes de sustituir producción.                                         |
 
-Otros requisitos transversales del RUP: cuentas individuales por invitación, sin registro público; MFA; sesión operativa verificada en el servidor; cookie con `HttpOnly`, `Secure` y `SameSite` explícito; protección CSRF para cambios; limitación de intentos y errores de autenticación genéricos. El flujo implementado exige AAL2, consulta permisos actuales, utiliza cookie `HttpOnly`/`SameSite=Lax` con `Secure` en producción y valida origen/CSRF. Incluye limitación de intentos local por proceso; su adaptación a varias instancias, configuración del proveedor y verificación HTTPS del alojamiento quedan para la revisión de producción. El alta ordinaria y la administración completa de cuentas/permisos siguen pendientes de CU018/CU019.
+Otros requisitos transversales del RUP: cuentas individuales por invitación, sin registro público; MFA; sesión operativa verificada en el servidor; cookie con `HttpOnly`, `Secure` y `SameSite` explícito; protección CSRF para cambios; limitación de intentos y errores de autenticación genéricos. El flujo implementado exige AAL2, consulta permisos actuales, utiliza cookie `HttpOnly`/`SameSite=Lax` con `Secure` en producción y valida origen/CSRF. Incluye limitación de intentos local por proceso; su adaptación a varias instancias, configuración del proveedor y verificación HTTPS del alojamiento quedan para la revisión de producción.
 
 ## Decisiones pendientes del despacho
 
@@ -175,3 +175,10 @@ el acceso al documento y a sus versiones. La recuperación exige autorización
 operativa vigente, conservación y evidencia de todos los originales; el
 acceso posterior se calcula por los permisos actuales del expediente.
 [Contrato y evidencia](documents.md#paso-5d-de-retiro-y-recuperación).
+
+CU018 y CU019 (SCRUM-138/139) se cubren en 6A. La cuenta por invitación
+necesita confirmar correo y completar MFA. Roles y permisos exigen motivo,
+revisión y la autorización correspondiente. La baja conserva la autoría y
+revoca sesiones; la revocación de accesos explícitos afecta solicitudes
+posteriores con la misma sesión.
+[Contrato y evidencia](identity.md#paso-6a-de-usuarios-y-permisos).

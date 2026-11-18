@@ -6,6 +6,12 @@ import {
 } from './development-database.mjs';
 
 export const fixturePath = `${localDirectory}/identity-development-accounts.json`;
+export function isDevelopmentEmail(fixture, email) {
+  return (
+    email.endsWith('@example.test') ||
+    fixture.accounts.some((account) => account.email === email)
+  );
+}
 export async function readDevelopmentFixture(config) {
   const fixture = JSON.parse(await readFile(fixturePath, 'utf8'));
   if (

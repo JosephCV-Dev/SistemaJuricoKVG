@@ -4,6 +4,7 @@ declare module 'express-session' {
   interface SessionData {
     csrfToken?: string;
     authentication?: Authentication;
+    invitation?: { accessToken: string; digest: string; expiresAt: number };
   }
 }
 

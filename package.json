@@ -47,7 +47,8 @@
     "setup:document-organization:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentOrganization",
     "setup:document-versions:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentVersions",
     "setup:document-review:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentReview",
-    "setup:document-recovery:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentRecovery"
+    "setup:document-recovery:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentRecovery",
+    "setup:staff:dev": "node apps/api/scripts/setup-record-updates-dev.mjs staff"
   },
   "devDependencies": {
     "concurrently": "10.0.6",

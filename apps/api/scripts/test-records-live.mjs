@@ -8,7 +8,10 @@ import {
   reportSetupFailure,
   DevelopmentSetupError,
 } from './lib/development-database.mjs';
-import { readDevelopmentFixture } from './lib/development-identities.mjs';
+import {
+  isDevelopmentEmail,
+  readDevelopmentFixture,
+} from './lib/development-identities.mjs';
 import { DevelopmentBrowser } from './lib/development-http.mjs';
 
 let app,
@@ -29,9 +32,7 @@ try {
   check(
     known.rows.length > 0 &&
       known.rows.every((user) =>
-        fixture.accounts.some(
-          (account) => account.email === user.correo_operativo,
-        ),
+        isDevelopmentEmail(fixture, user.correo_operativo),
       ),
     'entorno_solo_identidades_ficticias_conocidas',
   );

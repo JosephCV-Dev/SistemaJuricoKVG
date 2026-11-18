@@ -10,6 +10,7 @@ export type WorkspaceView =
   | 'new-case'
   | 'documents'
   | 'retired-documents'
+  | 'staff'
   | 'session';
 
 export const viewTitles: Record<WorkspaceView, string> = {
@@ -24,5 +25,6 @@ export const viewTitles: Record<WorkspaceView, string> = {
   'new-case': 'Nuevo expediente',
   documents: 'Documentos',
   'retired-documents': 'Documentos retirados',
+  staff: 'Usuarios y permisos',
   session: 'Mi sesión',
 };
