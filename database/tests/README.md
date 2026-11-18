@@ -100,3 +100,9 @@ las migraciones en PostgreSQL efímero. Comprueba activación por invitación y
 MFA, edición, roles, matriz, último administrador, relevo y pérdida de
 acceso con la misma sesión. El fixture representa Auth con filas de prueba
 y la transacción se revierte.
+
+`audit-configuration-local.sql` verifica CU020/CU021 con el fixture y
+las migraciones en PostgreSQL efímero. Prueba consultas permitidas y denegadas,
+filtros y cursores, proyección de campos, protección de parámetros, caducidad,
+revisiones concurrentes y conservación de referencias. Revierte los datos y el
+historial de prueba.

@@ -22,11 +22,12 @@ const migrations = {
   documentReview: ['202611170014_document_legal_review.sql'],
   documentRecovery: ['202611170015_document_retirement_recovery.sql'],
   staff: ['202611170016_staff_administration.sql'],
+  auditConfiguration: ['202611180017_audit_configuration.sql'],
 };
 try {
   if (!Object.hasOwn(migrations, scope))
     throw new DevelopmentSetupError(
-      'Indica la preparación de clientes, expedientes, asignaciones, seguimiento, organización documental, versiones, revisión jurídica, recuperación o personal.',
+      'Indica la preparación de clientes, expedientes, asignaciones, seguimiento, organización documental, versiones, revisión jurídica, recuperación, personal o bitácora y configuración.',
     );
   const config = await developmentConfig();
   const fixture = await readDevelopmentFixture(config);

@@ -179,13 +179,23 @@ try {
     !catalogs.tipos_identificacion.some(
       (type) => type.tipo_identificacion_codigo === 'PRUEBA_KVG',
     )
-  )
+  ) {
+    const {
+      rows: [catalogChange],
+    } = await owner.query(
+      'SELECT EXISTS (SELECT 1 FROM kvg_servidor.migracion WHERE nombre=$1) AS applied',
+      ['202611180017_audit_configuration.sql'],
+    );
     await ordinary('configuracion.identificacion', {
       codigo: 'PRUEBA_KVG',
       nombre: 'Identificación ficticia de desarrollo',
       regla: 'ALFANUMERICA_V1',
       unicidad: true,
+      ...(catalogChange.applied
+        ? { motivo: 'Preparación del catálogo ficticio de desarrollo.' }
+        : {}),
     });
+  }
   const secretaryAuthentication = await authenticateDevelopmentAccount(
     identity,
     fixture,

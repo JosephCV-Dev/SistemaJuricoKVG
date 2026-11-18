@@ -62,8 +62,12 @@ además de concesiones por expediente. La entrega de correos depende de la
 plantilla y el servicio de correo del proyecto Supabase.
 [Contrato y pruebas](identity.md#paso-6a-de-usuarios-y-permisos).
 
-El siguiente avance es **6B**, consulta de bitácora y configuración
-(CU020/CU021).
+**6B implementado.** CU020/CU021 (SCRUM-168/169) añaden consulta y detalle de
+bitácora y gestión de catálogos y parámetros permitidos con motivo,
+confirmación e historial. [Contrato y pruebas](audit-and-configuration.md).
+
+El siguiente avance es **6C**, gestión de respaldos y restauración
+(CU022/CU030).
 La demo mantiene su modo beta local. El antimalware operativo y el despliegue
 separado siguen pendientes.
 
@@ -199,12 +203,19 @@ Pedir una funcionalidad acotada mediante su CU/Jira facilita revisar el resultad
 
 > Implementa CU008, SCRUM-127: carga privada para un expediente autorizado, cuarentena y trabajo persistente de verificación de contenido, antimalware y SHA-256. El documento debe permanecer inaccesible hasta un resultado apto. Comprueba acceso denegado, rechazo, fallo del analizador y reintento sin duplicación. No sustituyas el análisis real por una aprobación automática; mantén la interfaz con el estilo mínimo existente.
 
-**Siguiente petición recomendada para el paso 6B**
+**Consulta de bitácora y configuración (implementadas)**
 
 > Implementa CU020/CU021. Permite consultar la bitácora con filtros y
 > paginación, y administrar catálogos y parámetros permitidos con revisión y
 > motivo. Verifica los límites y los permisos de cada operación y mantiene la
 > interfaz KVG.
+
+**Siguiente petición recomendada para el paso 6C**
+
+> Implementa CU022/CU030 (SCRUM-196/197) para gestionar respaldos y
+> restauración a partir del ensayo acotado. Conserva la verificación de datos,
+> objetos y manifiesto, la autenticación reforzada y las restricciones actuales
+> al restaurar. Documenta los requisitos y resultados verificables de PT04.
 
 **Petición para retomar el prototipo y despliegue cuando haya recursos:**
 

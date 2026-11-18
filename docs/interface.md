@@ -28,11 +28,9 @@ para tipografía, scripts o imágenes.
 El menú responde a capacidades y no sustituye los controles de autorización del
 servidor y SQL. El administrador no obtiene enlaces de lectura jurídica por ser
 administrador. El detalle del expediente incorpora Documentos con carga privada, estado de
-análisis, detalle y descarga autorizada (paso 3B). Usuarios, permisos, configuración,
-bitácora, respaldos,
-edición, asignación, cambio de estado y captura de avances recibirán sus controles
-cuando se implemente cada recorrido del roadmap. No se reutilizan los botones de
-maqueta que aparentan guardar sin persistencia.
+análisis, detalle y descarga autorizada (paso 3B). El menú Administración
+agrupa Usuarios y permisos, Bitácora y Configuración para las cuentas con
+la capacidad correspondiente. [Contrato de Bitácora y Configuración](audit-and-configuration.md).
 
 Se conserva el folio generado por SQL, identificaciones opcionales y catálogo real,
 el par número externo/autoridad y los reintentos idempotentes durante la confirmación.

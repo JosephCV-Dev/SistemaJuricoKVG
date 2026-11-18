@@ -11,6 +11,8 @@ export type WorkspaceView =
   | 'documents'
   | 'retired-documents'
   | 'staff'
+  | 'audit'
+  | 'configuration'
   | 'session';
 
 export const viewTitles: Record<WorkspaceView, string> = {
@@ -26,5 +28,7 @@ export const viewTitles: Record<WorkspaceView, string> = {
   documents: 'Documentos',
   'retired-documents': 'Documentos retirados',
   staff: 'Usuarios y permisos',
+  audit: 'Bitácora',
+  configuration: 'Configuración',
   session: 'Mi sesión',
 };

@@ -1,3 +1,5 @@
+import { AuditWorkspace } from '../administration/AuditWorkspace';
+import { ConfigurationWorkspace } from '../administration/ConfigurationWorkspace';
 import { DocumentSearch } from '../documents/DocumentSearch';
 import { AssignedCases } from './AssignedCases';
 import { CaseAssignmentPanel } from './CaseAssignmentPanel';
@@ -77,6 +79,8 @@ export function RecordsWorkspace({
   const [showAssignment, setShowAssignment] = useState(false);
   const [caseReturn, setCaseReturn] = useState<'cases' | 'assigned'>('cases');
   const [accessRevision, setAccessRevision] = useState(0);
+  const [deniedAdministration, setDeniedAdministration] =
+    useState<WorkspaceView | null>(null);
   const [clientText, setClientText] = useState('');
   const [clientIdentification, setClientIdentification] = useState('');
   const [clientQuery, setClientQuery] = useState({
@@ -101,6 +105,7 @@ export function RecordsWorkspace({
     setNotice('');
     try {
       await action(controller.signal);
+      if (view === deniedAdministration) setDeniedAdministration(null);
     } catch (failure: unknown) {
       if (!controller.signal.aborted) {
         if (
@@ -116,9 +121,13 @@ export function RecordsWorkspace({
             view === 'reassign' ||
             view === 'documents' ||
             view === 'retired-documents' ||
-            view === 'staff'
+            view === 'staff' ||
+            view === 'audit' ||
+            view === 'configuration'
           )
             setAccessRevision((previous) => previous + 1);
+          if (view === 'audit' || view === 'configuration')
+            setDeniedAdministration(view);
           setClients(emptyPage());
           setCases(emptyPage());
           if (failure.status === 401) onSessionExpired();
@@ -144,12 +153,6 @@ export function RecordsWorkspace({
       onCapabilities(result.capabilities);
       if (
         result.capabilities.some(
-          (item) => item.permission === 'cliente.registrar',
-        )
-      )
-        setTypes(await getIdentificationTypes(signal));
-      if (
-        result.capabilities.some(
           (item) => item.permission === 'cliente.consultar',
         )
       )
@@ -166,6 +169,13 @@ export function RecordsWorkspace({
       activeRequest.current = null;
     };
   }, []);
+
+  function openClientRegistration() {
+    void run(async (signal) => {
+      setTypes(await getIdentificationTypes(signal));
+      onNavigate('new-client');
+    });
+  }
 
   async function onClientCreated(created: ClientSummary, signal: AbortSignal) {
     setNotice(`Cliente registrado: ${created.name}.`);
@@ -285,7 +295,7 @@ export function RecordsWorkspace({
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => onNavigate('new-client')}
+                  onClick={openClientRegistration}
                 >
                   Nuevo cliente
                 </button>
@@ -381,7 +391,7 @@ export function RecordsWorkspace({
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => onNavigate('new-client')}
+                  onClick={openClientRegistration}
                 >
                   Nuevo cliente
                 </button>
@@ -623,6 +633,23 @@ export function RecordsWorkspace({
       )}
       {view === 'retired-documents' && can('documento.recuperar') && (
         <DocumentRecovery key={accessRevision} busy={busy} run={run} />
+      )}
+      {view === 'audit' && can('auditoria.consultar') && (
+        <AuditWorkspace
+          key={accessRevision}
+          busy={busy}
+          run={run}
+          autoLoad={deniedAdministration !== view}
+        />
+      )}
+      {view === 'configuration' && can('configuracion.administrar') && (
+        <ConfigurationWorkspace
+          key={accessRevision}
+          busy={busy}
+          run={run}
+          onNotice={setNotice}
+          autoLoad={deniedAdministration !== view}
+        />
       )}
       {view === 'staff' &&
         (can('usuario.administrar') || can('usuario.permisos')) && (

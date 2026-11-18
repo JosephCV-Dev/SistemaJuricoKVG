@@ -66,8 +66,18 @@ export function Sidebar({
             'Documentos retirados',
             view === 'retired-documents',
           )}
+        {(can('usuario.administrar') ||
+          can('usuario.permisos') ||
+          can('auditoria.consultar') ||
+          can('configuracion.administrar')) && (
+          <p className="nav-group">Administración</p>
+        )}
         {(can('usuario.administrar') || can('usuario.permisos')) &&
           link('staff', 'Usuarios y permisos', view === 'staff')}
+        {can('auditoria.consultar') &&
+          link('audit', 'Bitácora', view === 'audit')}
+        {can('configuracion.administrar') &&
+          link('configuration', 'Configuración', view === 'configuration')}
         <p className="nav-group">Cuenta</p>
         {link('session', 'Mi sesión', view === 'session')}
       </nav>

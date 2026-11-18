@@ -57,3 +57,5 @@ export type {
 export type * from './documents';
 
 export type * from './staff';
+
+export type * from './administration';

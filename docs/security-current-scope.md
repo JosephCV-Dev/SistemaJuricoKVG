@@ -7,16 +7,16 @@ despliegue separado. Los pasos 4A y 4B ya están implementados en desarrollo y c
 
 ## Controles disponibles sin servicios nuevos
 
-| Área                    | Comportamiento implementado                                                                                             | Límite                                                                                   |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Identidad               | Supabase Auth existente, invitación y MFA TOTP; sesión operativa AAL2                                                   | Administración completa de usuarios/permisos pendiente                                   |
-| Sesión                  | Cookie opaca HttpOnly/SameSite; tokens solo en servidor, persistencia cifrada, expiración, rotación y revocación        | Secure en HTTPS de producción; desarrollo local usa HTTP                                 |
-| Peticiones              | Origen exacto y CSRF para mutaciones, DTO y errores sin secretos, límites de intentos por proceso                       | Límites distribuidos pendientes si se adoptan varias instancias                          |
-| Autorización            | Guards que deniegan por defecto y RPC con identidad, permiso/contexto y alcance del recurso; RLS/privilegios existentes | Cada nuevo CU requiere pruebas específicas; administrador no equivale a lectura jurídica |
-| Integridad              | Restricciones SQL, auditoría, solicitudes idempotentes y revisiones según el CU                                         | La pantalla de bitácora y varias actualizaciones siguen pendientes                       |
-| Archivos ya habilitados | Buckets privados, autorización ordinaria antes del broker técnico, hash y reautorización en descarga                    | Las cargas beta indican que falta antimalware                                            |
-| Secretos                | Fuera de Git/frontend, rol SQL limitado de sesiones; soporte de archivos montados, imágenes sin `.env`                  | Custodia y rotación de producción pendientes                                             |
-| Recuperación            | Herramienta de ensayo cifrado y restauración aislada en PostgreSQL local                                                | No sustituye copia programada completa ni restauración de Supabase Auth/Storage          |
+| Área                    | Comportamiento implementado                                                                                             | Límite                                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Identidad               | Supabase Auth existente, invitación y MFA TOTP; sesión operativa AAL2                                                   | Administración completa de usuarios/permisos pendiente                                              |
+| Sesión                  | Cookie opaca HttpOnly/SameSite; tokens solo en servidor, persistencia cifrada, expiración, rotación y revocación        | Secure en HTTPS de producción; desarrollo local usa HTTP                                            |
+| Peticiones              | Origen exacto y CSRF para mutaciones, DTO y errores sin secretos, límites de intentos por proceso                       | Límites distribuidos pendientes si se adoptan varias instancias                                     |
+| Autorización            | Guards que deniegan por defecto y RPC con identidad, permiso/contexto y alcance del recurso; RLS/privilegios existentes | Cada nuevo CU requiere pruebas específicas; administrador no equivale a lectura jurídica            |
+| Integridad              | Restricciones SQL, auditoría, solicitudes idempotentes y revisiones según el CU                                         | La bitácora web consulta los eventos SQL. Los logs diagnósticos de NestJS se consultan por separado |
+| Archivos ya habilitados | Buckets privados, autorización ordinaria antes del broker técnico, hash y reautorización en descarga                    | Las cargas beta indican que falta antimalware                                                       |
+| Secretos                | Fuera de Git/frontend, rol SQL limitado de sesiones; soporte de archivos montados, imágenes sin `.env`                  | Custodia y rotación de producción pendientes                                                        |
+| Recuperación            | Herramienta de ensayo cifrado y restauración aislada en PostgreSQL local                                                | No sustituye copia programada completa ni restauración de Supabase Auth/Storage                     |
 
 Estas capacidades aprovechan código local y el Supabase ya configurado. No son
 servicios nuevos ni prueba de que todas las etapas del proyecto estén terminadas.

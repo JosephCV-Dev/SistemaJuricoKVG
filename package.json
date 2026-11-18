@@ -48,7 +48,8 @@
     "setup:document-versions:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentVersions",
     "setup:document-review:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentReview",
     "setup:document-recovery:dev": "node apps/api/scripts/setup-record-updates-dev.mjs documentRecovery",
-    "setup:staff:dev": "node apps/api/scripts/setup-record-updates-dev.mjs staff"
+    "setup:staff:dev": "node apps/api/scripts/setup-record-updates-dev.mjs staff",
+    "setup:audit-configuration:dev": "node apps/api/scripts/setup-record-updates-dev.mjs auditConfiguration"
   },
   "devDependencies": {
     "concurrently": "10.0.6",

@@ -117,12 +117,15 @@ login/MFA/renovación tienen límites de intentos por IP y cuenta/sesión por in
 Las altas de clientes y expedientes incorporan la misma protección CSRF; las
 futuras mutaciones deben conservarla.
 
-La sesión previa a MFA vence en diez minutos. La operativa usa la duración devuelta
-por SQL (actualmente ocho horas máximas y treinta minutos de inactividad, sujetos a
-PT02). La renovación del proveedor no amplía el límite absoluto. El cierre intenta
+La sesión previa a MFA vence en diez minutos. SQL valida la duración absoluta
+de cada sesión operativa y su inactividad. Los parámetros admiten 1–8 horas y
+5–30 minutos respectivamente, según los límites de PT02. La renovación del proveedor no amplía el límite absoluto. El cierre intenta
 revocar la sesión KVG y Auth y destruye la cookie local incluso si el proveedor falla.
 La auditoría SQL de sesiones se complementa con eventos fijos del backend, sin
-contraseñas, códigos, secretos TOTP ni tokens. La pantalla de bitácora es posterior.
+contraseñas, códigos, secretos TOTP ni tokens. Los módulos de bitácora y
+configuración usan RPC con la identidad del usuario y validan el permiso global
+en la API y en SQL. La proyección, la concurrencia por revisión y el historial
+se describen en [Bitácora y configuración](audit-and-configuration.md).
 
 Los roles funcionales se combinan con permisos y alcance del expediente. La cuenta
 administradora técnica no obtiene lectura jurídica automáticamente. Las claves

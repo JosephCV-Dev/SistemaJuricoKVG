@@ -88,6 +88,11 @@ Los nombres de carpetas están en inglés y los identificadores de negocio conse
 
 CU018 agrupa alta, actualización y desactivación de usuarios. CU014 distingue edición de metadatos y publicación de una nueva versión. CU028 se concreta en documentos, el recurso que tiene retiro previsto en esta línea base. `audit` interviene transversalmente: consultar la bitácora no sustituye el registro automático de las operaciones.
 
+CU020 consulta y filtra eventos conservando su correlación y diferenciando la
+autorización de descarga de la evidencia de transferencia. CU021 limita los cambios
+a parámetros de sesión y catálogos habilitados, exige un motivo y conserva las
+referencias al desactivar entradas. [Contrato y pruebas de CU020/CU021](audit-and-configuration.md).
+
 ## Reglas que condicionan la implementación
 
 | Reglas RUP | Comportamiento requerido                                                                                                                                                                                                                                                                                                      |
