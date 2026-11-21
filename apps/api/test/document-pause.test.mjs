@@ -90,3 +90,43 @@ test('beta es explícita y se rechaza fuera de desarrollo y pruebas', () => {
     /solo se admite en desarrollo/,
   );
 });
+
+test('el arranque de la demo en Render habilita solo el trabajador beta previsto', () => {
+  const env = {
+    NODE_ENV: 'production',
+    RENDER: 'true',
+    RENDER_SERVICE_TYPE: 'web',
+    RENDER_EXTERNAL_URL: 'https://kvg-demo.onrender.com',
+    DOCUMENT_UPLOAD_MODE: 'paused',
+    SUPABASE_URL: 'https://fixture.supabase.co',
+    SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_fixture',
+    SESSION_DATABASE_URL: 'postgresql://fixture',
+    SESSION_SECRET: 'x'.repeat(32),
+    SESSION_ENCRYPTION_KEY: Buffer.alloc(32).toString('base64'),
+  };
+  const render = validateEnvironment(env, true);
+  assert.equal(render.NODE_ENV, 'production');
+  assert.equal(render.APP_ORIGIN, env.RENDER_EXTERNAL_URL);
+  assert.equal(render.DOCUMENT_UPLOAD_MODE, 'beta');
+  assert.equal(render.RENDER_DOCUMENT_WORKER, true);
+
+  for (const other of [
+    validateEnvironment(env),
+    validateEnvironment({ ...env, RENDER: 'false' }, true),
+    validateEnvironment({ ...env, RENDER_SERVICE_TYPE: 'worker' }, true),
+    validateEnvironment({ ...env, RENDER_DEMO_UPLOADS: 'paused' }, true),
+  ]) {
+    assert.equal(other.DOCUMENT_UPLOAD_MODE, 'paused');
+    assert.equal(other.RENDER_DOCUMENT_WORKER, false);
+  }
+  const verified = validateEnvironment(
+    { ...env, DOCUMENT_UPLOAD_MODE: 'verified' },
+    true,
+  );
+  assert.equal(verified.DOCUMENT_UPLOAD_MODE, 'verified');
+  assert.equal(verified.RENDER_DOCUMENT_WORKER, false);
+  assert.throws(
+    () => validateEnvironment({ ...env, RENDER_DEMO_UPLOADS: 'true' }, true),
+    /RENDER_DEMO_UPLOADS/,
+  );
+});

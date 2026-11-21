@@ -26,6 +26,7 @@ const migrations = {
   documentReadProjection: [
     '202611180018_document_read_projection.sql',
     '202611180019_version_integrity_for_review.sql',
+    '202611200020_document_beta_read_projection.sql',
   ],
 };
 try {

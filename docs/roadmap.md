@@ -81,8 +81,8 @@ una carga y descarga beta, el ensayo HTTPS local y la restauración aislada.
 La validación en el destino de producción queda pendiente.
 [Estado de alojamiento y evidencia](release-verification.md).
 
-La demo mantiene su modo beta local. El antimalware operativo y el despliegue
-separado siguen pendientes.
+El modo beta admite la demo local y la [demo de Render](render-demo.md).
+El antimalware operativo y el despliegue separado siguen pendientes.
 
 Los controles que permanecen activos y los límites están en
 [security-current-scope.md](security-current-scope.md).

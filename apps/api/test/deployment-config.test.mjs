@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import childProcess from 'node:child_process';
+import { EventEmitter } from 'node:events';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ConfigService } from '@nestjs/config';
 import { readRuntimeSecrets } from '../dist/config/runtime-secrets.js';
 import { validateWorkerEnvironment } from '../dist/config/worker-environment.js';
+import { DocumentUploadPolicy } from '../dist/modules/documents/application/document-upload-policy.js';
+import { RenderDocumentWorker } from '../dist/modules/operations/infrastructure/render-document-worker.js';
 import {
   validateStagingSettings,
   validateStagingSecrets,
@@ -62,6 +67,61 @@ test('el trabajador de producción no requiere ni conserva secretos de sesión o
     }),
   );
 });
+
+test('Render pausa cargas hasta que el trabajador pueda reclamar en SQL y durante reinicio o apagado', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const children = [];
+  t.mock.method(childProcess, 'fork', (script, args, options) => {
+    assert.match(script, /worker\.js$/);
+    assert.deepEqual(args, ['--render-demo']);
+    assert.equal(options.env.DOCUMENT_UPLOAD_MODE, 'beta');
+    assert.equal(options.env.SUPABASE_SECRET_KEY, 'sb_secret_fixture');
+    assert(!Object.hasOwn(options.env, 'SESSION_SECRET'));
+    assert(!Object.hasOwn(options.env, 'DATABASE_URL'));
+    const child = new EventEmitter();
+    child.kill = (signal) => {
+      assert.equal(signal, 'SIGTERM');
+      child.emit('close');
+    };
+    children.push(child);
+    return child;
+  });
+  const config = {
+    RENDER_DOCUMENT_WORKER: true,
+    SUPABASE_URL: 'https://fixture.supabase.co',
+    SUPABASE_SECRET_KEY: '',
+    SESSION_SECRET: 'no-pasar',
+    DATABASE_URL: 'no-pasar',
+  };
+  const uploads = new DocumentUploadPolicy('beta', false);
+  const unconfigured = new RenderDocumentWorker(
+    new ConfigService(config),
+    uploads,
+  );
+  unconfigured.onApplicationBootstrap();
+  assert.equal(children.length, 0);
+  assert.throws(() => uploads.assertEnabled(), { status: 503 });
+
+  const render = new RenderDocumentWorker(
+    new ConfigService({ ...config, SUPABASE_SECRET_KEY: 'sb_secret_fixture' }),
+    uploads,
+  );
+  render.onApplicationBootstrap();
+  assert.deepEqual(uploads.availability(), { enabled: false, beta: true });
+  children[0].emit('message', 'document-worker-ready');
+  assert.deepEqual(uploads.availability(), { enabled: true, beta: true });
+  children[0].emit('close');
+  assert.throws(() => uploads.assertEnabled(), { status: 503 });
+  t.mock.timers.tick(15_000);
+  assert.equal(children.length, 2);
+  children[1].emit('message', 'document-worker-ready');
+  assert.equal(uploads.availability().enabled, true);
+  await render.beforeApplicationShutdown();
+  assert.throws(() => uploads.assertEnabled(), { status: 503 });
+  t.mock.timers.tick(15_000);
+  assert.equal(children.length, 2);
+});
+
 const settings = {
   STAGING_HOST: 'pruebas.kvg.test',
   SUPABASE_URL: 'https://stagingfixture.supabase.co',

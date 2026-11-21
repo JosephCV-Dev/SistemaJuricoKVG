@@ -7,13 +7,21 @@ import { DocumentWorker } from './modules/operations/application/document-worker
 import { IsolatedFileVerifier } from './modules/operations/infrastructure/isolated-file-verifier';
 
 async function run() {
-  try {
-    process.loadEnvFile('.env');
-  } catch (error) {
-    if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT'))
-      throw error;
+  const renderDemo =
+    process.argv.includes('--render-demo') && process.connected === true;
+  if (!renderDemo) {
+    try {
+      process.loadEnvFile('.env');
+    } catch (error) {
+      if (!(
+        error instanceof Error &&
+        'code' in error &&
+        error.code === 'ENOENT'
+      ))
+        throw error;
+    }
   }
-  const mode = documentUploadMode(process.env);
+  const mode = documentUploadMode(process.env, renderDemo);
   if (mode === 'paused') {
     console.log('Cargas pausadas: no se reclaman ni procesan trabajos.');
     return;
@@ -25,12 +33,13 @@ async function run() {
     mode === 'beta',
   );
   let stopping = false;
-  process.on('SIGTERM', () => {
+  let announced = false;
+  const stop = () => {
     stopping = true;
-  });
-  process.on('SIGINT', () => {
-    stopping = true;
-  });
+  };
+  process.once('SIGTERM', stop);
+  process.once('SIGINT', stop);
+  if (renderDemo) process.once('disconnect', stop);
   do {
     const result = await worker.once();
     if (result !== 'idle' || process.argv.includes('--once'))
@@ -43,17 +52,28 @@ async function run() {
           result: recovery,
         }),
       );
+    if (renderDemo && !announced && !stopping && process.connected) {
+      announced = true;
+      process.send?.('document-worker-ready', undefined, undefined, (error) => {
+        if (error) stop();
+      });
+    }
     if (process.argv.includes('--once')) break;
     if (
+      !stopping &&
       (result === 'idle' || result === 'retry') &&
       (recovery === 'idle' || recovery === 'retry')
     )
       await new Promise((resolve) => setTimeout(resolve, 5000));
   } while (!stopping);
 }
-void run().catch(() => {
-  console.error(
-    'El trabajador no pudo continuar. Revisa su configuración privada y conectividad.',
-  );
-  process.exitCode = 1;
-});
+void run()
+  .catch(() => {
+    console.error(
+      'El trabajador no pudo continuar. Revisa su configuración privada y conectividad.',
+    );
+    process.exitCode = 1;
+  })
+  .finally(() => {
+    if (process.connected) process.disconnect?.();
+  });

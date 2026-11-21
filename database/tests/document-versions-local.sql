@@ -81,6 +81,9 @@ BEGIN
   PERFORM set_config('kvg_test.claims',secretario,true);
   r:=public.kvg_operar('documento.consultar',jsonb_build_object('documento_id',doc));
   rev:=(r#>>'{datos,revision}')::integer;
+  IF r#>>'{datos,version,sin_antimalware}' IS DISTINCT FROM 'true'
+    OR (r#>'{datos,version}') ?| ARRAY['carga_id','localizador_objeto','sha256']
+    THEN RAISE EXCEPTION 'La marca beta debe conservarse en el detalle sin metadatos internos: %',r; END IF;
   IF r#>>'{datos,puede_editar_nombre}' IS DISTINCT FROM 'true'
     OR r#>>'{datos,puede_subir_version}' IS DISTINCT FROM 'true' THEN RAISE EXCEPTION 'Acciones de ficha: %',r; END IF;
   datos:=jsonb_build_object('documento_id',doc,'revision',rev,'nombre','Nombre ficticio corregido','motivo','Corregir el título');

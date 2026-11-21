@@ -24,15 +24,16 @@ importar Nest ni Supabase. El proceso `src/worker.ts` conecta los adaptadores de
 RPC/Storage y análisis, sin iniciar HTTP ni migraciones. El frontend documental
 está en `features/documents` y se compone dentro del detalle del expediente.
 
-| Endpoint `/api/v1/documents` | Operación y control                                                                                      |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `POST /uploads`              | `documento.cargar` con JWT real, permiso/contexto y CSRF; solicitud UUID estable.                        |
-| `GET /categories`            | Catálogo activo reducido; requiere capacidad de carga.                                                   |
-| `PUT /uploads/:id/content`   | Binario acotado; CSRF/origen y autor/alcance antes de consumir bytes; transferencia privada técnica.     |
-| `GET /uploads/:id`           | Estado accesible únicamente al autor con alcance vigente; no localizadores.                              |
-| `GET ?caseId=&offset=`       | Búsqueda SQL restringida al expediente, páginas de 20 y sin total global.                                |
-| `GET /:id`                   | Detalle autorizado/auditado y versión vigente; sin ruta de Storage.                                      |
-| `GET /versions/:id/download` | Autorización ordinaria y comprobación técnica antes y después de leer; hash/tamaño y adjunto `no-store`. |
+| Endpoint `/api/v1/documents` | Operación y control                                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `GET /upload-availability`   | Requiere permiso de carga. En Render, la disponibilidad depende del acceso del trabajador a la cola beta. |
+| `POST /uploads`              | `documento.cargar` con JWT real, permiso/contexto y CSRF; solicitud UUID estable.                         |
+| `GET /categories`            | Catálogo activo reducido; requiere capacidad de carga.                                                    |
+| `PUT /uploads/:id/content`   | Binario acotado; CSRF/origen y autor/alcance antes de consumir bytes; transferencia privada técnica.      |
+| `GET /uploads/:id`           | Estado accesible únicamente al autor con alcance vigente; no localizadores.                               |
+| `GET ?caseId=&offset=`       | Búsqueda SQL restringida al expediente, páginas de 20 y sin total global.                                 |
+| `GET /:id`                   | Detalle autorizado/auditado y versión vigente; sin ruta de Storage.                                       |
+| `GET /versions/:id/download` | Autorización ordinaria y comprobación técnica antes y después de leer; hash/tamaño y adjunto `no-store`.  |
 
 No se permite elegir operaciones RPC, actor, resultados antimalware, hash, estado,
 versión ni localizador desde el navegador. No hay CRUD directo de negocio ni
@@ -97,6 +98,10 @@ Se aplicaron explícitamente en desarrollo:
   real y reclamo de trabajos limitado a cargas. Privilegios existentes intactos.
 - `202611040006_document_detail_and_failed_jobs.sql`: nombres de autor/categoría
   después de autorizar el detalle y presentación del agotamiento de trabajos.
+- `202611200020_document_beta_read_projection.sql`: restaura la marca beta en
+  el detalle a partir de la versión autorizada. Conserva fuera de la respuesta
+  el identificador de carga, el hash y el localizador. Se aplica a través de
+  `npm run setup:document-read-projection:dev`.
 
 Los checksums se registran con el flujo existente. La baseline y migraciones ya
 aplicadas no se reescriben y la API no ejecuta instalación al arrancar.

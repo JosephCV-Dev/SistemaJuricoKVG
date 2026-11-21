@@ -1,9 +1,14 @@
-# Archivos en la beta de desarrollo
+# Archivos en la beta de desarrollo y en la demo de Render
 
 La beta permite cargar y descargar archivos ficticios en el Supabase actual.
 La API y el trabajador admiten `DOCUMENT_UPLOAD_MODE=beta` en desarrollo.
 La migración `202611170008_document_beta.sql` mantiene el modo desactivado en
 SQL hasta que se habilite explícitamente.
+
+La [demo de Render](render-demo.md) usa el mismo contrato beta y arranca su
+trabajador en el Web Service. La aplicación conserva `NODE_ENV=production`
+para las cookies y el origen HTTPS. La excepción de carga en ese entorno
+requiere el arranque de la demo y la activación SQL.
 
 El flujo conserva sesión, permiso y alcance, cuarentena privada, tamaño máximo,
 validación estructural y formato, SHA-256, reintentos y auditoría. La publicación

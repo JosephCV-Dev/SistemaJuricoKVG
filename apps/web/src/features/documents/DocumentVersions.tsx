@@ -98,7 +98,7 @@ export function DocumentVersions({
   return (
     <>
       <div className="actions">
-        {detail.canUploadVersion && !availability && (
+        {detail.canUploadVersion && !availability?.enabled && (
           <button
             type="button"
             className="button-secondary"

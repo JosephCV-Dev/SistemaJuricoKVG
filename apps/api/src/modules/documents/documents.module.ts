@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Environment } from '../../config/environment';
 import { DocumentUploadPolicy } from './application/document-upload-policy';
 import { IdentityModule } from '../identity/identity.module';
 import { SupabaseModule } from '../../infrastructure/supabase/supabase.module';
@@ -16,12 +17,16 @@ import { PrivateFileGateway } from './infrastructure/private-file-gateway';
     {
       provide: DocumentUploadPolicy,
       inject: [ConfigService],
-      useFactory: (config: ConfigService) =>
-        new DocumentUploadPolicy(config.get('DOCUMENT_UPLOAD_MODE')),
+      useFactory: (config: ConfigService<Environment, true>) =>
+        new DocumentUploadPolicy(
+          config.get('DOCUMENT_UPLOAD_MODE', { infer: true }),
+          !config.get('RENDER_DOCUMENT_WORKER', { infer: true }),
+        ),
     },
     DocumentsService,
     { provide: DocumentsRepository, useClass: KvgDocumentsRepository },
     { provide: PrivateFiles, useClass: PrivateFileGateway },
   ],
+  exports: [DocumentUploadPolicy],
 })
 export class DocumentsModule {}

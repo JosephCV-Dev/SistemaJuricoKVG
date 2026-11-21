@@ -26,8 +26,11 @@ Las evidencias previas están en `identity.md`, `clients-and-cases.md`,
 ## Beta documental
 
 El usuario pidió habilitar cargas y descargas ficticias aun con antivirus
-pospuesto. La beta exige un ajuste explícito en desarrollo y registra cada
-archivo habilitado sin análisis con un resultado distinto de `SEGURO`.
+pospuesto. La beta exige activación en el SQL de desarrollo y registra cada
+archivo habilitado sin análisis como `BETA_SIN_ANTIMALWARE`. El Web Service de
+la [demo de Render](render-demo.md) conserva la configuración HTTPS de
+producción y habilita las cargas ficticias cuando su trabajador accede a la
+cola beta.
 [Controles, operación y reactivación futura](document-beta.md).
 
 ## Plan y verificación

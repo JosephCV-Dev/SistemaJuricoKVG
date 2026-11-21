@@ -149,8 +149,8 @@ aplicaron al Supabase de desarrollo. CU031 registra revisión, motivo y campos
 modificados sin copiar datos jurídicos a la bitácora. Los cambios de cliente
 principal, estado y responsable conservan sus flujos específicos. [Contrato y evidencia](clients-and-cases.md#paso-4b-consulta-y-edición-de-expedientes).
 
-La demo puede usar documentos ficticios en modo beta sin antimalware por
-instrucción posterior del usuario. Cada versión se marca en la ficha. La
+La demo local y la de Render pueden usar documentos ficticios en modo beta sin
+antimalware por instrucción posterior del usuario. Cada versión se marca en la ficha. La
 excepción temporal conserva pendientes RN10, RUP 16.6 y el despliegue
 separado. [Contrato beta](document-beta.md).
 

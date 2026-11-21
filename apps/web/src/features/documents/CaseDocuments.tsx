@@ -104,16 +104,19 @@ export function CaseDocuments({
       }
     }
   }
+  async function refreshUploadAvailability(signal: AbortSignal) {
+    if (!canUpload) return;
+    const availability = await uploadAvailability(signal);
+    if (availability.enabled) setCatalog(await categories(signal));
+    setBeta(availability.beta === true);
+    setUploadsEnabled(availability.enabled);
+  }
+
   useEffect(() => {
     setUploadsEnabled(null);
     void run(async (signal) => {
       setPage(await listDocuments(caseId, 0, signal));
-      if (canUpload) {
-        const availability = await uploadAvailability(signal);
-        setUploadsEnabled(availability.enabled);
-        setBeta(availability.beta === true);
-        if (availability.enabled) setCatalog(await categories(signal));
-      }
+      await refreshUploadAvailability(signal);
     });
     return () => {
       active.current?.abort();
@@ -176,6 +179,7 @@ export function CaseDocuments({
               void run(async (signal) => {
                 if (status) setStatus(await uploadStatus(status.id, signal));
                 setPage(await listDocuments(caseId, page.offset, signal));
+                await refreshUploadAvailability(signal);
               })
             }
           >
@@ -184,9 +188,8 @@ export function CaseDocuments({
         </div>
         {canUpload && uploadsEnabled === false && (
           <p role="status">
-            Las cargas nuevas están pausadas hasta habilitar la verificación de
-            archivos. Puedes consultar los documentos ya disponibles según tus
-            permisos.
+            Las cargas nuevas están pausadas. Usa Actualizar documentos para
+            volver a comprobar la disponibilidad.
           </p>
         )}
         {canUpload && uploadsEnabled === true && (

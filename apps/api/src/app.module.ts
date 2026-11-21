@@ -13,7 +13,11 @@ import { SupabaseModule } from './infrastructure/supabase/supabase.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: (input) =>
+        validateEnvironment(input, process.argv.includes('--render-demo')),
+    }),
     SupabaseModule,
     HealthModule,
     IdentityModule,

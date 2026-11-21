@@ -264,6 +264,9 @@ sustituir guards ni permisos. El trabajador sale sin reclamar trabajos en ese mo
 El modo `verified` conserva ClamAV, comprobación estructural y hash obligatorios.
 Para la demo, `beta` omite solo ClamAV, con activación explícita en SQL y marca
 `BETA_SIN_ANTIMALWARE` por original. [Modo beta](document-beta.md).
+El arranque de la demo de Render supervisa ese mismo trabajador en un proceso
+hijo y mantiene las cargas en pausa hasta confirmar el acceso a la cola beta.
+[Arranque y controles en Render](render-demo.md).
 No se incorpora otro proveedor, API comercial o clave nueva. Se conserva la
 preparación de staging para uso futuro. Véase [security-current-scope.md](security-current-scope.md).
 

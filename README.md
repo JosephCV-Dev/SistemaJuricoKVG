@@ -10,8 +10,8 @@ formularios y vistas separadas, con acciones según las capacidades de la sesió
 
 **Alcance actual:** seguimos en desarrollo local con el Supabase existente y datos
 ficticios, sin nuevas cuentas ni servicios. Antivirus y despliegue separado se
-posponen. La demostración local puede habilitar cargas ficticias en modo beta
-sin antivirus. Los pasos 4A a 4D añaden consulta, edición, asignaciones y seguimiento
+posponen. La demo local y la de Render pueden habilitar cargas ficticias en
+modo beta sin antivirus. Los pasos 4A a 4D añaden consulta, edición, asignaciones y seguimiento
 sobre el Supabase de desarrollo. Consulta [seguridad y alcance vigente](docs/security-current-scope.md).
 
 ## Arquitectura elegida
@@ -180,6 +180,7 @@ Para usar documentos en el desarrollo actual, ejecuta `npm run dev:beta` si la
 API y la web están detenidas. Si ya usas `npm run dev`, añade el trabajador en
 otra terminal con `npm run worker:documents`. Consulta
 [los comandos y límites de la beta](docs/document-beta.md).
+Para el Web Service de Render, consulta [la configuración de la demo](docs/render-demo.md).
 
 Se conserva el paquete de imágenes/proxy y las pruebas HTTPS locales como trabajo
 preparado para el futuro, sin exigir ahora servidor, dominio ni segundo Supabase.
